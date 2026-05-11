@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import type { SharedBundle, SharedFileIndex, SharedIndex, SharedScanOptions, SharedScanProgress } from "./types.js";
+import type { SharedBundle, SharedFileEntry, SharedFileIndex, SharedIndex, SharedScanOptions, SharedScanProgress } from "./types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +20,7 @@ export async function scanShared(
   onProgress?.({ phase: "discovering", current: 0, total: 0 });
   const cachedFileIndex = options.forceRescan ? undefined : await readExistingSharedFileIndex(sharedDir);
   const candidates = cachedFileIndex
-    ? candidatesFromFileIndex(cachedFileIndex)
+    ? candidatesFromFileIndex(cachedFileIndex, sharedDir)
     : await findSharedBundleCandidates(sharedDir);
 
   if (!cachedFileIndex) {
@@ -45,7 +46,7 @@ export async function scanShared(
   });
 
   if (targetNames.length > 0 && foundTargets.size === targetNames.length) {
-    await writeJson(sharedIndexPath, knownIndex);
+    await writeSharedIndex(knownIndex);
     onProgress?.({
       phase: "done",
       current: 0,
@@ -54,7 +55,7 @@ export async function scanShared(
       targetTotal: targetNames.length,
       targetFound: foundTargets.size
     });
-    return knownIndex;
+    return hydrateSharedIndex(knownIndex, sharedDir);
   }
 
   const bundles: SharedBundle[] = [];
@@ -69,7 +70,7 @@ export async function scanShared(
     for (const candidate of batch) {
       if (shouldStop?.()) {
         const stoppedIndex = mergeSharedIndexes(knownIndex, { bundles });
-        await writeJson(sharedIndexPath, stoppedIndex);
+        await writeSharedIndex(stoppedIndex);
         onProgress?.({
           phase: "stopped",
           current: scannedThisRun,
@@ -78,13 +79,14 @@ export async function scanShared(
           targetTotal: targetNames.length,
           targetFound: foundTargets.size
         });
-        return stoppedIndex;
+        return hydrateSharedIndex(stoppedIndex, sharedDir);
       }
 
     const bundle: SharedBundle = {
       bundleId: candidate.bundleId,
       dataPath: candidate.dataPath,
       infoPath: candidate.infoPath,
+      hasInfo: Boolean(candidate.infoPath),
       sizeBytes: candidate.sizeBytes,
       assets: []
     };
@@ -110,7 +112,7 @@ export async function scanShared(
     scannedThisRun += 1;
     const currentIndex = mergeSharedIndexes(knownIndex, { bundles });
     foundTargets = findFoundTargetNames(currentIndex, targetNames);
-    await writeJson(sharedIndexPath, currentIndex);
+    await writeSharedIndex(currentIndex);
 
     onProgress?.({
       phase: "scanned",
@@ -127,7 +129,7 @@ export async function scanShared(
 
       if (targetNames.length > 0 && foundTargets.size === targetNames.length) {
         const sharedIndex = mergeSharedIndexes(knownIndex, { bundles });
-        await writeJson(sharedIndexPath, sharedIndex);
+        await writeSharedIndex(sharedIndex);
         onProgress?.({
           phase: "done",
           current: scannedThisRun,
@@ -136,13 +138,13 @@ export async function scanShared(
           targetTotal: targetNames.length,
           targetFound: foundTargets.size
         });
-        return sharedIndex;
+        return hydrateSharedIndex(sharedIndex, sharedDir);
       }
     }
   }
 
   const sharedIndex = mergeSharedIndexes(knownIndex, { bundles });
-  await writeJson(sharedIndexPath, sharedIndex);
+  await writeSharedIndex(sharedIndex);
   onProgress?.({
     phase: "done",
     current: scannedThisRun,
@@ -151,7 +153,7 @@ export async function scanShared(
     targetTotal: targetNames.length,
     targetFound: foundTargets.size
   });
-  return sharedIndex;
+  return hydrateSharedIndex(sharedIndex, sharedDir);
 }
 
 type SharedBundleCandidate = {
@@ -245,13 +247,12 @@ function sortCandidatesBySize(candidates: SharedBundleCandidate[]) {
 function createSharedFileIndex(sharedDir: string, candidates: SharedBundleCandidate[]): SharedFileIndex {
   return {
     generatedAt: new Date().toISOString(),
-    sharedDir,
+    sharedRootKey: sharedDirCacheKey(sharedDir),
     files: candidates.map((candidate) => ({
       bundleId: candidate.bundleId,
-      dataPath: candidate.dataPath,
-      infoPath: candidate.infoPath,
       sizeBytes: candidate.sizeBytes,
-      modifiedAt: candidate.modifiedAt
+      modifiedAt: candidate.modifiedAt,
+      hasInfo: Boolean(candidate.infoPath)
     }))
   };
 }
@@ -261,17 +262,18 @@ async function writeJson(filePath: string, data: unknown) {
   await fs.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
+async function writeSharedIndex(index: SharedIndex) {
+  await writeJson(sharedIndexPath, toPortableSharedIndex(index));
+}
+
 export async function readSharedIndex(sharedDir?: string): Promise<SharedIndex> {
   try {
     const index = JSON.parse(await fs.readFile(sharedIndexPath, "utf8")) as SharedIndex;
     if (!sharedDir?.trim()) {
-      return index;
+      return toPortableSharedIndex(index);
     }
 
-    const root = path.resolve(sharedDir);
-    return {
-      bundles: index.bundles.filter((bundle) => path.resolve(bundle.dataPath).startsWith(root))
-    };
+    return hydrateSharedIndex(index, sharedDir);
   } catch {
     return { bundles: [] };
   }
@@ -284,20 +286,45 @@ async function readExistingSharedIndex(): Promise<SharedIndex> {
 async function readExistingSharedFileIndex(sharedDir: string): Promise<SharedFileIndex | undefined> {
   try {
     const index = JSON.parse(await fs.readFile(sharedFileIndexPath, "utf8")) as SharedFileIndex;
-    return path.resolve(index.sharedDir) === path.resolve(sharedDir) ? index : undefined;
+    if ("sharedRootKey" in index) {
+      return index.sharedRootKey === sharedDirCacheKey(sharedDir) ? index : undefined;
+    }
+
+    const legacyIndex = index as SharedFileIndex & { sharedDir?: string };
+    return legacyIndex.sharedDir && path.resolve(legacyIndex.sharedDir) === path.resolve(sharedDir)
+      ? {
+          generatedAt: legacyIndex.generatedAt,
+          sharedRootKey: sharedDirCacheKey(sharedDir),
+          files: legacyIndex.files.map((file) => {
+            const legacyFile = file as SharedFileEntry & { infoPath?: string };
+            return {
+              bundleId: file.bundleId,
+              sizeBytes: file.sizeBytes,
+              modifiedAt: file.modifiedAt,
+              hasInfo: Boolean(legacyFile.infoPath)
+            };
+          })
+        }
+      : undefined;
   } catch {
     return undefined;
   }
 }
 
-function candidatesFromFileIndex(index: SharedFileIndex): SharedBundleCandidate[] {
-  return sortCandidatesBySize(index.files.map((file) => ({
-    bundleId: file.bundleId,
-    dataPath: file.dataPath,
-    infoPath: file.infoPath,
-    sizeBytes: file.sizeBytes,
-    modifiedAt: file.modifiedAt
-  })));
+function candidatesFromFileIndex(index: SharedFileIndex, sharedDir?: string): SharedBundleCandidate[] {
+  return sortCandidatesBySize(index.files.flatMap((file) => {
+    if (!safeBundleIdParts(file.bundleId)) {
+      return [];
+    }
+
+    return [{
+      bundleId: file.bundleId,
+      dataPath: dataPathForBundleId(sharedDir ?? "", file.bundleId),
+      infoPath: file.hasInfo ? infoPathForBundleId(sharedDir ?? "", file.bundleId) : undefined,
+      sizeBytes: file.sizeBytes,
+      modifiedAt: file.modifiedAt
+    }];
+  }));
 }
 
 function mergeSharedIndexes(...indexes: SharedIndex[]): SharedIndex {
@@ -309,7 +336,140 @@ function mergeSharedIndexes(...indexes: SharedIndex[]): SharedIndex {
     }
   }
 
-  return { bundles: [...bundles.values()] };
+  return withAssetNameIndex({ bundles: [...bundles.values()] });
+}
+
+function toPortableSharedIndex(index: SharedIndex): SharedIndex {
+  return withAssetNameIndex({
+    bundles: index.bundles.map((bundle) => ({
+      bundleId: bundle.bundleId,
+      hasInfo: bundle.hasInfo ?? Boolean(bundle.infoPath),
+      sizeBytes: bundle.sizeBytes,
+      assets: bundle.assets,
+      scanError: bundle.scanError
+    }))
+  });
+}
+
+function hydrateSharedIndex(index: SharedIndex, sharedDir: string): SharedIndex {
+  return withAssetNameIndex({
+    bundles: index.bundles.flatMap((bundle) => {
+      if (!safeBundleIdParts(bundle.bundleId)) {
+        return [];
+      }
+
+      const dataPath = bundle.dataPath && isPathInside(bundle.dataPath, sharedDir)
+        ? bundle.dataPath
+        : dataPathForBundleId(sharedDir, bundle.bundleId);
+      const hasInfo = bundle.hasInfo ?? Boolean(bundle.infoPath);
+
+      return [{
+        ...bundle,
+        dataPath,
+        infoPath: hasInfo
+          ? bundle.infoPath && isPathInside(bundle.infoPath, sharedDir)
+            ? bundle.infoPath
+            : infoPathForBundleId(sharedDir, bundle.bundleId)
+          : undefined,
+        hasInfo
+      }];
+    })
+  });
+}
+
+function withAssetNameIndex(index: SharedIndex): SharedIndex {
+  return {
+    ...index,
+    assetsByName: buildAssetNameIndex(index.bundles)
+  };
+}
+
+function buildAssetNameIndex(bundles: SharedBundle[]) {
+  const byName: NonNullable<SharedIndex["assetsByName"]> = {};
+
+  for (const bundle of bundles) {
+    for (const asset of bundle.assets) {
+      const entry = {
+        bundleId: bundle.bundleId,
+        assetName: asset.name,
+        type: asset.type,
+        pathId: asset.pathId,
+        width: asset.width,
+        height: asset.height
+      };
+
+      for (const key of assetNameIndexKeys(asset.name, asset.type)) {
+        byName[key] = byName[key] ?? [];
+        if (!byName[key].some((current) =>
+          current.bundleId === entry.bundleId &&
+          current.pathId === entry.pathId &&
+          current.type === entry.type
+        )) {
+          byName[key].push(entry);
+        }
+      }
+    }
+  }
+
+  return sortAssetNameIndex(byName);
+}
+
+function assetNameIndexKeys(assetName: string, type: string) {
+  const normalized = assetName.toLowerCase();
+  const keys = new Set([normalized]);
+  if (type === "Texture2D" && !normalized.endsWith(".png")) {
+    keys.add(`${normalized}.png`);
+  }
+
+  return [...keys];
+}
+
+function sortAssetNameIndex(index: NonNullable<SharedIndex["assetsByName"]>) {
+  const sorted: NonNullable<SharedIndex["assetsByName"]> = {};
+  for (const key of Object.keys(index).sort((a, b) => a.localeCompare(b))) {
+    sorted[key] = [...index[key]].sort((a, b) =>
+      a.bundleId.localeCompare(b.bundleId) ||
+      a.type.localeCompare(b.type) ||
+      a.assetName.localeCompare(b.assetName) ||
+      a.pathId - b.pathId
+    );
+  }
+
+  return sorted;
+}
+
+function dataPathForBundleId(sharedDir: string, bundleId: string) {
+  return path.join(sharedDir, ...requireSafeBundleIdParts(bundleId), "__data");
+}
+
+function infoPathForBundleId(sharedDir: string, bundleId: string) {
+  return path.join(sharedDir, ...requireSafeBundleIdParts(bundleId), "__info");
+}
+
+function requireSafeBundleIdParts(bundleId: string) {
+  const parts = safeBundleIdParts(bundleId);
+  if (!parts) {
+    throw new Error(`Invalid Shared bundleId: ${bundleId}`);
+  }
+
+  return parts;
+}
+
+function safeBundleIdParts(bundleId: string) {
+  const parts = bundleId.split("/");
+  return parts.length === 2 && parts.every((part) => /^[a-f0-9]{32}$/i.test(part)) ? parts : undefined;
+}
+
+function isPathInside(filePath: string, root: string) {
+  const relative = path.relative(path.resolve(root), path.resolve(filePath));
+  return Boolean(relative) && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+function sharedDirCacheKey(sharedDir: string) {
+  return crypto
+    .createHash("sha256")
+    .update(path.resolve(sharedDir))
+    .digest("hex");
 }
 
 function normalizeTargetNames(targetNames: string[]) {
@@ -318,6 +478,18 @@ function normalizeTargetNames(targetNames: string[]) {
 
 function findFoundTargetNames(sharedIndex: SharedIndex, targetNames: string[]) {
   const found = new Set<string>();
+
+  for (const assetName of Object.keys(sharedIndex.assetsByName ?? {})) {
+    for (const targetName of targetNames) {
+      if (!found.has(targetName) && assetName.includes(targetName)) {
+        found.add(targetName);
+      }
+    }
+  }
+
+  if (found.size === targetNames.length) {
+    return found;
+  }
 
   for (const bundle of sharedIndex.bundles) {
     for (const asset of bundle.assets) {
@@ -358,6 +530,14 @@ async function fileExists(filePath: string) {
 }
 
 async function scanBundleAssets(dataPath: string, options: SharedScanOptions) {
+  if ((options.scanBackend ?? "uabea") === "uabea") {
+    return scanBundleAssetsWithUabea(dataPath, options);
+  }
+
+  return scanBundleAssetsWithUnityPy(dataPath, options);
+}
+
+async function scanBundleAssetsWithUnityPy(dataPath: string, options: SharedScanOptions) {
   const scriptPath = path.resolve(__dirname, "../../python/scan_bundle.py");
   const args = [scriptPath, "--input", dataPath];
 
@@ -383,6 +563,41 @@ async function scanBundleAssets(dataPath: string, options: SharedScanOptions) {
   }
 
   return result.assets ?? [];
+}
+
+async function scanBundleAssetsWithUabea(dataPath: string, options: SharedScanOptions) {
+  const dotnetPath = options.dotnetPath?.trim() || defaultDotnetPath();
+  const projectPath = options.uabeaScannerProjectPath?.trim() || defaultUabeaProjectPath();
+  const dllPath = defaultUabeaDllPath(projectPath);
+  const args = await fileExists(dllPath)
+    ? [dllPath, "--mode", "scan", "--input", dataPath]
+    : ["run", "--project", projectPath, "--", "--mode", "scan", "--input", dataPath];
+  const stdout = await run(dotnetPath, args);
+  let result: { ok: boolean; assets?: SharedBundle["assets"]; error?: string };
+
+  try {
+    result = JSON.parse(stdout);
+  } catch {
+    throw new Error(stdout.trim() || "UABEA scanner did not return JSON");
+  }
+
+  if (!result.ok) {
+    throw new Error(result.error ?? "Failed to scan Unity AssetBundle with UABEA scanner");
+  }
+
+  return result.assets ?? [];
+}
+
+function defaultDotnetPath() {
+  return path.resolve("manager-data/tools/dotnet/dotnet");
+}
+
+function defaultUabeaProjectPath() {
+  return path.resolve("experiments/uabea-patcher/UabeaPatchPrototype.csproj");
+}
+
+function defaultUabeaDllPath(projectPath: string) {
+  return path.join(path.dirname(projectPath), "bin", "Debug", "net8.0", "UabeaPatchPrototype.dll");
 }
 
 function run(command: string, args: string[]): Promise<string> {

@@ -75,12 +75,13 @@ BD2ModManager/
 找到所有 __data
 讀取 Unity AssetBundle
 建立索引檔：
+索引只記錄可公開分享的 bundleId、檔案大小、__info 是否存在與 asset 資訊；本機 Shared 路徑會在使用者讀取索引時由 Shared Folder + bundleId 重新組出。索引也會產生 assetsByName 反向查表，讓 patch plan 可以從檔名快速找到 bundleId。
 {
   "bundles": [
     {
       "bundleId": "00044c1c0b4b673e127e271e219f70b2/3dcf985e24fdc96ab662cc29a6591835",
-      "dataPath": "/path/to/Shared/.../.../__data",
-      "infoPath": "/path/to/Shared/.../.../__info",
+      "hasInfo": true,
+      "sizeBytes": 123456789,
       "assets": [
         {
           "name": "char004102.atlas",
@@ -101,10 +102,21 @@ BD2ModManager/
         }
       ]
     }
-  ]
+  ],
+  "assetsByName": {
+    "char004102.atlas": [
+      {
+        "bundleId": "00044c1c0b4b673e127e271e219f70b2/3dcf985e24fdc96ab662cc29a6591835",
+        "assetName": "char004102.atlas",
+        "type": "TextAsset",
+        "pathId": 123456
+      }
+    ]
+  }
 }
 
 如果 Node.js 端不方便直接解析 AssetBundle，請讓 shared-indexer.ts 呼叫 Python 腳本產生索引。
+目前掃描 backend 可選 UABEA / AssetsTools.NET 或 UnityPy；預設使用 UABEA / AssetsTools.NET，UnityPy 保留作為相容與比較用。
 
 功能 2：Mods 掃描
 

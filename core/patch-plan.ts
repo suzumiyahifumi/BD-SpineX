@@ -12,6 +12,8 @@ import type {
 } from "./types.js";
 
 export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex): PatchPlanIndex {
+  const bundlesById = new Map(sharedIndex.bundles.map((bundle) => [bundle.bundleId, bundle]));
+
   return {
     plans: modsIndex.mods.flatMap((mod): PatchPlanEntry[] => {
       if (mod.status !== "ready") {
@@ -24,7 +26,8 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
       }
 
       const requiredTargets = getRequiredTargets(mod);
-      const matches = sharedIndex.bundles
+      const candidateBundles = findCandidateBundles(sharedIndex, bundlesById, mod.name, requiredTargets);
+      const matches = candidateBundles
         .map((bundle) => {
           const targets = findTargets(bundle, mod.name, requiredTargets);
           const foundCount = countTargets(targets);
@@ -95,6 +98,44 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
 }
 
 type RequiredTarget = PatchMissingTarget;
+
+function findCandidateBundles(
+  sharedIndex: SharedIndex,
+  bundlesById: Map<string, SharedBundle>,
+  modName: string,
+  requiredTargets: RequiredTarget[]
+) {
+  if (!sharedIndex.assetsByName) {
+    return sharedIndex.bundles;
+  }
+
+  const bundleIds = new Set<string>();
+
+  for (const target of requiredTargets) {
+    for (const entry of sharedIndex.assetsByName[target.assetName.toLowerCase()] ?? []) {
+      if (entry.type === target.type) {
+        bundleIds.add(entry.bundleId);
+      }
+    }
+  }
+
+  const lowerName = modName.toLowerCase();
+  for (const [assetName, entries] of Object.entries(sharedIndex.assetsByName)) {
+    if (!assetName.includes(lowerName)) {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (isSpineCandidateAsset(entry.assetName.toLowerCase(), entry.type)) {
+        bundleIds.add(entry.bundleId);
+      }
+    }
+  }
+
+  return [...bundleIds]
+    .map((bundleId) => bundlesById.get(bundleId))
+    .filter((bundle): bundle is SharedBundle => Boolean(bundle));
+}
 
 function getRequiredTargets(mod: ModEntry): RequiredTarget[] {
   const targets = [
@@ -221,6 +262,11 @@ function targetKey(target: Pick<PatchTarget, "assetName" | "type">) {
 
 function findAsset(assets: BundleAsset[], predicate: (asset: BundleAsset) => boolean) {
   return assets.find(predicate);
+}
+
+function isSpineCandidateAsset(assetName: string, type: string) {
+  return (type === "TextAsset" && (assetName.includes("skel") || assetName.includes("atlas"))) ||
+    type === "Texture2D";
 }
 
 function toTarget(asset: BundleAsset) {

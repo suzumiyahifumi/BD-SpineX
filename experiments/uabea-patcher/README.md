@@ -6,6 +6,27 @@ This is intentionally not wired into the manager. It reads the current `__data.p
 
 ## Usage
 
+Scan candidate Spine assets from a bundle:
+
+```bash
+dotnet run --project experiments/uabea-patcher -- \
+  --mode scan \
+  --input /path/to/__data
+```
+
+The scan output matches the UnityPy scanner shape used by the manager:
+
+```json
+{
+  "ok": true,
+  "assets": [
+    { "name": "char004102.atlas", "type": "TextAsset", "pathId": 123456 }
+  ]
+}
+```
+
+Patch a bundle:
+
 ```bash
 dotnet run --project experiments/uabea-patcher -- \
   --input /path/to/__data \

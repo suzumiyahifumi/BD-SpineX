@@ -15,19 +15,67 @@ if (parsedArgs.ShowHelp)
 var stopwatch = Stopwatch.StartNew();
 try
 {
-    var result = UabeaPatchPrototype.Patch(parsedArgs);
-    Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions.Pretty));
-    return result.Ok ? 0 : 1;
+    if (parsedArgs.Mode.Equals("scan", StringComparison.OrdinalIgnoreCase))
+    {
+        var result = UabeaPatchPrototype.Scan(parsedArgs);
+        Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions.Pretty));
+        return result.Ok ? 0 : 1;
+    }
+    else
+    {
+        var result = UabeaPatchPrototype.Patch(parsedArgs);
+        Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions.Pretty));
+        return result.Ok ? 0 : 1;
+    }
 }
 catch (Exception error)
 {
-    var result = new PatchResult(false, error.Message, stopwatch.ElapsedMilliseconds, []);
-    Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions.Pretty));
+    if (parsedArgs.Mode.Equals("scan", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new ScanResult(false, error.Message, stopwatch.ElapsedMilliseconds, []), JsonOptions.Pretty));
+    }
+    else
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new PatchResult(false, error.Message, stopwatch.ElapsedMilliseconds, []), JsonOptions.Pretty));
+    }
     return 1;
 }
 
 static class UabeaPatchPrototype
 {
+    private static readonly System.Text.RegularExpressions.Regex CandidatePattern = new(
+        @"(?:cutscene_char\d+|char\d+|illust_dating[\w\d_]*)",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    public static ScanResult Scan(CliArgs args)
+    {
+        var totalTimer = Stopwatch.StartNew();
+        var timings = new List<TimingEntry>();
+        var assets = new List<ScannedAsset>();
+        var skipped = 0;
+
+        var manager = new AssetsManager();
+        var loadTimer = Stopwatch.StartNew();
+        var bundleInstance = manager.LoadBundleFile(args.Input, true);
+        var assetsFileInstance = manager.LoadAssetsFileFromBundle(bundleInstance, 0, false);
+        var assetsFile = assetsFileInstance.file;
+        timings.Add(TimingEntry.From("load_bundle", loadTimer));
+
+        var scanTimer = Stopwatch.StartNew();
+        ScanTextAssets(manager, assetsFileInstance, assetsFile, assets, ref skipped);
+        ScanTextures(manager, assetsFileInstance, assetsFile, assets, ref skipped);
+        timings.Add(TimingEntry.From("scan_assets", scanTimer));
+
+        manager.UnloadAll();
+        assets.Sort((a, b) =>
+            string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase) is var nameCompare && nameCompare != 0
+                ? nameCompare
+                : string.Compare(a.Type, b.Type, StringComparison.OrdinalIgnoreCase));
+        timings.Add(TimingEntry.From("total", totalTimer));
+
+        return new ScanResult(true, null, totalTimer.ElapsedMilliseconds, assets, skipped, timings);
+    }
+
     public static PatchResult Patch(CliArgs args)
     {
         var totalTimer = Stopwatch.StartNew();
@@ -67,6 +115,65 @@ static class UabeaPatchPrototype
         timings.Add(TimingEntry.From("total", totalTimer));
 
         return new PatchResult(true, null, totalTimer.ElapsedMilliseconds, timings, changed);
+    }
+
+    private static void ScanTextAssets(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        List<ScannedAsset> assets,
+        ref int skipped)
+    {
+        foreach (var assetInfo in assetsFile.GetAssetsOfType(AssetClassID.TextAsset))
+        {
+            try
+            {
+                var baseField = manager.GetBaseField(assetsFileInstance, assetInfo);
+                var assetName = baseField["m_Name"].AsString;
+                if (!CandidatePattern.IsMatch(assetName))
+                {
+                    continue;
+                }
+
+                assets.Add(new ScannedAsset(assetName, "TextAsset", assetInfo.PathId));
+            }
+            catch
+            {
+                skipped += 1;
+            }
+        }
+    }
+
+    private static void ScanTextures(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        List<ScannedAsset> assets,
+        ref int skipped)
+    {
+        foreach (var assetInfo in assetsFile.GetAssetsOfType(AssetClassID.Texture2D))
+        {
+            try
+            {
+                var baseField = manager.GetBaseField(assetsFileInstance, assetInfo);
+                var assetName = baseField["m_Name"].AsString;
+                if (!CandidatePattern.IsMatch(assetName))
+                {
+                    continue;
+                }
+
+                assets.Add(new ScannedAsset(
+                    assetName,
+                    "Texture2D",
+                    assetInfo.PathId,
+                    baseField["m_Width"].AsInt,
+                    baseField["m_Height"].AsInt));
+            }
+            catch
+            {
+                skipped += 1;
+            }
+        }
     }
 
     private static List<PatchJob> ReadJobs(string manifestPath)
@@ -216,6 +323,21 @@ static class UabeaPatchPrototype
 
 sealed record PatchManifest(List<PatchJob> Jobs);
 
+sealed record ScannedAsset(
+    string Name,
+    string Type,
+    long PathId,
+    int? Width = null,
+    int? Height = null);
+
+sealed record ScanResult(
+    bool Ok,
+    string? Error,
+    long ElapsedMs,
+    List<ScannedAsset> Assets,
+    int Skipped = 0,
+    List<TimingEntry>? Timings = null);
+
 sealed record PatchJob(
     string ModName,
     List<string>? Atlases,
@@ -336,6 +458,7 @@ sealed record Replacement(string? ModName, string Path, string Action, string? A
 
 sealed class CliArgs
 {
+    public string Mode { get; private init; } = "patch";
     public string Input { get; private init; } = "";
     public string Output { get; private init; } = "";
     public string JobManifest { get; private init; } = "";
@@ -368,11 +491,22 @@ sealed class CliArgs
 
         var parsed = new CliArgs
         {
+            Mode = values.TryGetValue("mode", out var mode) ? mode : "patch",
             Input = Required(values, "input"),
-            Output = Required(values, "output"),
-            JobManifest = Required(values, "job-manifest"),
+            Output = values.TryGetValue("output", out var output) ? output : "",
+            JobManifest = values.TryGetValue("job-manifest", out var jobManifest) ? jobManifest : "",
             Compression = values.TryGetValue("compression", out var compression) ? compression : "lz4"
         };
+
+        if (parsed.Mode is not ("patch" or "scan"))
+        {
+            throw new ArgumentException("--mode must be patch or scan");
+        }
+
+        if (parsed.Mode == "patch" && (string.IsNullOrWhiteSpace(parsed.Output) || string.IsNullOrWhiteSpace(parsed.JobManifest)))
+        {
+            throw new ArgumentException("Patch mode requires --output and --job-manifest");
+        }
 
         if (parsed.Compression is not ("lz4" or "none"))
         {
@@ -384,6 +518,7 @@ sealed class CliArgs
 
     public static void PrintUsage()
     {
+        Console.WriteLine("UabeaPatchPrototype --mode scan --input __data");
         Console.WriteLine("UabeaPatchPrototype --input __data --output patched.__data --job-manifest __data.patch-jobs.json [--compression lz4|none]");
     }
 
