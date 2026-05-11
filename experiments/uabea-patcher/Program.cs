@@ -329,11 +329,14 @@ static class UabeaPatchPrototype
             return inserted;
         }
 
-        var existingTextureNames = new HashSet<string>(
-            assetsFile.GetAssetsOfType(AssetClassID.Texture2D)
-                .Select(assetInfo => manager.GetBaseField(assetsFileInstance, assetInfo)["m_Name"].AsString),
-            StringComparer.OrdinalIgnoreCase);
-        var templateInfo = assetsFile.GetAssetsOfType(AssetClassID.Texture2D).FirstOrDefault();
+        var existingTextures = assetsFile.GetAssetsOfType(AssetClassID.Texture2D)
+            .Select(assetInfo => new
+            {
+                Info = assetInfo,
+                Name = manager.GetBaseField(assetsFileInstance, assetInfo)["m_Name"].AsString
+            })
+            .ToDictionary(item => item.Name, item => item.Info, StringComparer.OrdinalIgnoreCase);
+        var templateInfo = existingTextures.Values.FirstOrDefault();
         if (templateInfo is null)
         {
             throw new InvalidOperationException("Cannot insert Texture2D because this __data has no Texture2D template asset.");
@@ -342,8 +345,10 @@ static class UabeaPatchPrototype
         var nextPathId = assetsFile.AssetInfos.Count == 0 ? 1 : assetsFile.AssetInfos.Max(asset => asset.PathId) + 1;
         foreach (var (assetName, replacement) in replacements)
         {
-            if (existingTextureNames.Contains(assetName))
+            if (existingTextures.TryGetValue(assetName, out var existingTexture))
             {
+                inserted.Add(new InsertedTexture(replacement.ModName, assetName, existingTexture.PathId, replacement.Path));
+                changed.Add(new ChangedAsset(replacement.ModName, "Texture2D", assetName, "reuse_texture", replacement.Path, null));
                 continue;
             }
 
@@ -362,7 +367,7 @@ static class UabeaPatchPrototype
 
             assetInfo.SetNewData(baseField);
             assetsFile.Metadata.AddAssetInfo(assetInfo);
-            existingTextureNames.Add(assetName);
+            existingTextures[assetName] = assetInfo;
             changed.Add(new ChangedAsset(replacement.ModName, "Texture2D", assetName, replacement.Action, replacement.Path, null));
             inserted.Add(new InsertedTexture(replacement.ModName, assetName, assetInfo.PathId, replacement.Path));
         }
@@ -409,6 +414,21 @@ static class UabeaPatchPrototype
             }
 
             var materialName = $"{rootName}_{texture.Name}";
+            var existingMaterialInfo = FindNamedAsset(manager, assetsFileInstance, assetsFile, AssetClassID.Material, materialName);
+            if (existingMaterialInfo is not null)
+            {
+                AddAtlasMaterialPointer(materialsArray, existingMaterialInfo.PathId);
+                atlasInfo.SetNewData(atlasField);
+                if (assetBundleField is not null)
+                {
+                    AddAssetBundleEntry(assetBundleField, rootName, $"{texture.Name}.png", texture.PathId);
+                    AddAssetBundleEntry(assetBundleField, rootName, $"{materialName}.mat", existingMaterialInfo.PathId);
+                    assetBundleInfo!.SetNewData(assetBundleField);
+                }
+                changed.Add(new ChangedAsset(texture.ModName, "Material", materialName, "reuse_material", texture.Source, null));
+                continue;
+            }
+
             var materialField = manager.GetBaseField(assetsFileInstance, templateMaterialInfo).Clone();
             materialField["m_Name"].AsString = materialName;
             SetFirstMaterialTexture(materialField, texture.PathId);
@@ -422,9 +442,7 @@ static class UabeaPatchPrototype
             materialInfo.SetNewData(materialField);
             assetsFile.Metadata.AddAssetInfo(materialInfo);
 
-            var materialPointer = materialsArray.Children[^1].Clone();
-            SetPPtr(materialPointer, 0, materialInfo.PathId);
-            materialsArray.Children.Add(materialPointer);
+            AddAtlasMaterialPointer(materialsArray, materialInfo.PathId);
             atlasInfo.SetNewData(atlasField);
 
             if (assetBundleField is not null)
@@ -436,6 +454,18 @@ static class UabeaPatchPrototype
 
             changed.Add(new ChangedAsset(texture.ModName, "Material", materialName, "insert_material", texture.Source, null));
         }
+    }
+
+    private static void AddAtlasMaterialPointer(AssetTypeValueField materialsArray, long materialPathId)
+    {
+        if (materialsArray.Children.Any(item => GetPPtrPathId(item) == materialPathId))
+        {
+            return;
+        }
+
+        var materialPointer = materialsArray.Children[^1].Clone();
+        SetPPtr(materialPointer, 0, materialPathId);
+        materialsArray.Children.Add(materialPointer);
     }
 
     private static AssetFileInfo? FindNamedAsset(
