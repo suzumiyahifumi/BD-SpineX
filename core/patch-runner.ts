@@ -420,16 +420,17 @@ export async function restoreModPatches(
 
 export async function restoreAllPatches(plans: PatchPlanEntry[]): Promise<ApplyPatchResult> {
   const history = await readPatchHistory();
-  const byBundle = new Map<string, PatchPlanEntry>();
+  const byBundle = new Map<string, PatchPlanEntry[]>();
   for (const plan of plans) {
-    if (plan.bundleId && plan.bundlePath && !byBundle.has(plan.bundleId)) {
-      byBundle.set(plan.bundleId, plan);
+    if (plan.bundleId && plan.bundlePath) {
+      byBundle.set(plan.bundleId, [...(byBundle.get(plan.bundleId) ?? []), plan]);
     }
   }
 
   const entries: PatchRunEntry[] = [];
-  for (const plan of byBundle.values()) {
-    const dataCheck = await checkPatchDataForBundle([plan]);
+  for (const bundlePlans of byBundle.values()) {
+    const firstPlan = bundlePlans[0];
+    const dataCheck = await checkPatchDataForBundle(bundlePlans);
     const invalidDataCheck = dataCheck.find((entry) => entry.status === "missing" || entry.status === "changed");
     if (invalidDataCheck) {
       entries.push(createChangedPatchRunEntry(invalidDataCheck));
@@ -437,13 +438,13 @@ export async function restoreAllPatches(plans: PatchPlanEntry[]): Promise<ApplyP
     }
 
     try {
-      await restoreOriginal(plan.bundlePath ?? "", plan.bundleId ?? "");
-      entries.push({ ...createPatchRunEntry(plan, "restored"), message: "Original backup A copied to game __data." });
+      await restoreOriginal(firstPlan.bundlePath ?? "", firstPlan.bundleId ?? "");
+      entries.push(...createRestoreAllEntriesForBundle(bundlePlans, history));
     } catch (error) {
-      entries.push({
+      entries.push(...bundlePlans.map((plan) => ({
         ...createPatchRunEntry(plan, "failed"),
         message: error instanceof Error ? error.message : String(error)
-      });
+      })));
     }
   }
 
@@ -740,6 +741,34 @@ function mergePatchHistory(history: PatchHistory, entries: PatchRunEntry[]): Pat
     updatedAt: new Date().toISOString(),
     entries: [...current.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   };
+}
+
+function createRestoreAllEntriesForBundle(plans: PatchPlanEntry[], history: PatchHistory): PatchRunEntry[] {
+  const firstPlan = plans[0];
+  const bundleId = firstPlan.bundleId ?? "";
+  const updatedAt = new Date().toISOString();
+  const message = "Original backup A copied to game __data.";
+  const entries = new Map<string, PatchRunEntry>();
+
+  for (const plan of plans) {
+    const entry = createPatchRunEntry(plan, "restored");
+    entries.set(entry.id, { ...entry, updatedAt, message });
+  }
+
+  for (const entry of history.entries) {
+    if (entry.bundleId !== bundleId || entries.has(entry.id)) {
+      continue;
+    }
+
+    entries.set(entry.id, {
+      ...entry,
+      status: "restored",
+      updatedAt,
+      message
+    });
+  }
+
+  return [...entries.values()];
 }
 
 async function checkPatchDataForBundle(plans: PatchPlanEntry[]): Promise<PatchDataCheckEntry[]> {

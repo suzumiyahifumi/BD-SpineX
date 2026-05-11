@@ -1244,27 +1244,42 @@ function getHistoryDisplayStatus(historyEntries?: PatchHistory["entries"]) {
     return undefined;
   }
 
-  if (historyEntries.some((entry) => entry.status === "changed")) {
+  const latestEntries = getLatestHistoryEntriesById(historyEntries);
+
+  if (latestEntries.some((entry) => entry.status === "changed")) {
     return "changed";
   }
 
-  if (historyEntries.some((entry) => entry.status === "failed")) {
+  if (latestEntries.some((entry) => entry.status === "failed")) {
     return "failed";
   }
 
-  if (historyEntries.some((entry) => entry.status === "patched")) {
+  if (latestEntries.some((entry) => entry.status === "patched")) {
     return "patched";
   }
 
-  if (historyEntries.every((entry) => entry.status === "restored")) {
+  if (latestEntries.every((entry) => entry.status === "restored")) {
     return "restored";
   }
 
-  if (historyEntries.some((entry) => entry.status === "skipped")) {
+  if (latestEntries.some((entry) => entry.status === "skipped")) {
     return "skipped";
   }
 
-  return historyEntries[0].status;
+  return latestEntries[0].status;
+}
+
+function getLatestHistoryEntriesById(historyEntries: PatchHistory["entries"]) {
+  const latestById = new Map<string, PatchHistory["entries"][number]>();
+  const sortedEntries = [...historyEntries].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  for (const entry of sortedEntries) {
+    if (!latestById.has(entry.id)) {
+      latestById.set(entry.id, entry);
+    }
+  }
+
+  return [...latestById.values()];
 }
 
 function formatPatchStatusLabel(status: string) {
