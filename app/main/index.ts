@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scanMods } from "../../core/mod-indexer.js";
 import { createPatchPlan } from "../../core/patch-plan.js";
-import { applyPatchStateChanges, applyReadyPatches, dryRunPatchStateChanges, readPatchHistory, restoreAllPatches } from "../../core/patch-runner.js";
+import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, readPatchHistory, restoreAllPatches } from "../../core/patch-runner.js";
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
 import type { ApplyPatchOptions, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
 
@@ -83,6 +83,14 @@ ipcMain.handle("patch:restore-all", async (_event, args: { plans: PatchPlanEntry
   notifyPatchFinished("Restore Complete", summarizePatchResult(result));
   return result;
 });
+ipcMain.handle("patch:copy-backups-for-mods", async (_event, args: { plans: PatchPlanEntry[]; modNames: string[]; source: "original" | "patched" }) => {
+  const result = await copyPatchBackupsForMods(args.plans, args.modNames, args.source);
+  notifyPatchFinished("Mod Power Complete", summarizePatchResult(result));
+  return result;
+});
+ipcMain.handle("patch:check-data-for-mods", async (_event, args: { plans: PatchPlanEntry[]; modNames: string[] }) =>
+  checkPatchDataForMods(args.plans, args.modNames)
+);
 ipcMain.handle("patch:history", async () => readPatchHistory());
 
 function summarizePatchResult(result: Awaited<ReturnType<typeof applyReadyPatches>>) {

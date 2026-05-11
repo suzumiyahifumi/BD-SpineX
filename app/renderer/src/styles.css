@@ -109,7 +109,24 @@ input[type="checkbox"] {
 
 .settingsActions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+}
+
+.advancedToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #445268;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .advancedSettingsGrid {
@@ -140,6 +157,7 @@ input[type="checkbox"] {
 
 .toolbar {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 10px;
   margin: 14px 0;
@@ -200,7 +218,7 @@ progress {
 }
 
 .scanGrid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   margin-bottom: 14px;
 }
 
@@ -214,20 +232,65 @@ progress {
   padding: 14px;
 }
 
-.sharedPanel {
+.modsPanel,
+.sharedPanel.expanded {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  max-height: 520px;
-  min-height: 360px;
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
 
+.modsPanel {
+  max-height: 520px;
+}
+
+.modsHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+.modsHeader .panelTitle {
+  margin-bottom: 4px;
+}
+
+.modFilterField {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.modFilterField span {
+  color: #445268;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.modFilterField input {
+  width: 100%;
+  min-width: 0;
+}
+
+.sharedPanel.expanded {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  max-height: 560px;
+}
+
+.sharedPanel.collapsed {
+  min-height: 0;
+}
+
+.modsPanel table,
 .sharedPanel table {
   display: block;
   min-height: 0;
   overflow: auto;
 }
 
+.modsPanel thead,
+.modsPanel tbody,
+.modsPanel tr,
 .sharedPanel thead,
 .sharedPanel tbody,
 .sharedPanel tr {
@@ -236,16 +299,103 @@ progress {
   table-layout: fixed;
 }
 
+.modsPanel tbody,
 .sharedPanel tbody {
   display: block;
-  max-height: 300px;
+  max-height: 360px;
   overflow: auto;
 }
 
+.modsPanel th,
 .sharedPanel th {
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+.modsPanel .patchColumn {
+  width: 42px;
+  padding-left: 6px;
+  padding-right: 6px;
+  text-align: center;
+}
+
+.modsPanel .patchCol {
+  width: 42px;
+}
+
+.modsPanel .folderCol {
+  width: 56%;
+}
+
+.modsPanel .nameCol {
+  width: 26%;
+}
+
+.modsPanel .categoryCol {
+  width: 7%;
+}
+
+.modsPanel .statusCol {
+  width: 7%;
+}
+
+.modsPanel .folderCell {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-height: 26px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.sortButton:hover,
+.sortButton.active {
+  color: #9f1d1d;
+}
+
+.categoryBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.categoryBadge.char {
+  background: #dbeafe;
+  color: #315b9c;
+}
+
+.categoryBadge.cutscene {
+  background: #ede9fe;
+  color: #6b5aa8;
+}
+
+.categoryBadge.dating {
+  background: #fce7f3;
+  color: #9b5b85;
+}
+
+.categoryBadge.other {
+  background: #e0f2fe;
+  color: #3f6f88;
 }
 
 .panelTitle {
@@ -257,7 +407,7 @@ progress {
 
 .tableHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
@@ -265,6 +415,14 @@ progress {
 
 .tableHeader .panelTitle {
   margin-bottom: 4px;
+}
+
+.tableHeaderActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .tableHint {
@@ -353,6 +511,14 @@ tr.pendingPatchChange td {
   background: #fff0f0;
 }
 
+tr.pendingPatchChange.pendingPatchAdd td {
+  background: #fff1d6;
+}
+
+tr.pendingPatchChange.pendingPatchRemove td {
+  background: #fde7e7;
+}
+
 .empty {
   color: #778397;
   text-align: center;
@@ -363,6 +529,46 @@ tr.pendingPatchChange td {
   display: grid;
   align-content: start;
   gap: 9px;
+}
+
+.modPowerPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid #dbe2ea;
+  border-radius: 6px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.modPowerPanel.enabled {
+  border-color: #badccc;
+  background: #f1fbf6;
+}
+
+.modPowerPanel.disabled {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+}
+
+.modPowerLabel {
+  color: #2d394c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.modPowerState {
+  margin-top: 2px;
+  color: #647287;
+  font-size: 12px;
+}
+
+.modPowerPanel.enabled .modPowerLabel {
+  color: #17633d;
+}
+
+.modPowerPanel.disabled .modPowerLabel {
+  color: #6d28d9;
 }
 
 .hint {
@@ -424,7 +630,10 @@ tr.pendingPatchChange td {
   color: #9f1d1d;
 }
 
-pre {
+.logStream {
+  display: grid;
+  align-content: start;
+  gap: 3px;
   min-height: 128px;
   max-height: 220px;
   margin: 0;
@@ -433,21 +642,71 @@ pre {
   font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.logLine {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  border-left: 2px solid transparent;
+  padding: 1px 0 1px 6px;
+}
+
+.logTime {
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.logMessage {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.logAccent {
+  border-radius: 4px;
+  padding: 0 3px;
+  font-weight: 800;
+}
+
+.logAccent.action {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.logAccent.module {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.logAccent.bundle {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.logAccent.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .badge.ready {
+  background: #e0f2fe;
+  color: #036580;
+}
+
+.badge.patched {
   background: #dfeee7;
   color: #17633d;
 }
 
-.badge.patched,
 .badge.restored {
-  background: #dfeee7;
-  color: #17633d;
+  background: #ede9fe;
+  color: #6d28d9;
 }
 
 .badge.missing_json,
 .badge.missing_png,
 .badge.conflict,
-.badge.skipped {
+.badge.skipped,
+.badge.changed {
   background: #fff1d6;
   color: #875300;
 }

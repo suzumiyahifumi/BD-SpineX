@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import type { ApplyPatchOptions, BundleAsset, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, SharedIndex, SharedScanProgress } from "../../../core/types";
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import type { ApplyPatchOptions, BundleAsset, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, SharedIndex, SharedScanBackend, SharedScanProgress } from "../../../core/types";
 
 type Settings = {
   settingsVersion: number;
@@ -7,6 +7,7 @@ type Settings = {
   modsDir: string;
   converterPath: string;
   pythonPath: string;
+  scanBackend: SharedScanBackend;
   patchBackend: PatchBackend;
   dotnetPath: string;
   unityVersion: string;
@@ -15,6 +16,44 @@ type Settings = {
 };
 
 type SharedAssetCategory = "all" | "char" | "cutscene_char" | "illust_dating" | "other";
+type ModCategory = "char" | "cutscene" | "dating" | "other";
+type ModSortKey = "folder" | "name" | "category" | "status";
+type SortDirection = "asc" | "desc";
+
+type ModSort = {
+  key: ModSortKey;
+  direction: SortDirection;
+};
+
+type PendingChangeTone = "added" | "removed";
+
+type PendingChangeRow = PatchStateChange & {
+  implicit?: boolean;
+};
+
+type LogAccentTone = "action" | "module" | "bundle" | "error";
+
+type LogAccent = {
+  text: string;
+  tone: LogAccentTone;
+};
+
+type LogEntry = {
+  id: string;
+  time: string;
+  message: string;
+  accents?: LogAccent[];
+};
+
+type LogInput = string | {
+  message: string;
+  accents?: LogAccent[];
+};
+
+type ModPowerState = {
+  enabled: boolean;
+  restoreModNames: string[];
+};
 
 const emptySettings: Settings = {
   settingsVersion: 2,
@@ -22,6 +61,7 @@ const emptySettings: Settings = {
   modsDir: "",
   converterPath: "",
   pythonPath: ".venv/bin/python",
+  scanBackend: "uabea",
   patchBackend: "uabea",
   dotnetPath: "manager-data/tools/dotnet/dotnet",
   unityVersion: "2021.3.33f1",
@@ -29,6 +69,8 @@ const emptySettings: Settings = {
   scanLimit: "10"
 };
 const settingsStorageKey = "bd2-spine-mod-manager:settings";
+const modPowerStorageKey = "bd2-spine-mod-manager:mod-power";
+const defaultModPowerState: ModPowerState = { enabled: true, restoreModNames: [] };
 
 export function App() {
   const [settings, setSettings] = useState<Settings>(emptySettings);
@@ -37,7 +79,7 @@ export function App() {
   const [plans, setPlans] = useState<PatchPlanEntry[]>([]);
   const [patchHistory, setPatchHistory] = useState<PatchHistory>({ updatedAt: "", entries: [] });
   const [desiredPatchStates, setDesiredPatchStates] = useState<Record<string, boolean>>({});
-  const [logs, setLogs] = useState<string[]>(["Ready."]);
+  const [logs, setLogs] = useState<LogEntry[]>(() => [createLogEntry("Ready.")]);
   const [busy, setBusy] = useState(false);
   const [sharedProgress, setSharedProgress] = useState<SharedScanProgress | null>(null);
   const [patchProgress, setPatchProgress] = useState<PatchProgress | null>(null);
@@ -46,6 +88,10 @@ export function App() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAdvancedTools, setShowAdvancedTools] = useState(false);
   const [sharedScanActive, setSharedScanActive] = useState(false);
+  const [showSharedCandidates, setShowSharedCandidates] = useState(false);
+  const [modPower, setModPower] = useState<ModPowerState>(() => loadModPowerState());
+  const [modFilter, setModFilter] = useState("");
+  const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
 
   const readyTargetCount = useMemo(() => plans.filter((plan) => plan.status === "ready").length, [plans]);
   const readyModCount = useMemo(() => countReadyMods(plans), [plans]);
@@ -53,6 +99,12 @@ export function App() {
   const patchHistoryByModName = useMemo(() => groupPatchHistoryByModName(patchHistory), [patchHistory]);
   const actualPatchStates = useMemo(() => getActualPatchStates(modsIndex, patchHistory), [modsIndex, patchHistory]);
   const patchStateChanges = useMemo(() => getPatchStateChanges(modsIndex, actualPatchStates, desiredPatchStates), [modsIndex, actualPatchStates, desiredPatchStates]);
+  const pendingChangeRows = useMemo(() => getPendingChangeRows(patchStateChanges, actualPatchStates, plansByModName), [patchStateChanges, actualPatchStates, plansByModName]);
+  const effectivePatchStateChanges = useMemo(() => pendingChangeRows.map(({ modName, enabled }) => ({ modName, enabled })), [pendingChangeRows]);
+  const pendingChangeTones = useMemo(() => getPendingChangeTones(pendingChangeRows, plansByModName), [pendingChangeRows, plansByModName]);
+  const activeModNames = useMemo(() => Object.entries(actualPatchStates).filter(([, enabled]) => enabled).map(([modName]) => modName), [actualPatchStates]);
+  const restorablePowerModNames = useMemo(() => modPower.restoreModNames.filter((modName) => modsIndex.mods.some((mod) => mod.modName === modName)), [modPower.restoreModNames, modsIndex.mods]);
+  const visibleMods = useMemo(() => filterAndSortMods(modsIndex.mods, modFilter, modSort, plansByModName, patchHistoryByModName), [modsIndex.mods, modFilter, modSort, plansByModName, patchHistoryByModName]);
   const modTargetNames = useMemo(() => getModTargetNames(modsIndex), [modsIndex]);
   const sharedAssets = useMemo(() => {
     return sharedIndex.bundles.flatMap((bundle) =>
@@ -125,12 +177,16 @@ export function App() {
     window.localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
   }, [settings, settingsLoaded]);
 
+  useEffect(() => {
+    window.localStorage.setItem(modPowerStorageKey, JSON.stringify(modPower));
+  }, [modPower]);
+
   function updateSetting<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
-  function log(message: string) {
-    setLogs((current) => [`${new Date().toLocaleTimeString()} ${message}`, ...current].slice(0, 200));
+  function log(input: LogInput) {
+    pushLog(setLogs, input);
   }
 
   async function selectDirectory(key: "sharedDir" | "modsDir") {
@@ -149,6 +205,73 @@ export function App() {
       log(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function toggleModPower() {
+    if (modPower.enabled) {
+      await turnOffAllMods();
+    } else {
+      await turnOnSavedMods();
+    }
+  }
+
+  async function turnOffAllMods() {
+    const restoreModNames = activeModNames;
+
+    if (restoreModNames.length > 0) {
+      const result = await window.bd2.copyPatchBackupsForMods(plans, restoreModNames, "original");
+      setPatchHistory(result.history);
+      setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
+      const restored = result.entries.filter((entry) => entry.status === "restored").length;
+      const failed = result.entries.filter((entry) => entry.status === "failed").length;
+      log(`Mod power off: copied backup A for ${restored} mod(s), ${failed} failed. Saved ${restoreModNames.length} enabled mod(s) for quick restore.`);
+      if (!result.ok) {
+        return;
+      }
+    } else {
+      setDesiredPatchStates({});
+      log("Mod power off: no active mod was found. Mod controls are now locked.");
+    }
+
+    setModPower({ enabled: false, restoreModNames });
+  }
+
+  async function turnOnSavedMods() {
+    const restoreSet = new Set(restorablePowerModNames);
+    const modNames = modsIndex.mods
+      .filter((mod) => restoreSet.has(mod.modName) && !actualPatchStates[mod.modName])
+      .map((mod) => mod.modName);
+
+    if (modNames.length > 0) {
+      const result = await window.bd2.copyPatchBackupsForMods(plans, modNames, "patched");
+      setPatchHistory(result.history);
+      setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
+      const patched = result.entries.filter((entry) => entry.status === "patched").length;
+      const failed = result.entries.filter((entry) => entry.status === "failed").length;
+      log(`Mod power on: copied backup B for ${patched} mod(s), ${failed} failed. Restored saved mod state.`);
+      if (!result.ok) {
+        return;
+      }
+    } else {
+      setDesiredPatchStates({});
+      log("Mod power on: no saved mod needed patching.");
+    }
+
+    setModPower({ enabled: true, restoreModNames: [] });
+  }
+
+  async function checkActivePatchData() {
+    const result = await window.bd2.checkPatchDataForMods(plans, activeModNames);
+    const ok = result.entries.filter((entry) => entry.status === "ok").length;
+    const noBackup = result.entries.filter((entry) => entry.status === "no_backup").length;
+    const changed = result.entries.filter((entry) => entry.status === "changed").length;
+    const missing = result.entries.filter((entry) => entry.status === "missing").length;
+    const bundleCount = new Set(result.entries.map((entry) => entry.bundleId).filter(Boolean)).size;
+
+    log(`Active __data check: ${ok} ok, ${noBackup} no backup yet, ${changed} changed, ${missing} missing across ${bundleCount} __data bundle(s).`);
+    for (const entry of result.entries.filter((item) => item.status === "changed" || item.status === "missing").slice(0, 8)) {
+      log(`${entry.modName} ${entry.bundleId}: ${entry.message}`);
     }
   }
 
@@ -206,6 +329,8 @@ export function App() {
     }
     const index = await window.bd2.scanShared(activeSettings.sharedDir, {
       pythonPath: activeSettings.pythonPath,
+      scanBackend: activeSettings.scanBackend,
+      dotnetPath: activeSettings.dotnetPath,
       unityVersion: activeSettings.unityVersion,
       decryptKey: activeSettings.decryptKey,
       scanLimit: parseScanLimit(activeSettings.scanLimit),
@@ -224,6 +349,13 @@ export function App() {
     setDesiredPatchStates((current) => ({
       ...current,
       [modName]: enabled
+    }));
+  }
+
+  function updateModSort(key: ModSortKey) {
+    setModSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc"
     }));
   }
 
@@ -252,36 +384,30 @@ export function App() {
           onChange={(value) => updateSetting("modsDir", value)}
           onBrowse={() => selectDirectory("modsDir")}
         />
-        <SelectField
-          label="Patch Backend"
-          value={settings.patchBackend}
-          onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
-          options={[
-            { value: "unitypy", label: "UnityPy" },
-            { value: "uabea", label: "UABEA / AssetsTools.NET" }
-          ]}
-        />
         <div className="settingsActions">
-          <button type="button" onClick={() => setShowAdvancedSettings((current) => !current)}>
-            {showAdvancedSettings ? "Hide Advanced Settings" : "Advanced Settings"}
+          <button className="advancedToggle" type="button" onClick={() => setShowAdvancedSettings((current) => !current)}>
+            {showAdvancedSettings ? "+ Hide Advanced Settings" : "+ Advanced Settings"}
           </button>
         </div>
         {showAdvancedSettings && (
           <div className="advancedSettingsGrid">
-            <PathField
-              label="SpineSkeletonDataConverter Override"
-              value={settings.converterPath}
-              onChange={(value) => updateSetting("converterPath", value)}
+            <SelectField
+              label="Patch Backend"
+              value={settings.patchBackend}
+              onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
+              options={[
+                { value: "unitypy", label: "UnityPy" },
+                { value: "uabea", label: "UABEA / AssetsTools.NET" }
+              ]}
             />
-            <PathField
-              label="Python"
-              value={settings.pythonPath}
-              onChange={(value) => updateSetting("pythonPath", value)}
-            />
-            <PathField
-              label="Dotnet for UABEA Patch"
-              value={settings.dotnetPath}
-              onChange={(value) => updateSetting("dotnetPath", value)}
+            <SelectField
+              label="Shared Scan Backend"
+              value={settings.scanBackend}
+              onChange={(value) => updateSetting("scanBackend", value as SharedScanBackend)}
+              options={[
+                { value: "uabea", label: "UABEA / AssetsTools.NET" },
+                { value: "unitypy", label: "UnityPy" }
+              ]}
             />
             <PathField
               label="Unity Fallback Version"
@@ -315,8 +441,8 @@ export function App() {
         }}>
           Stop Scan
         </button>
-        <button type="button" onClick={() => setShowAdvancedTools((current) => !current)}>
-          {showAdvancedTools ? "Hide Advanced Tools" : "Advanced Tools"}
+        <button className="advancedToggle" type="button" onClick={() => setShowAdvancedTools((current) => !current)}>
+          {showAdvancedTools ? "+ Hide Advanced Tools" : "+ Advanced Tools"}
         </button>
         {showAdvancedTools && (
           <div className="advancedToolbar">
@@ -332,6 +458,8 @@ export function App() {
               setSharedProgress({ phase: "discovering", current: 0, total: 0 });
               const index = await window.bd2.scanShared(settings.sharedDir, {
                 pythonPath: settings.pythonPath,
+                scanBackend: settings.scanBackend,
+                dotnetPath: settings.dotnetPath,
                 unityVersion: settings.unityVersion,
                 decryptKey: settings.decryptKey,
                 forceRescan: true
@@ -387,106 +515,148 @@ export function App() {
       )}
 
       <section className="scanGrid">
-        <div className="panel tablePanel">
-          <div className="panelTitle">Mods</div>
+        <div className="panel tablePanel modsPanel">
+          <div className="modsHeader">
+            <div>
+              <div className="panelTitle">Mods</div>
+              <div className="tableHint">{visibleMods.length} shown / {modsIndex.mods.length} scanned</div>
+            </div>
+            <label className="modFilterField">
+              <span>Filter</span>
+              <input
+                value={modFilter}
+                onChange={(event) => setModFilter(event.target.value)}
+                placeholder="Search folder, name, category, status"
+              />
+            </label>
+          </div>
           <table>
+            <colgroup>
+              <col className="patchCol" />
+              <col className="folderCol" />
+              <col className="nameCol" />
+              <col className="categoryCol" />
+              <col className="statusCol" />
+            </colgroup>
             <thead>
               <tr>
-                <th>Patch</th>
-                <th>Folder</th>
-                <th>Name</th>
-                <th>Skeleton</th>
-                <th>Atlas</th>
-                <th>PNG</th>
-                <th>Status</th>
+                <th className="patchColumn"></th>
+                <th>{renderModSortButton("Folder", "folder", modSort, updateModSort)}</th>
+                <th>{renderModSortButton("Name", "name", modSort, updateModSort)}</th>
+                <th>{renderModSortButton("Category", "category", modSort, updateModSort)}</th>
+                <th>{renderModSortButton("Status", "status", modSort, updateModSort)}</th>
               </tr>
             </thead>
             <tbody>
               {modsIndex.mods.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="empty">Scan Mods to inspect detected file names.</td>
+                  <td colSpan={5} className="empty">Scan Mods to inspect detected file names.</td>
                 </tr>
-              ) : modsIndex.mods.map((mod) => (
-                <tr key={mod.dir} className={isPatchStateDirty(mod.modName, actualPatchStates, desiredPatchStates) ? "pendingPatchChange" : ""}>
+              ) : visibleMods.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="empty">No mods match this filter.</td>
+                </tr>
+              ) : visibleMods.map((mod) => {
+                const pendingTone = pendingChangeTones[mod.modName];
+                return (
+                  <tr key={mod.dir} className={pendingTone ? `pendingPatchChange ${formatPendingChangeToneClass(pendingTone)}` : ""}>
+                    <td className="patchColumn">
+                      <input
+                        aria-label={`Patch ${mod.modName}`}
+                        checked={getDesiredPatchState(mod.modName, actualPatchStates, desiredPatchStates)}
+                        disabled={!modPower.enabled || (mod.status !== "ready" && !actualPatchStates[mod.modName])}
+                        type="checkbox"
+                        onChange={(event) => updateDesiredPatchState(mod.modName, event.target.checked)}
+                      />
+                    </td>
+                    <td className="folderCell" title={mod.dir}>{mod.modName}</td>
+                    <td title={mod.name}>{mod.name}</td>
                   <td>
-                    <input
-                      aria-label={`Patch ${mod.modName}`}
-                      checked={getDesiredPatchState(mod.modName, actualPatchStates, desiredPatchStates)}
-                      disabled={mod.status !== "ready" && !actualPatchStates[mod.modName]}
-                      type="checkbox"
-                      onChange={(event) => updateDesiredPatchState(mod.modName, event.target.checked)}
-                    />
+                    <span className={`categoryBadge ${classifyMod(mod)}`}>{formatModCategory(classifyMod(mod))}</span>
                   </td>
-                  <td title={mod.dir}>{mod.modName}</td>
-                  <td>{mod.name}</td>
-                  <td title={formatSkeletonFilesTitle(mod)}>{formatSkeletonFilesCell(mod)}</td>
-                  <td title={formatModFilesTitle(mod.files?.atlas, mod.atlasPath)}>{formatModFilesCell(mod.files?.atlas, mod.atlasFile)}</td>
-                  <td title={formatModFilesTitle(mod.files?.png, mod.pngPath)}>{formatModFilesCell(mod.files?.png, mod.pngFile)}</td>
-                  <td title={formatModPatchStatusTitle(plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName))}>
-                    <span className={`badge ${getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName))}`}>
-                      {getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName))}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    <td title={formatModPatchStatusTitle(plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName))}>
+                      <span className={`badge ${getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName))}`}>
+                        {formatPatchStatusLabel(getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName)))}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
-        <div className="panel tablePanel sharedPanel">
+        <div className={`panel tablePanel sharedPanel ${showSharedCandidates ? "expanded" : "collapsed"}`}>
           <div className="tableHeader">
             <div>
               <div className="panelTitle">Shared Candidates</div>
               <div className="tableHint">{filteredSharedAssets.length} shown / {relatedSharedAssets.length} related / {sharedAssets.length} indexed</div>
             </div>
-            <div className="segmentedControl" aria-label="Shared asset category">
-              {sharedAssetGroups.map((group) => (
-                <button
-                  key={group.category}
-                  className={sharedAssetCategory === group.category ? "active" : ""}
-                  type="button"
-                  onClick={() => setSharedAssetCategory(group.category)}
-                >
-                  {group.label} <span>{group.count}</span>
-                </button>
-              ))}
+            <div className="tableHeaderActions">
+              {showSharedCandidates && (
+                <div className="segmentedControl" aria-label="Shared asset category">
+                  {sharedAssetGroups.map((group) => (
+                    <button
+                      key={group.category}
+                      className={sharedAssetCategory === group.category ? "active" : ""}
+                      type="button"
+                      onClick={() => setSharedAssetCategory(group.category)}
+                    >
+                      {group.label} <span>{group.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                className="advancedToggle"
+                aria-expanded={showSharedCandidates}
+                type="button"
+                onClick={() => setShowSharedCandidates((current) => !current)}
+              >
+                {showSharedCandidates ? "+ Collapse" : "+ Expand"}
+              </button>
             </div>
           </div>
-          <div className="assetSummaryGrid">
-            {sharedAssetGroups.filter((group) => group.category !== "all").map((group) => (
-              <div className="assetSummaryItem" key={group.category}>
-                <div className="assetSummaryLabel">{group.label}</div>
-                <div className="assetSummaryCount">{group.count}</div>
-                <div className="assetSummaryMeta">{group.uniqueBaseCount} base name(s)</div>
+
+          {showSharedCandidates && (
+            <>
+              <div className="assetSummaryGrid">
+                {sharedAssetGroups.filter((group) => group.category !== "all").map((group) => (
+                  <div className="assetSummaryItem" key={group.category}>
+                    <div className="assetSummaryLabel">{group.label}</div>
+                    <div className="assetSummaryCount">{group.count}</div>
+                    <div className="assetSummaryMeta">{group.uniqueBaseCount} base name(s)</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Asset</th>
-                <th>Category</th>
-                <th>Type</th>
-                <th>Bundle</th>
-                <th>Size</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSharedAssets.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="empty">Scan Mods and Shared to list matching candidate assets.</td>
-                </tr>
-              ) : filteredSharedAssets.map((asset) => (
-                <tr key={`${asset.bundleId}:${asset.pathId}`}>
-                  <td title={asset.name}>{asset.name}</td>
-                  <td>{formatSharedAssetCategory(asset.category)}</td>
-                  <td>{asset.type}</td>
-                  <td title={asset.dataPath}>{asset.bundleId}</td>
-                  <td>{formatAssetSize(asset)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Asset</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Bundle</th>
+                    <th>Size</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSharedAssets.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="empty">Scan Mods and Shared to list matching candidate assets.</td>
+                    </tr>
+                  ) : filteredSharedAssets.map((asset) => (
+                    <tr key={`${asset.bundleId}:${asset.pathId}`}>
+                      <td title={asset.name}>{asset.name}</td>
+                      <td>{formatSharedAssetCategory(asset.category)}</td>
+                      <td>{asset.type}</td>
+                      <td title={asset.dataPath}>{asset.bundleId}</td>
+                      <td>{formatAssetSize(asset)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </div>
       </section>
 
@@ -533,13 +703,13 @@ export function App() {
               </tr>
             </thead>
             <tbody>
-              {patchStateChanges.length === 0 ? (
+              {pendingChangeRows.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="empty">Change a module checkbox to stage patch changes.</td>
                 </tr>
-              ) : patchStateChanges.map((change) => (
-                <tr key={change.modName} className="pendingPatchChange">
-                  <td>{change.modName}</td>
+              ) : pendingChangeRows.map((change) => (
+                <tr key={change.modName} className={`pendingPatchChange ${formatPendingChangeToneClass(pendingChangeTones[change.modName])}`}>
+                  <td>{change.modName}{change.implicit ? " (auto)" : ""}</td>
                   <td>{formatPatchBoolean(actualPatchStates[change.modName])}</td>
                   <td>{formatPatchBoolean(change.enabled)}</td>
                 </tr>
@@ -550,23 +720,31 @@ export function App() {
 
         <aside className="panel sidePanel">
           <div className="panelTitle">Actions</div>
-          <button disabled={busy || !patchStateChanges.length || !plans.length} onClick={() => runTask(async () => {
-            const result = await window.bd2.dryRunPatchStateChanges(plans, modsIndex, patchStateChanges, {
-              ...createApplyPatchOptions(settings)
-            });
-            const converted = result.entries.filter((entry) => entry.status === "ready").length;
-            const failed = result.entries.filter((entry) => entry.status === "failed").length;
-            const restoreOnly = patchStateChanges.filter((change) => !change.enabled).length;
-            log(`Dry run finished: ${converted} mod(s) prepared skeleton files, ${restoreOnly} restore-only change(s), ${failed} failed.`);
-            for (const entry of result.entries.filter((item) => item.status === "failed").slice(0, 8)) {
-              log(`${entry.modName}: ${entry.message ?? "dry run failed"}`);
-            }
-          })}>
-            Dry Run
+          <div className={`modPowerPanel ${modPower.enabled ? "enabled" : "disabled"}`}>
+            <div>
+              <div className="modPowerLabel">Mod Power</div>
+              <div className="modPowerState">
+                {modPower.enabled
+                  ? `${activeModNames.length} active mod(s)`
+                  : `${restorablePowerModNames.length} saved mod(s)`}
+              </div>
+            </div>
+            <button
+              disabled={busy || (modPower.enabled && activeModNames.length > 0 && !plans.length) || (!modPower.enabled && restorablePowerModNames.length > 0 && !plans.length)}
+              onClick={() => runTask(toggleModPower)}
+              type="button"
+            >
+              {modPower.enabled ? "Turn Off All" : "Restore Saved"}
+            </button>
+          </div>
+          {!modPower.enabled && (
+            <p className="hint">Mod power is off. Module controls are locked until saved mods are restored.</p>
+          )}
+          <button disabled={busy || !modPower.enabled || !activeModNames.length || !plans.length} onClick={() => runTask(checkActivePatchData)}>
+            Check Active __data
           </button>
-          <button disabled>Apply Selected Mod</button>
-          <button disabled={busy || !patchStateChanges.length || !plans.length} onClick={() => runTask(async () => {
-            const result = await window.bd2.applyPatchStateChanges(plans, modsIndex, patchStateChanges, {
+          <button disabled={busy || !modPower.enabled || !effectivePatchStateChanges.length || !plans.length} onClick={() => runTask(async () => {
+            const result = await window.bd2.applyPatchStateChanges(plans, modsIndex, effectivePatchStateChanges, {
               ...createApplyPatchOptions(settings)
             });
             setPatchHistory(result.history);
@@ -575,22 +753,23 @@ export function App() {
             const restored = result.entries.filter((entry) => entry.status === "restored").length;
             const failed = result.entries.filter((entry) => entry.status === "failed").length;
             const skipped = result.entries.filter((entry) => entry.status === "skipped").length;
-            log(`Apply changes finished: ${patched} patched, ${restored} restored, ${failed} failed, ${skipped} skipped.`);
-            for (const entry of result.entries.filter((item) => item.status === "failed" || item.status === "skipped").slice(0, 8)) {
+            const changed = result.entries.filter((entry) => entry.status === "changed").length;
+            log(`Apply changes finished: ${patched} patched, ${restored} restored, ${failed} failed, ${skipped} skipped, ${changed} changed.`);
+            for (const entry of result.entries.filter((item) => item.status === "failed" || item.status === "skipped" || item.status === "changed").slice(0, 8)) {
               log(`${entry.modName} ${entry.bundleId}: ${entry.message ?? entry.status}`);
             }
           })}>
             Apply Changes
           </button>
-          <button disabled>Restore Selected</button>
-          <button disabled={busy || !plans.some((plan) => plan.bundleId)} onClick={() => runTask(async () => {
+          <button disabled={busy || !modPower.enabled || !plans.some((plan) => plan.bundleId)} onClick={() => runTask(async () => {
             const result = await window.bd2.restoreAllPatches(plans);
             setPatchHistory(result.history);
             setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
             const restored = result.entries.filter((entry) => entry.status === "restored").length;
             const failed = result.entries.filter((entry) => entry.status === "failed").length;
-            log(`Restore all finished: ${restored} restored, ${failed} failed.`);
-            for (const entry of result.entries.filter((item) => item.status === "failed").slice(0, 8)) {
+            const changed = result.entries.filter((entry) => entry.status === "changed").length;
+            log(`Restore all finished: ${restored} restored, ${failed} failed, ${changed} changed.`);
+            for (const entry of result.entries.filter((item) => item.status === "failed" || item.status === "changed").slice(0, 8)) {
               log(`${entry.bundleId}: ${entry.message ?? "restore failed"}`);
             }
           })}>
@@ -620,7 +799,7 @@ export function App() {
               <tr key={entry.id}>
                 <td title={entry.message}>{entry.modName}</td>
                 <td title={entry.bundlePath}>{entry.bundleId}</td>
-                <td><span className={`badge ${entry.status}`}>{entry.status}</span></td>
+                <td><span className={`badge ${entry.status}`}>{formatPatchStatusLabel(entry.status)}</span></td>
                 <td>{formatDateTime(entry.updatedAt)}</td>
               </tr>
             ))}
@@ -630,7 +809,14 @@ export function App() {
 
       <section className="panel logPanel">
         <div className="panelTitle">Log</div>
-        <pre>{logs.join("\n")}</pre>
+        <div className="logStream" role="log" aria-live="polite">
+          {logs.map((entry) => (
+            <div key={entry.id} className="logLine">
+              <span className="logTime">{entry.time}</span>
+              <span className="logMessage">{renderLogMessage(entry)}</span>
+            </div>
+          ))}
+        </div>
       </section>
     </main>
   );
@@ -648,6 +834,71 @@ function groupSharedErrors(errors: SharedIndex["bundles"]) {
     .map(([message, count]) => ({ message, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 6);
+}
+
+function renderModSortButton(label: string, key: ModSortKey, sort: ModSort, onSort: (key: ModSortKey) => void) {
+  const active = sort.key === key;
+  const direction = active ? sort.direction : undefined;
+  return (
+    <button
+      className={`sortButton ${active ? "active" : ""}`}
+      type="button"
+      onClick={() => onSort(key)}
+    >
+      <span>{label}</span>
+      <span aria-hidden="true">{direction === "asc" ? "▲" : direction === "desc" ? "▼" : "↕"}</span>
+    </button>
+  );
+}
+
+function filterAndSortMods(
+  mods: ModsIndex["mods"],
+  filter: string,
+  sort: ModSort,
+  plansByModName: Map<string, PatchPlanEntry>,
+  patchHistoryByModName: Map<string, PatchHistory["entries"]>
+) {
+  const normalizedFilter = filter.trim().toLowerCase();
+  const filtered = normalizedFilter
+    ? mods.filter((mod) => getModSearchText(mod, plansByModName, patchHistoryByModName).includes(normalizedFilter))
+    : mods;
+
+  return [...filtered].sort((a, b) => {
+    const valueA = getModSortValue(a, sort.key, plansByModName, patchHistoryByModName);
+    const valueB = getModSortValue(b, sort.key, plansByModName, patchHistoryByModName);
+    const comparison = valueA.localeCompare(valueB, undefined, { numeric: true, sensitivity: "base" });
+    return sort.direction === "asc" ? comparison : -comparison;
+  });
+}
+
+function getModSearchText(mod: ModsIndex["mods"][number], plansByModName: Map<string, PatchPlanEntry>, patchHistoryByModName: Map<string, PatchHistory["entries"]>) {
+  return [
+    mod.modName,
+    mod.name,
+    formatModCategory(classifyMod(mod)),
+    getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName))
+  ].join(" ").toLowerCase();
+}
+
+function getModSortValue(
+  mod: ModsIndex["mods"][number],
+  key: ModSortKey,
+  plansByModName: Map<string, PatchPlanEntry>,
+  patchHistoryByModName: Map<string, PatchHistory["entries"]>
+) {
+  if (key === "name") {
+    return mod.name;
+  }
+
+  if (key === "category") {
+    return formatModCategory(classifyMod(mod));
+  }
+
+  if (key === "status") {
+    return getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName));
+  }
+
+  return mod.modName;
 }
 
 function countReadyMods(plans: PatchPlanEntry[]) {
@@ -674,13 +925,21 @@ async function loadSavedSettings(): Promise<Settings> {
       return fallback;
     }
 
-    return {
+    return normalizeManagedToolSettings({
       ...fallback,
       ...migrateStoredSettings(JSON.parse(stored))
-    };
+    }, fallback);
   } catch {
     return fallback;
   }
+}
+
+function normalizeManagedToolSettings(settings: Settings, fallback: Settings): Settings {
+  return {
+    ...settings,
+    pythonPath: fallback.pythonPath,
+    dotnetPath: fallback.dotnetPath
+  };
 }
 
 function migrateStoredSettings(stored: Partial<Settings>): Partial<Settings> {
@@ -693,6 +952,25 @@ function migrateStoredSettings(stored: Partial<Settings>): Partial<Settings> {
     settingsVersion: emptySettings.settingsVersion,
     patchBackend: "uabea"
   };
+}
+
+function loadModPowerState(): ModPowerState {
+  try {
+    const stored = window.localStorage.getItem(modPowerStorageKey);
+    if (!stored) {
+      return defaultModPowerState;
+    }
+
+    const parsed = JSON.parse(stored) as Partial<ModPowerState>;
+    return {
+      enabled: parsed.enabled ?? true,
+      restoreModNames: Array.isArray(parsed.restoreModNames)
+        ? parsed.restoreModNames.filter((name): name is string => typeof name === "string")
+        : []
+    };
+  } catch {
+    return defaultModPowerState;
+  }
 }
 
 function createApplyPatchOptions(settings: Settings): ApplyPatchOptions {
@@ -775,6 +1053,114 @@ function getPatchStateChanges(modsIndex: ModsIndex, actualStates: Record<string,
     }));
 }
 
+function getPendingChangeRows(changes: PatchStateChange[], actualStates: Record<string, boolean>, plansByModName: Map<string, PatchPlanEntry>): PendingChangeRow[] {
+  const rows: PendingChangeRow[] = [...changes];
+  const rowModNames = new Set(rows.map((change) => change.modName));
+  const addedTargetKeys = new Set(
+    changes
+      .filter((change) => change.enabled)
+      .flatMap((change) => {
+        const plan = plansByModName.get(change.modName);
+        return plan ? getPlanAssetKeys(plan) : [];
+      })
+  );
+
+  if (!addedTargetKeys.size) {
+    return rows;
+  }
+
+  for (const [modName, enabled] of Object.entries(actualStates)) {
+    if (!enabled || rowModNames.has(modName)) {
+      continue;
+    }
+
+    const plan = plansByModName.get(modName);
+    if (!plan) {
+      continue;
+    }
+
+    if (getPlanAssetKeys(plan).some((key) => addedTargetKeys.has(key))) {
+      rows.push({ modName, enabled: false, implicit: true });
+      rowModNames.add(modName);
+    }
+  }
+
+  return rows;
+}
+
+function getPendingChangeTones(changes: PendingChangeRow[], plansByModName: Map<string, PatchPlanEntry>): Record<string, PendingChangeTone> {
+  const addChanges = changes.filter((change) => change.enabled);
+  const removeChanges = changes.filter((change) => !change.enabled);
+  const tones: Record<string, PendingChangeTone> = {};
+
+  for (const addChange of addChanges) {
+    tones[addChange.modName] = "added";
+  }
+
+  for (const removeChange of removeChanges) {
+    tones[removeChange.modName] = "removed";
+  }
+
+  for (const addChange of addChanges) {
+    const addPlan = plansByModName.get(addChange.modName);
+    if (!addPlan) {
+      continue;
+    }
+
+    const addKeys = new Set(getPlanAssetKeys(addPlan));
+    for (const removeChange of removeChanges) {
+      const removePlan = plansByModName.get(removeChange.modName);
+      if (!removePlan) {
+        continue;
+      }
+
+      if (getPlanAssetKeys(removePlan).some((key) => addKeys.has(key))) {
+        tones[addChange.modName] = "added";
+        tones[removeChange.modName] = "removed";
+      }
+    }
+  }
+
+  return tones;
+}
+
+function getPlanAssetKeys(plan: PatchPlanEntry) {
+  const bundleId = plan.bundleId ?? "";
+  return getPlanAssetNames(plan).map((assetName) => `${bundleId}:${assetName.toLowerCase()}`);
+}
+
+function getPlanAssetNames(plan: PatchPlanEntry) {
+  const assetNames = new Set<string>();
+  const rawTargets: Array<{ assetName: string } | undefined> = [
+    plan.targets.atlas,
+    plan.targets.skel,
+    plan.targets.texture,
+    ...(plan.targets.atlases ?? []),
+    ...(plan.targets.skels ?? []),
+    ...(plan.targets.textures ?? [])
+  ];
+
+  for (const target of rawTargets) {
+    if (target) {
+      assetNames.add(target.assetName);
+    }
+  }
+
+  return [...assetNames].filter(Boolean);
+}
+
+function formatPendingChangeToneClass(tone?: PendingChangeTone) {
+  if (tone === "added") {
+    return "pendingPatchAdd";
+  }
+
+  if (tone === "removed") {
+    return "pendingPatchRemove";
+  }
+
+  return "";
+}
+
 function formatModFilesCell(files: Array<{ file: string }> | undefined, fallback?: string) {
   if (!files?.length) {
     return fallback ?? "-";
@@ -830,7 +1216,12 @@ function formatMissingTargets(plan: PatchPlanEntry) {
 }
 
 function getModDisplayStatus(fileStatus: string, plan?: PatchPlanEntry, historyEntries?: PatchHistory["entries"]) {
-  return plan?.status ?? getHistoryDisplayStatus(historyEntries) ?? fileStatus;
+  const historyStatus = getHistoryDisplayStatus(historyEntries);
+  if (historyStatus === "changed" || historyStatus === "failed" || historyStatus === "patched") {
+    return historyStatus;
+  }
+
+  return plan?.status ?? historyStatus ?? fileStatus;
 }
 
 function formatModPatchStatusTitle(plan?: PatchPlanEntry, historyEntries?: PatchHistory["entries"]) {
@@ -853,6 +1244,10 @@ function getHistoryDisplayStatus(historyEntries?: PatchHistory["entries"]) {
     return undefined;
   }
 
+  if (historyEntries.some((entry) => entry.status === "changed")) {
+    return "changed";
+  }
+
   if (historyEntries.some((entry) => entry.status === "failed")) {
     return "failed";
   }
@@ -870,6 +1265,45 @@ function getHistoryDisplayStatus(historyEntries?: PatchHistory["entries"]) {
   }
 
   return historyEntries[0].status;
+}
+
+function formatPatchStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    changed: "changed",
+    patched: "Patched",
+    ready: "Ready"
+  };
+
+  return labels[status] ?? status;
+}
+
+function classifyMod(mod: ModsIndex["mods"][number]): ModCategory {
+  const normalized = [
+    mod.modName,
+    mod.name,
+    ...mod.files.json.map((file) => file.baseName),
+    ...mod.files.skel.map((file) => file.baseName),
+    ...mod.files.atlas.map((file) => file.baseName),
+    ...mod.files.png.map((file) => file.baseName)
+  ].join(" ").toLowerCase();
+
+  if (/\bcutscene[_-]?char|\bcutscene/.test(normalized)) {
+    return "cutscene";
+  }
+
+  if (/\billust[_-]?dating|\bdating/.test(normalized)) {
+    return "dating";
+  }
+
+  if (/\bchar\d+|\bchar[_-]/.test(normalized)) {
+    return "char";
+  }
+
+  return "other";
+}
+
+function formatModCategory(category: ModCategory) {
+  return category;
 }
 
 function summarizeSharedAssets(assets: Array<BundleAsset & { category: SharedAssetCategory }>) {
@@ -936,8 +1370,66 @@ function compactError(error: string) {
     .slice(0, 180);
 }
 
-function pushLog(setLogs: Dispatch<SetStateAction<string[]>>, message: string) {
-  setLogs((current) => [`${new Date().toLocaleTimeString()} ${message}`, ...current].slice(0, 200));
+function pushLog(setLogs: Dispatch<SetStateAction<LogEntry[]>>, input: LogInput) {
+  setLogs((current) => [createLogEntry(input), ...current].slice(0, 200));
+}
+
+function createLogEntry(input: LogInput): LogEntry {
+  const payload = typeof input === "string" ? { message: input } : input;
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    time: new Date().toLocaleTimeString(),
+    message: payload.message,
+    accents: payload.accents?.filter((accent) => accent.text.trim())
+  };
+}
+
+function renderLogMessage(entry: LogEntry) {
+  if (!entry.accents?.length) {
+    return entry.message;
+  }
+
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  const accents = [...entry.accents].sort((a, b) => b.text.length - a.text.length);
+
+  while (cursor < entry.message.length) {
+    const match = findNextLogAccent(entry.message, accents, cursor);
+    if (!match) {
+      nodes.push(entry.message.slice(cursor));
+      break;
+    }
+
+    if (match.index > cursor) {
+      nodes.push(entry.message.slice(cursor, match.index));
+    }
+
+    nodes.push(
+      <span key={`${match.index}-${match.accent.text}`} className={`logAccent ${match.accent.tone}`}>
+        {entry.message.slice(match.index, match.index + match.accent.text.length)}
+      </span>
+    );
+    cursor = match.index + match.accent.text.length;
+  }
+
+  return nodes;
+}
+
+function findNextLogAccent(message: string, accents: LogAccent[], cursor: number) {
+  let next: { accent: LogAccent; index: number } | undefined;
+
+  for (const accent of accents) {
+    const index = message.indexOf(accent.text, cursor);
+    if (index === -1) {
+      continue;
+    }
+
+    if (!next || index < next.index || (index === next.index && accent.text.length > next.accent.text.length)) {
+      next = { accent, index };
+    }
+  }
+
+  return next;
 }
 
 function formatSharedProgress(progress: SharedScanProgress) {
@@ -1051,10 +1543,45 @@ function formatPatchProgress(progress: PatchProgress) {
   return target ? `${backend}${progress.message} (${target})` : `${backend}${progress.message}`;
 }
 
-function formatPatchProgressLog(progress: PatchProgress) {
-  const backend = progress.backend ? `${formatPatchBackend(progress.backend)} ` : "";
+function formatPatchProgressLog(progress: PatchProgress): LogInput {
+  const action = formatPatchAction(progress.phase);
+  const backend = progress.backend ? ` via ${formatPatchBackend(progress.backend)}` : "";
+  const module = progress.modName ? ` module ${progress.modName}` : "";
+  const bundle = progress.bundleId ? ` bundle ${progress.bundleId}` : "";
   const timing = progress.timing ? ` [${progress.timing.name}: ${formatDuration(progress.timing.ms)}]` : "";
-  return `Patch ${backend}${progress.current}/${progress.total} ${progress.message}${timing}`;
+  const accents: LogAccent[] = [{ text: action, tone: "action" }];
+
+  if (progress.modName) {
+    accents.push({ text: progress.modName, tone: "module" });
+  }
+
+  if (progress.bundleId) {
+    accents.push({ text: progress.bundleId, tone: "bundle" });
+  }
+
+  if (progress.phase === "failed") {
+    accents.push({ text: progress.message, tone: "error" });
+  }
+
+  return {
+    message: `Patch ${progress.current}/${progress.total}: ${action}${module}${bundle}${backend}. ${progress.message}${timing}`,
+    accents
+  };
+}
+
+function formatPatchAction(phase: PatchProgress["phase"]) {
+  const labels: Record<PatchProgress["phase"], string> = {
+    starting: "Starting",
+    converting: "Converting",
+    preparing_backup: "Preparing backup",
+    patching: "Patching",
+    copying: "Copying to game",
+    restoring: "Restoring",
+    done: "Finished",
+    failed: "Failed"
+  };
+
+  return labels[phase];
 }
 
 function formatPatchBackend(backend: PatchBackend) {

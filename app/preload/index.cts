@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
+import type { ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
 
 const api = {
   getDefaultPaths: () => ipcRenderer.invoke("app:default-paths") as Promise<{ modsDir: string; sharedDir: string; dotnetPath: string }>,
@@ -33,6 +33,10 @@ const api = {
   },
   restoreAllPatches: (plans: PatchPlanEntry[]) =>
     ipcRenderer.invoke("patch:restore-all", { plans }) as Promise<ApplyPatchResult>,
+  copyPatchBackupsForMods: (plans: PatchPlanEntry[], modNames: string[], source: "original" | "patched") =>
+    ipcRenderer.invoke("patch:copy-backups-for-mods", { plans, modNames, source }) as Promise<ApplyPatchResult>,
+  checkPatchDataForMods: (plans: PatchPlanEntry[], modNames: string[]) =>
+    ipcRenderer.invoke("patch:check-data-for-mods", { plans, modNames }) as Promise<PatchDataCheckResult>,
   readPatchHistory: () => ipcRenderer.invoke("patch:history") as Promise<PatchHistory>
 };
 

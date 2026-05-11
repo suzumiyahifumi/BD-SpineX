@@ -1,11 +1,12 @@
 import fs from "node:fs/promises";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { applyModded, getAssetBackupDir, getPatchTempPath, getPatchWorkPath, preparePatchWork, replacePatchWork, restoreOriginal } from "./backup-manager.js";
+import { applyModded, getAssetBackupDir, getOriginalBackupPath, getPatchTempPath, getPatchWorkPath, preparePatchWork, replacePatchWork, restoreOriginal } from "./backup-manager.js";
 import { patchBundleBatch, type PatchBundleJob } from "./asset-patcher.js";
 import { convertJsonToSkel } from "./spine-converter.js";
 import { ensureSpineConverter } from "./tool-manager.js";
-import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchStateChange } from "./types.js";
+import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchDataCheckEntry, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchStateChange } from "./types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,15 @@ export async function applyReadyPatches(
   for (const bundlePlans of plansByBundle.values()) {
     const firstPlan = bundlePlans[0];
     if (!firstPlan.bundleId || !firstPlan.bundlePath) {
+      continue;
+    }
+
+    const dataCheck = await checkPatchDataForBundle(bundlePlans);
+    const invalidDataChecks = dataCheck.filter((entry) => entry.status === "missing" || entry.status === "changed");
+    if (invalidDataChecks.length > 0) {
+      entries.push(...invalidDataChecks.map((entry) => createChangedPatchRunEntry(entry)));
+      progressCurrent += invalidDataChecks.length;
+      emitPatchProgress(onProgress, "failed", progressCurrent, progressTotal, `Changed: skipped ${invalidDataChecks.length} mod(s) in ${firstPlan.bundleId}. Re-scan Shared and generate a new patch plan.`, firstPlan, patchBackend);
       continue;
     }
 
@@ -188,14 +198,30 @@ export async function applyPatchStateChanges(
     entries.push(...result.entries);
   }
 
-  if (toRestore.length > 0) {
+  const patchedApplyModNames = new Set(entries.filter((entry) => entry.status === "patched").map((entry) => entry.modName));
+  const replacementRestoreModNames = getReplacementRestoreModNames(plansForChangedMods, toRestore, patchedApplyModNames);
+  const directRestoreModNames = toRestore.filter((modName) => !replacementRestoreModNames.has(modName));
+
+  if (directRestoreModNames.length > 0) {
     const result = await restoreModPatches(
-      plansForChangedMods.filter((plan) => toRestore.includes(plan.modName)),
-      toRestore,
+      plansForChangedMods.filter((plan) => directRestoreModNames.includes(plan.modName)),
+      directRestoreModNames,
       options,
       onProgress
     );
     entries.push(...result.entries);
+  }
+
+  if (replacementRestoreModNames.size > 0) {
+    const replacementEntries = plansForChangedMods
+      .filter((plan) => replacementRestoreModNames.has(plan.modName))
+      .map((plan) => ({
+        ...createPatchRunEntry(plan, "restored" as const),
+        message: "Marked restored because another staged mod overwrote the same __data asset name."
+      }));
+    entries.push(...replacementEntries);
+    const latestHistory = await readPatchHistory();
+    await writePatchHistory(mergePatchHistory(latestHistory, replacementEntries));
   }
 
   const nextHistory = await readPatchHistory();
@@ -277,6 +303,15 @@ export async function restoreModPatches(
   for (const bundlePlans of plansByBundle.values()) {
     const firstPlan = bundlePlans[0];
     if (!firstPlan.bundleId || !firstPlan.bundlePath) {
+      continue;
+    }
+
+    const dataCheck = await checkPatchDataForBundle(bundlePlans);
+    const invalidDataChecks = dataCheck.filter((entry) => entry.status === "missing" || entry.status === "changed");
+    if (invalidDataChecks.length > 0) {
+      entries.push(...invalidDataChecks.map((entry) => createChangedPatchRunEntry(entry)));
+      progressCurrent += invalidDataChecks.length;
+      emitPatchProgress(onProgress, "failed", progressCurrent, progressTotal, `Changed: skipped ${invalidDataChecks.length} restore change(s) in ${firstPlan.bundleId}. Re-scan Shared and generate a new patch plan.`, firstPlan, patchBackend);
       continue;
     }
 
@@ -390,6 +425,13 @@ export async function restoreAllPatches(plans: PatchPlanEntry[]): Promise<ApplyP
 
   const entries: PatchRunEntry[] = [];
   for (const plan of byBundle.values()) {
+    const dataCheck = await checkPatchDataForBundle([plan]);
+    const invalidDataCheck = dataCheck.find((entry) => entry.status === "missing" || entry.status === "changed");
+    if (invalidDataCheck) {
+      entries.push(createChangedPatchRunEntry(invalidDataCheck));
+      continue;
+    }
+
     try {
       await restoreOriginal(plan.bundlePath ?? "", plan.bundleId ?? "");
       entries.push({ ...createPatchRunEntry(plan, "restored"), message: "Original backup A copied to game __data." });
@@ -404,6 +446,74 @@ export async function restoreAllPatches(plans: PatchPlanEntry[]): Promise<ApplyP
   const nextHistory = mergePatchHistory(history, entries);
   await writePatchHistory(nextHistory);
   return { ok: entries.every((entry) => entry.status === "restored"), entries, history: nextHistory };
+}
+
+export async function checkPatchDataForMods(plans: PatchPlanEntry[], modNames: string[]): Promise<PatchDataCheckResult> {
+  const targetMods = new Set(modNames);
+  const targetPlans = plans.filter((plan) => targetMods.has(plan.modName) && plan.bundleId && plan.bundlePath);
+  const entries: PatchDataCheckEntry[] = [];
+  for (const bundlePlans of groupBy(targetPlans, (plan) => plan.bundleId ?? "").values()) {
+    entries.push(...await checkPatchDataForBundle(bundlePlans));
+  }
+  return {
+    ok: entries.every((entry) => entry.status === "ok" || entry.status === "no_backup"),
+    entries
+  };
+}
+
+export async function copyPatchBackupsForMods(
+  plans: PatchPlanEntry[],
+  modNames: string[],
+  source: "original" | "patched"
+): Promise<ApplyPatchResult> {
+  const history = await readPatchHistory();
+  const targetMods = new Set(modNames);
+  const targetPlans = plans.filter((plan) => targetMods.has(plan.modName) && plan.bundleId && plan.bundlePath);
+  const plansByBundle = groupBy(targetPlans, (plan) => plan.bundleId ?? "");
+  const entries: PatchRunEntry[] = [];
+
+  for (const bundlePlans of plansByBundle.values()) {
+    const firstPlan = bundlePlans[0];
+    if (!firstPlan.bundleId || !firstPlan.bundlePath) {
+      continue;
+    }
+
+    const dataCheck = await checkPatchDataForBundle(bundlePlans);
+    const invalidDataChecks = dataCheck.filter((entry) => entry.status === "missing" || entry.status === "changed");
+    if (invalidDataChecks.length > 0) {
+      entries.push(...invalidDataChecks.map((entry) => createChangedPatchRunEntry(entry)));
+      continue;
+    }
+
+    try {
+      if (source === "original") {
+        await restoreOriginal(firstPlan.bundlePath, firstPlan.bundleId);
+        entries.push(...bundlePlans.map((plan) => ({
+          ...createPatchRunEntry(plan, "restored"),
+          message: "Original backup A copied to game __data by Mod Power."
+        })));
+      } else {
+        await applyModded(firstPlan.bundlePath, firstPlan.bundleId);
+        entries.push(...bundlePlans.map((plan) => ({
+          ...createPatchRunEntry(plan, "patched"),
+          message: "Modded backup B copied to game __data by Mod Power."
+        })));
+      }
+    } catch (error) {
+      entries.push(...bundlePlans.map((plan) => ({
+        ...createPatchRunEntry(plan, "failed"),
+        message: error instanceof Error ? error.message : String(error)
+      })));
+    }
+  }
+
+  const nextHistory = mergePatchHistory(history, entries);
+  await writePatchHistory(nextHistory);
+  return {
+    ok: entries.length > 0 && entries.every((entry) => entry.status === (source === "original" ? "restored" : "patched")),
+    entries,
+    history: nextHistory
+  };
 }
 
 export async function readPatchHistory(): Promise<PatchHistory> {
@@ -518,6 +628,50 @@ function getPatchedModNames(history: PatchHistory) {
   return patched;
 }
 
+function getReplacementRestoreModNames(plans: PatchPlanEntry[], restoreModNames: string[], patchedApplyModNames: Set<string>) {
+  const restoreSet = new Set(restoreModNames);
+  const patchedApplyTargetKeys = new Set(
+    plans
+      .filter((plan) => patchedApplyModNames.has(plan.modName))
+      .flatMap(getPatchPlanAssetKeys)
+  );
+  const replacementRestoreModNames = new Set<string>();
+
+  if (!patchedApplyTargetKeys.size) {
+    return replacementRestoreModNames;
+  }
+
+  for (const plan of plans) {
+    if (!restoreSet.has(plan.modName)) {
+      continue;
+    }
+
+    if (getPatchPlanAssetKeys(plan).some((key) => patchedApplyTargetKeys.has(key))) {
+      replacementRestoreModNames.add(plan.modName);
+    }
+  }
+
+  return replacementRestoreModNames;
+}
+
+function getPatchPlanAssetKeys(plan: PatchPlanEntry) {
+  const bundleId = plan.bundleId ?? "";
+  return getPatchPlanAssetNames(plan).map((assetName) => `${bundleId}:${assetName.toLowerCase()}`);
+}
+
+function getPatchPlanAssetNames(plan: PatchPlanEntry) {
+  const targets = [
+    plan.targets.atlas,
+    plan.targets.skel,
+    plan.targets.texture,
+    ...(plan.targets.atlases ?? []),
+    ...(plan.targets.skels ?? []),
+    ...(plan.targets.textures ?? [])
+  ].filter((target): target is NonNullable<typeof target> => Boolean(target));
+
+  return [...new Set(targets.map((target) => target.assetName).filter(Boolean))];
+}
+
 function mergePatchHistory(history: PatchHistory, entries: PatchRunEntry[]): PatchHistory {
   const current = new Map(history.entries.map((entry) => [entry.id, entry]));
   for (const entry of entries) {
@@ -528,6 +682,97 @@ function mergePatchHistory(history: PatchHistory, entries: PatchRunEntry[]): Pat
     updatedAt: new Date().toISOString(),
     entries: [...current.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   };
+}
+
+async function checkPatchDataForBundle(plans: PatchPlanEntry[]): Promise<PatchDataCheckEntry[]> {
+  const firstPlan = plans[0];
+  if (!firstPlan.bundleId || !firstPlan.bundlePath) {
+    return plans.map((plan) => ({
+      modName: plan.modName,
+      name: plan.name,
+      bundleId: plan.bundleId ?? "",
+      bundlePath: plan.bundlePath ?? "",
+      status: "missing",
+      message: "Changed: patch plan has no __data path. Re-scan Shared and generate a new patch plan."
+    }));
+  }
+
+  const status = await checkPatchDataState(firstPlan.bundlePath, firstPlan.bundleId);
+  return plans.map((plan) => ({
+    modName: plan.modName,
+    name: plan.name,
+    bundleId: plan.bundleId ?? "",
+    bundlePath: plan.bundlePath ?? "",
+    ...status
+  }));
+}
+
+async function checkPatchDataState(bundlePath: string, bundleId: string): Promise<Pick<PatchDataCheckEntry, "status" | "message">> {
+  if (!await fileExists(bundlePath)) {
+    return {
+      status: "missing",
+      message: `Changed: __data is missing for ${bundleId}. Re-scan Shared and generate a new patch plan.`
+    };
+  }
+
+  const originalPath = getOriginalBackupPath(bundleId);
+  const patchedPath = getPatchWorkPath(bundleId);
+  const hasOriginal = await fileExists(originalPath);
+  const hasPatched = await fileExists(patchedPath);
+
+  if (!hasOriginal && !hasPatched) {
+    return {
+      status: "no_backup",
+      message: "No existing A/B backup yet. Current __data can be used to create backup A."
+    };
+  }
+
+  const currentHash = await hashFile(bundlePath);
+  const matchesOriginal = hasOriginal && currentHash === await hashFile(originalPath);
+  const matchesPatched = hasPatched && currentHash === await hashFile(patchedPath);
+
+  if (matchesOriginal || matchesPatched) {
+    return {
+      status: "ok",
+      message: matchesPatched
+        ? "Current __data matches backup B."
+        : "Current __data matches backup A."
+    };
+  }
+
+  return {
+    status: "changed",
+    message: `Changed: current __data differs from known A/B backups for ${bundleId}. Re-scan Shared and generate a new patch plan before patching.`
+  };
+}
+
+function createChangedPatchRunEntry(entry: PatchDataCheckEntry): PatchRunEntry {
+  return {
+    id: `${entry.modName}:${entry.bundleId || "none"}`,
+    modName: entry.modName,
+    name: entry.name,
+    bundleId: entry.bundleId,
+    bundlePath: entry.bundlePath,
+    status: "changed",
+    updatedAt: new Date().toISOString(),
+    message: entry.message
+  };
+}
+
+async function fileExists(filePath: string) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function hashFile(filePath: string) {
+  return crypto
+    .createHash("sha256")
+    .update(await fs.readFile(filePath))
+    .digest("hex");
 }
 
 function emitPatchProgress(

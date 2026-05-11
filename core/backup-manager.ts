@@ -46,6 +46,10 @@ export function getPatchWorkPath(bundleId: string) {
   return path.join(getBackupDir(bundleId), "__data.patched");
 }
 
+export function getOriginalBackupPath(bundleId: string) {
+  return path.join(getBackupDir(bundleId), "__data.original");
+}
+
 export function getPatchTempPath(bundleId: string, step: number) {
   return path.join(getBackupDir(bundleId), `__data.patched.${step}.tmp`);
 }

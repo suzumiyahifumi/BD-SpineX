@@ -10,8 +10,9 @@ export type BundleAsset = {
 
 export type SharedBundle = {
   bundleId: string;
-  dataPath: string;
+  dataPath?: string;
   infoPath?: string;
+  hasInfo?: boolean;
   sizeBytes?: number;
   assets: BundleAsset[];
   scanError?: string;
@@ -19,30 +20,46 @@ export type SharedBundle = {
 
 export type SharedIndex = {
   bundles: SharedBundle[];
+  assetsByName?: SharedAssetNameIndex;
+};
+
+export type SharedAssetNameIndex = Record<string, SharedAssetNameIndexEntry[]>;
+
+export type SharedAssetNameIndexEntry = {
+  bundleId: string;
+  assetName: string;
+  type: AssetType;
+  pathId: number;
+  width?: number;
+  height?: number;
 };
 
 export type SharedFileEntry = {
   bundleId: string;
-  dataPath: string;
-  infoPath?: string;
   sizeBytes: number;
   modifiedAt: string;
+  hasInfo?: boolean;
 };
 
 export type SharedFileIndex = {
   generatedAt: string;
-  sharedDir: string;
+  sharedRootKey: string;
   files: SharedFileEntry[];
 };
 
 export type SharedScanOptions = {
   pythonPath?: string;
+  scanBackend?: SharedScanBackend;
+  dotnetPath?: string;
+  uabeaScannerProjectPath?: string;
   unityVersion?: string;
   decryptKey?: string;
   scanLimit?: number;
   targetNames?: string[];
   forceRescan?: boolean;
 };
+
+export type SharedScanBackend = "unitypy" | "uabea";
 
 export type SharedScanProgress = {
   phase: "discovering" | "found" | "scanning" | "scanned" | "done" | "stopped";
@@ -132,7 +149,7 @@ export type PatchPlanIndex = {
   plans: PatchPlanEntry[];
 };
 
-export type PatchRunStatus = "ready" | "patched" | "restored" | "failed" | "skipped";
+export type PatchRunStatus = "ready" | "patched" | "restored" | "failed" | "skipped" | "changed";
 
 export type PatchRunEntry = {
   id: string;
@@ -149,6 +166,22 @@ export type PatchRunEntry = {
 export type PatchHistory = {
   updatedAt: string;
   entries: PatchRunEntry[];
+};
+
+export type PatchDataCheckStatus = "ok" | "missing" | "changed" | "no_backup";
+
+export type PatchDataCheckEntry = {
+  modName: string;
+  name: string;
+  bundleId: string;
+  bundlePath: string;
+  status: PatchDataCheckStatus;
+  message: string;
+};
+
+export type PatchDataCheckResult = {
+  ok: boolean;
+  entries: PatchDataCheckEntry[];
 };
 
 export type ApplyPatchOptions = {
