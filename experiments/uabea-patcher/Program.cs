@@ -108,7 +108,8 @@ static class UabeaPatchPrototype
         var patchTimer = Stopwatch.StartNew();
         PatchTextAssets(manager, assetsFileInstance, assetsFile, replacements.Text, changed);
         PatchTextures(manager, assetsFileInstance, assetsFile, replacements.Textures, changed);
-        InsertTextures(manager, assetsFileInstance, assetsFile, replacements.InsertTextures, changed);
+        var insertedTextures = InsertTextures(manager, assetsFileInstance, assetsFile, replacements.InsertTextures, changed);
+        InsertMaterialsForTextures(manager, assetsFileInstance, assetsFile, insertedTextures, changed);
         timings.Add(TimingEntry.From("patch_assets", patchTimer));
 
         var missing = replacements.FindMissing(changed);
@@ -315,16 +316,17 @@ static class UabeaPatchPrototype
         }
     }
 
-    private static void InsertTextures(
+    private static List<InsertedTexture> InsertTextures(
         AssetsManager manager,
         AssetsFileInstance assetsFileInstance,
         AssetsFile assetsFile,
         Dictionary<string, Replacement> replacements,
         List<ChangedAsset> changed)
     {
+        var inserted = new List<InsertedTexture>();
         if (replacements.Count == 0)
         {
-            return;
+            return inserted;
         }
 
         var existingTextureNames = new HashSet<string>(
@@ -362,7 +364,192 @@ static class UabeaPatchPrototype
             assetsFile.Metadata.AddAssetInfo(assetInfo);
             existingTextureNames.Add(assetName);
             changed.Add(new ChangedAsset(replacement.ModName, "Texture2D", assetName, replacement.Action, replacement.Path, null));
+            inserted.Add(new InsertedTexture(replacement.ModName, assetName, assetInfo.PathId, replacement.Path));
         }
+
+        return inserted;
+    }
+
+    private static void InsertMaterialsForTextures(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        List<InsertedTexture> insertedTextures,
+        List<ChangedAsset> changed)
+    {
+        if (insertedTextures.Count == 0)
+        {
+            return;
+        }
+
+        var assetBundleInfo = assetsFile.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault();
+        var assetBundleField = assetBundleInfo is null ? null : manager.GetBaseField(assetsFileInstance, assetBundleInfo);
+        var nextPathId = assetsFile.AssetInfos.Count == 0 ? 1 : assetsFile.AssetInfos.Max(asset => asset.PathId) + 1;
+        foreach (var texture in insertedTextures)
+        {
+            var rootName = SpineAtlasRootName(texture.Name);
+            var atlasInfo = FindNamedAsset(manager, assetsFileInstance, assetsFile, AssetClassID.MonoBehaviour, $"{rootName}_Atlas");
+            if (atlasInfo is null)
+            {
+                continue;
+            }
+
+            var atlasField = manager.GetBaseField(assetsFileInstance, atlasInfo);
+            var materialsArray = atlasField["materials"]["Array"];
+            if (materialsArray.IsDummy || materialsArray.Children.Count == 0)
+            {
+                continue;
+            }
+
+            var templateMaterialPathId = materialsArray.Children[^1]["m_PathID"].AsLong;
+            var templateMaterialInfo = assetsFile.Metadata.GetAssetInfo(templateMaterialPathId);
+            if (templateMaterialInfo is null)
+            {
+                continue;
+            }
+
+            var materialName = $"{rootName}_{texture.Name}";
+            var materialField = manager.GetBaseField(assetsFileInstance, templateMaterialInfo).Clone();
+            materialField["m_Name"].AsString = materialName;
+            SetFirstMaterialTexture(materialField, texture.PathId);
+
+            var materialInfo = AssetFileInfo.Create(assetsFile, nextPathId++, (int)AssetClassID.Material, null, false);
+            if (materialInfo is null)
+            {
+                throw new InvalidOperationException($"Cannot create Material asset info for {materialName}.");
+            }
+
+            materialInfo.SetNewData(materialField);
+            assetsFile.Metadata.AddAssetInfo(materialInfo);
+
+            var materialPointer = materialsArray.Children[^1].Clone();
+            SetPPtr(materialPointer, 0, materialInfo.PathId);
+            materialsArray.Children.Add(materialPointer);
+            atlasInfo.SetNewData(atlasField);
+
+            if (assetBundleField is not null)
+            {
+                AddAssetBundleEntry(assetBundleField, rootName, $"{texture.Name}.png", texture.PathId);
+                AddAssetBundleEntry(assetBundleField, rootName, $"{materialName}.mat", materialInfo.PathId);
+                assetBundleInfo!.SetNewData(assetBundleField);
+            }
+
+            changed.Add(new ChangedAsset(texture.ModName, "Material", materialName, "insert_material", texture.Source, null));
+        }
+    }
+
+    private static AssetFileInfo? FindNamedAsset(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        AssetClassID type,
+        string name)
+    {
+        return assetsFile.GetAssetsOfType(type).FirstOrDefault(assetInfo =>
+            TryGetAssetName(manager, assetsFileInstance, assetInfo).Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string SpineAtlasRootName(string textureName)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(textureName, @"^(.*)_\d+$");
+        return match.Success ? match.Groups[1].Value : textureName;
+    }
+
+    private static void SetFirstMaterialTexture(AssetTypeValueField materialField, long texturePathId)
+    {
+        var texEnvs = materialField["m_SavedProperties"]["m_TexEnvs"]["Array"];
+        if (texEnvs.IsDummy)
+        {
+            return;
+        }
+
+        foreach (var texEnv in texEnvs.Children)
+        {
+            var texture = texEnv["second"]["m_Texture"];
+            if (SetPPtr(texture, 0, texturePathId))
+            {
+                return;
+            }
+        }
+    }
+
+    private static void AddAssetBundleEntry(AssetTypeValueField assetBundleField, string rootName, string fileName, long pathId)
+    {
+        AddPreloadEntry(assetBundleField, pathId);
+        AddContainerEntry(assetBundleField, rootName, fileName, pathId);
+    }
+
+    private static void AddPreloadEntry(AssetTypeValueField assetBundleField, long pathId)
+    {
+        var preloadArray = assetBundleField["m_PreloadTable"]["Array"];
+        if (preloadArray.IsDummy || preloadArray.Children.Any(item => GetPPtrPathId(item) == pathId))
+        {
+            return;
+        }
+
+        var template = preloadArray.Children.FirstOrDefault(item => GetPPtrFileId(item) == 0)?.Clone();
+        if (template is null)
+        {
+            return;
+        }
+
+        SetPPtr(template, 0, pathId);
+        preloadArray.Children.Add(template);
+    }
+
+    private static void AddContainerEntry(AssetTypeValueField assetBundleField, string rootName, string fileName, long pathId)
+    {
+        var containerArray = assetBundleField["m_Container"]["Array"];
+        if (containerArray.IsDummy)
+        {
+            return;
+        }
+
+        var path = $"Assets/AddressableResources/BundleCommon/SkeletonData/{SpineFamilyName(rootName)}/{fileName}";
+        if (containerArray.Children.Any(item => item["first"].AsString.Equals(path, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        var template = containerArray.Children
+            .FirstOrDefault(item => item["first"].AsString.Contains($"/{SpineFamilyName(rootName)}/", StringComparison.OrdinalIgnoreCase))
+            ?.Clone();
+        if (template is null)
+        {
+            return;
+        }
+
+        template["first"].AsString = path;
+        SetPPtr(template["second"], 0, pathId);
+        containerArray.Children.Add(template);
+    }
+
+    private static string SpineFamilyName(string rootName)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(rootName, @"^(cutscene_char\d+|char\d+|illust_dating\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value : rootName;
+    }
+
+    private static bool SetPPtr(AssetTypeValueField field, int fileId, long pathId)
+    {
+        var fileIdField = field["m_FileID"];
+        var pathIdField = field["m_PathID"];
+        if (!fileIdField.IsDummy && !pathIdField.IsDummy)
+        {
+            fileIdField.AsInt = fileId;
+            pathIdField.AsLong = pathId;
+            return true;
+        }
+
+        foreach (var child in field.Children)
+        {
+            if (SetPPtr(child, fileId, pathId))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool CanEncodeNativeFormat(int textureFormat)
@@ -607,6 +794,8 @@ sealed record ChangedAsset(
     string? AssetBackup);
 
 sealed record MissingAsset(string Type, string Name, string Source, string? ModName);
+
+sealed record InsertedTexture(string? ModName, string Name, long PathId, string Source);
 
 sealed record TimingEntry(string Name, long Ms)
 {
