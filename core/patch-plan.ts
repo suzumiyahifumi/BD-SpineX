@@ -74,6 +74,19 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
         }));
       }
 
+      const splitMatches = findSplitMatches(getRequiredTextTargets(requiredTargets), matches);
+      if (splitMatches) {
+        return splitMatches.map((match) => ({
+          modName: mod.modName,
+          name: mod.name,
+          bundleId: match.bundle.bundleId,
+          bundlePath: match.bundle.dataPath,
+          status: "ready",
+          targets: match.targets,
+          missingTargets: []
+        }));
+      }
+
       const match = matches[0];
       const missingTypes = new Set(match.missingTargets.map((target) => target.type));
       const status = missingTypes.has("TextAsset") && match.missingTargets.some((target) => target.assetName.endsWith(".atlas"))
@@ -98,6 +111,12 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
 }
 
 type RequiredTarget = PatchMissingTarget;
+type CandidateMatch = {
+  bundle: SharedBundle;
+  targets: PatchPlanEntry["targets"];
+  foundCount: number;
+  missingTargets: PatchMissingTarget[];
+};
 
 function findCandidateBundles(
   sharedIndex: SharedIndex,
@@ -162,6 +181,10 @@ function getRequiredTargets(mod: ModEntry): RequiredTarget[] {
   ];
 
   return dedupeRequiredTargets(targets);
+}
+
+function getRequiredTextTargets(targets: RequiredTarget[]) {
+  return targets.filter((target) => target.type === "TextAsset");
 }
 
 function dedupeRequiredTargets(targets: RequiredTarget[]) {
@@ -241,19 +264,51 @@ function findMissingTargets(requiredTargets: RequiredTarget[], targets: PatchPla
   return requiredTargets.filter((target) => !found.has(targetKey(target)));
 }
 
+function findSplitMatches(requiredTargets: RequiredTarget[], matches: CandidateMatch[]) {
+  const requiredKeys = new Set(requiredTargets.map((target) => targetKey(target)));
+  const ownersByKey = new Map<string, CandidateMatch[]>();
+
+  for (const match of matches) {
+    for (const target of getPlanTargets(match.targets)) {
+      const key = targetKey(target);
+      if (!requiredKeys.has(key)) {
+        continue;
+      }
+
+      ownersByKey.set(key, [...(ownersByKey.get(key) ?? []), match]);
+    }
+  }
+
+  const selected = new Map<string, CandidateMatch>();
+  for (const key of requiredKeys) {
+    const owners = ownersByKey.get(key) ?? [];
+    if (owners.length !== 1) {
+      return undefined;
+    }
+
+    selected.set(owners[0].bundle.bundleId, owners[0]);
+  }
+
+  return [...selected.values()].sort((a, b) => a.bundle.bundleId.localeCompare(b.bundle.bundleId));
+}
+
 function countTargets(targets: PatchPlanEntry["targets"]) {
   return (targets.atlases?.length ?? 0) + (targets.skels?.length ?? 0) + (targets.textures?.length ?? 0);
 }
 
 function targetSignature(targets: PatchPlanEntry["targets"]) {
+  return getPlanTargets(targets)
+    .map((target) => `${target.type}:${target.assetName.toLowerCase()}`)
+    .sort()
+    .join("|");
+}
+
+function getPlanTargets(targets: PatchPlanEntry["targets"]) {
   return [
     ...(targets.atlases ?? []),
     ...(targets.skels ?? []),
     ...(targets.textures ?? [])
-  ]
-    .map((target) => `${target.type}:${target.assetName.toLowerCase()}`)
-    .sort()
-    .join("|");
+  ];
 }
 
 function targetKey(target: Pick<PatchTarget, "assetName" | "type">) {

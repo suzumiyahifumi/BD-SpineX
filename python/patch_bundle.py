@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--atlas", action="append", default=[])
     parser.add_argument("--skel", action="append", default=[])
     parser.add_argument("--png", action="append", default=[])
+    parser.add_argument("--insert-png", action="append", default=[])
     parser.add_argument("--unity-version", default="2021.3.33f1")
     parser.add_argument("--decrypt-key")
     parser.add_argument("--asset-backup-dir")
@@ -139,19 +140,20 @@ def build_replacements(args):
                 job.get("assetBackupDir"),
                 job.get("atlases", []),
                 job.get("skels", []),
-                job.get("pngs", [])
+                job.get("pngs", []),
+                job.get("insertPngs", [])
             )
         return {"text": text, "texture": texture}
 
     if not args.mod_name:
         raise ValueError("--mod-name is required when --job-manifest is not used.")
 
-    add_job_replacements(text, texture, args.mod_name, args.asset_backup_dir, args.atlas, args.skel, args.png)
+    add_job_replacements(text, texture, args.mod_name, args.asset_backup_dir, args.atlas, args.skel, args.png, args.insert_png)
 
     return {"text": text, "texture": texture}
 
 
-def add_job_replacements(text, texture, mod_name, asset_backup_dir, atlases, skels, pngs):
+def add_job_replacements(text, texture, mod_name, asset_backup_dir, atlases, skels, pngs, insert_pngs=None):
     for atlas in atlases:
         add_replacement(text, Path(atlas).name.lower(), atlas, "replace_atlas", mod_name, asset_backup_dir)
 
@@ -160,6 +162,9 @@ def add_job_replacements(text, texture, mod_name, asset_backup_dir, atlases, ske
 
     for png in pngs:
         add_replacement(texture, Path(png).stem.lower(), png, "replace_texture", mod_name, asset_backup_dir)
+
+    if insert_pngs:
+        raise ValueError("Texture2D insertion requires the UABEA patch backend.")
 
 
 def add_replacement(group, key, file_path, action, mod_name, asset_backup_dir):

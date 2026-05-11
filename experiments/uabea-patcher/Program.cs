@@ -21,6 +21,12 @@ try
         Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions.Pretty));
         return result.Ok ? 0 : 1;
     }
+    else if (parsedArgs.Mode.Equals("inspect", StringComparison.OrdinalIgnoreCase))
+    {
+        var result = UabeaPatchPrototype.Inspect(parsedArgs);
+        Console.WriteLine(JsonSerializer.Serialize(result, JsonOptions.Pretty));
+        return result.Ok ? 0 : 1;
+    }
     else
     {
         var result = UabeaPatchPrototype.Patch(parsedArgs);
@@ -33,6 +39,10 @@ catch (Exception error)
     if (parsedArgs.Mode.Equals("scan", StringComparison.OrdinalIgnoreCase))
     {
         Console.WriteLine(JsonSerializer.Serialize(new ScanResult(false, error.Message, stopwatch.ElapsedMilliseconds, []), JsonOptions.Pretty));
+    }
+    else if (parsedArgs.Mode.Equals("inspect", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new InspectResult(false, error.Message, stopwatch.ElapsedMilliseconds, [], [], [], [], []), JsonOptions.Pretty));
     }
     else
     {
@@ -98,6 +108,7 @@ static class UabeaPatchPrototype
         var patchTimer = Stopwatch.StartNew();
         PatchTextAssets(manager, assetsFileInstance, assetsFile, replacements.Text, changed);
         PatchTextures(manager, assetsFileInstance, assetsFile, replacements.Textures, changed);
+        InsertTextures(manager, assetsFileInstance, assetsFile, replacements.InsertTextures, changed);
         timings.Add(TimingEntry.From("patch_assets", patchTimer));
 
         var missing = replacements.FindMissing(changed);
@@ -115,6 +126,65 @@ static class UabeaPatchPrototype
         timings.Add(TimingEntry.From("total", totalTimer));
 
         return new PatchResult(true, null, totalTimer.ElapsedMilliseconds, timings, changed);
+    }
+
+    public static InspectResult Inspect(CliArgs args)
+    {
+        var totalTimer = Stopwatch.StartNew();
+        var manager = new AssetsManager();
+        var bundleInstance = manager.LoadBundleFile(args.Input, true);
+        var assetsFileInstance = manager.LoadAssetsFileFromBundle(bundleInstance, 0, false);
+        var assetsFile = assetsFileInstance.file;
+        var target = args.Target?.Trim() ?? "";
+        var assets = new List<InspectAsset>();
+        var allAssets = new List<InspectAsset>();
+        var containers = new List<InspectContainerEntry>();
+        var preload = new List<InspectPPtr>();
+        var references = new List<InspectReference>();
+        var directories = bundleInstance.file.BlockAndDirInfo.DirectoryInfos
+            .Select((entry, index) => new InspectDirectory(index, entry.Name, entry.Offset, entry.DecompressedSize))
+            .ToList();
+
+        foreach (var assetInfo in assetsFile.AssetInfos)
+        {
+            var typeName = GetTypeName(assetInfo, assetsFile);
+            var name = TryGetAssetName(manager, assetsFileInstance, assetInfo);
+            var asset = ReadInspectAsset(manager, assetsFileInstance, assetsFile, assetInfo, typeName, name);
+            allAssets.Add(asset);
+            if (target.Length > 0 && !name.Contains(target, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            assets.Add(asset);
+        }
+
+        var assetNameByPathId = allAssets.ToDictionary(asset => asset.PathId, asset => asset.Name);
+
+        foreach (var assetInfo in assetsFile.GetAssetsOfType(AssetClassID.AssetBundle).Concat(assetsFile.GetAssetsOfType(AssetClassID.ResourceManager)))
+        {
+            var ownerName = TryGetAssetName(manager, assetsFileInstance, assetInfo);
+            var ownerType = GetTypeName(assetInfo, assetsFile);
+            var baseField = manager.GetBaseField(assetsFileInstance, assetInfo);
+            AddContainerEntries(baseField, ownerType, ownerName, target, containers);
+            AddPreloadEntries(baseField, ownerType, ownerName, preload);
+        }
+
+        foreach (var assetInfo in assetsFile.AssetInfos)
+        {
+            var ownerName = TryGetAssetName(manager, assetsFileInstance, assetInfo);
+            if (target.Length > 0 && !ownerName.Contains(target, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var ownerType = GetTypeName(assetInfo, assetsFile);
+            var baseField = manager.GetBaseField(assetsFileInstance, assetInfo);
+            AddReferences(baseField, ownerType, ownerName, "", assetNameByPathId, references);
+        }
+
+        manager.UnloadAll();
+        return new InspectResult(true, null, totalTimer.ElapsedMilliseconds, assets, containers, preload, directories, references);
     }
 
     private static void ScanTextAssets(
@@ -245,6 +315,56 @@ static class UabeaPatchPrototype
         }
     }
 
+    private static void InsertTextures(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        Dictionary<string, Replacement> replacements,
+        List<ChangedAsset> changed)
+    {
+        if (replacements.Count == 0)
+        {
+            return;
+        }
+
+        var existingTextureNames = new HashSet<string>(
+            assetsFile.GetAssetsOfType(AssetClassID.Texture2D)
+                .Select(assetInfo => manager.GetBaseField(assetsFileInstance, assetInfo)["m_Name"].AsString),
+            StringComparer.OrdinalIgnoreCase);
+        var templateInfo = assetsFile.GetAssetsOfType(AssetClassID.Texture2D).FirstOrDefault();
+        if (templateInfo is null)
+        {
+            throw new InvalidOperationException("Cannot insert Texture2D because this __data has no Texture2D template asset.");
+        }
+
+        var nextPathId = assetsFile.AssetInfos.Count == 0 ? 1 : assetsFile.AssetInfos.Max(asset => asset.PathId) + 1;
+        foreach (var (assetName, replacement) in replacements)
+        {
+            if (existingTextureNames.Contains(assetName))
+            {
+                continue;
+            }
+
+            var baseField = manager.GetBaseField(assetsFileInstance, templateInfo).Clone();
+            baseField["m_Name"].AsString = assetName;
+            var texture = TextureFile.ReadTextureFile(baseField);
+            texture.m_TextureFormat = (int)TextureFormat.RGBA32;
+            texture.EncodeTextureImage(replacement.Path, replacement.EncodeQuality);
+            texture.WriteTo(baseField);
+
+            var assetInfo = AssetFileInfo.Create(assetsFile, nextPathId++, (int)AssetClassID.Texture2D, null, false);
+            if (assetInfo is null)
+            {
+                throw new InvalidOperationException($"Cannot create Texture2D asset info for {assetName}.");
+            }
+
+            assetInfo.SetNewData(baseField);
+            assetsFile.Metadata.AddAssetInfo(assetInfo);
+            existingTextureNames.Add(assetName);
+            changed.Add(new ChangedAsset(replacement.ModName, "Texture2D", assetName, replacement.Action, replacement.Path, null));
+        }
+    }
+
     private static bool CanEncodeNativeFormat(int textureFormat)
     {
         return Enum.IsDefined(typeof(TextureFormat), textureFormat) &&
@@ -278,6 +398,138 @@ static class UabeaPatchPrototype
         Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
         var scriptField = baseField["m_Script"];
         File.WriteAllBytes(backupPath, scriptField.AsByteArray);
+    }
+
+    private static InspectAsset ReadInspectAsset(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        AssetFileInfo assetInfo,
+        string typeName,
+        string name)
+    {
+        int? width = null;
+        int? height = null;
+        if (assetInfo.GetTypeId(assetsFile) == (int)AssetClassID.Texture2D)
+        {
+            var baseField = manager.GetBaseField(assetsFileInstance, assetInfo);
+            width = baseField["m_Width"].AsInt;
+            height = baseField["m_Height"].AsInt;
+        }
+
+        return new InspectAsset(name, typeName, assetInfo.PathId, assetInfo.GetTypeId(assetsFile), assetInfo.ByteSize, width, height);
+    }
+
+    private static void AddContainerEntries(
+        AssetTypeValueField baseField,
+        string ownerType,
+        string ownerName,
+        string target,
+        List<InspectContainerEntry> entries)
+    {
+        var container = baseField["m_Container"];
+        if (container.IsDummy)
+        {
+            return;
+        }
+
+        foreach (var item in container["Array"].Children)
+        {
+            var path = item["first"].AsString;
+            if (target.Length > 0 && !path.Contains(target, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var pointer = item["second"];
+            entries.Add(new InspectContainerEntry(ownerType, ownerName, path, GetPPtrFileId(pointer), GetPPtrPathId(pointer)));
+        }
+    }
+
+    private static void AddPreloadEntries(
+        AssetTypeValueField baseField,
+        string ownerType,
+        string ownerName,
+        List<InspectPPtr> entries)
+    {
+        var preload = baseField["m_PreloadTable"];
+        if (preload.IsDummy)
+        {
+            return;
+        }
+
+        foreach (var item in preload["Array"].Children)
+        {
+            entries.Add(new InspectPPtr(ownerType, ownerName, GetPPtrFileId(item), GetPPtrPathId(item)));
+        }
+    }
+
+    private static void AddReferences(
+        AssetTypeValueField field,
+        string ownerType,
+        string ownerName,
+        string fieldPath,
+        Dictionary<long, string> assetNameByPathId,
+        List<InspectReference> references)
+    {
+        var fileId = field["m_FileID"];
+        var pathId = field["m_PathID"];
+        if (!fileId.IsDummy && !pathId.IsDummy)
+        {
+            var id = pathId.AsLong;
+            references.Add(new InspectReference(
+                ownerType,
+                ownerName,
+                fieldPath,
+                fileId.AsInt,
+                id,
+                assetNameByPathId.TryGetValue(id, out var targetName) ? targetName : null));
+            return;
+        }
+
+        for (var index = 0; index < field.Children.Count; index++)
+        {
+            var child = field.Children[index];
+            var childName = child.TemplateField.Name;
+            var childPath = string.IsNullOrEmpty(fieldPath)
+                ? childName
+                : $"{fieldPath}.{childName}";
+            AddReferences(child, ownerType, ownerName, childPath, assetNameByPathId, references);
+        }
+    }
+
+    private static int GetPPtrFileId(AssetTypeValueField field)
+    {
+        var fileId = field["m_FileID"];
+        return fileId.IsDummy ? 0 : fileId.AsInt;
+    }
+
+    private static long GetPPtrPathId(AssetTypeValueField field)
+    {
+        var pathId = field["m_PathID"];
+        return pathId.IsDummy ? 0 : pathId.AsLong;
+    }
+
+    private static string TryGetAssetName(AssetsManager manager, AssetsFileInstance assetsFileInstance, AssetFileInfo assetInfo)
+    {
+        try
+        {
+            var baseField = manager.GetBaseField(assetsFileInstance, assetInfo);
+            var name = baseField["m_Name"];
+            return name.IsDummy ? "" : name.AsString;
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private static string GetTypeName(AssetFileInfo assetInfo, AssetsFile assetsFile)
+    {
+        var typeId = assetInfo.GetTypeId(assetsFile);
+        return Enum.IsDefined(typeof(AssetClassID), typeId)
+            ? ((AssetClassID)typeId).ToString()
+            : typeId.ToString();
     }
 
     private static void BackupTexture(Replacement replacement, AssetsFileInstance assetsFileInstance, AssetTypeValueField baseField, string assetName)
@@ -343,6 +595,7 @@ sealed record PatchJob(
     List<string>? Atlases,
     List<string>? Skels,
     List<string>? Pngs,
+    List<string>? InsertPngs,
     string? AssetBackupDir);
 
 sealed record ChangedAsset(
@@ -368,10 +621,57 @@ sealed record PatchResult(
     List<ChangedAsset>? Changed = null,
     List<MissingAsset>? Missing = null);
 
+sealed record InspectResult(
+    bool Ok,
+    string? Error,
+    long ElapsedMs,
+    List<InspectAsset> Assets,
+    List<InspectContainerEntry> Containers,
+    List<InspectPPtr> Preload,
+    List<InspectDirectory> Directories,
+    List<InspectReference> References);
+
+sealed record InspectAsset(
+    string Name,
+    string Type,
+    long PathId,
+    int TypeId,
+    uint ByteSize,
+    int? Width = null,
+    int? Height = null);
+
+sealed record InspectContainerEntry(
+    string OwnerType,
+    string OwnerName,
+    string Path,
+    int FileId,
+    long PathId);
+
+sealed record InspectPPtr(
+    string OwnerType,
+    string OwnerName,
+    int FileId,
+    long PathId);
+
+sealed record InspectDirectory(
+    int Index,
+    string Name,
+    long Offset,
+    long DecompressedSize);
+
+sealed record InspectReference(
+    string OwnerType,
+    string OwnerName,
+    string FieldPath,
+    int FileId,
+    long PathId,
+    string? TargetName);
+
 sealed class ReplacementIndex
 {
     public Dictionary<string, Replacement> Text { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, Replacement> Textures { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, Replacement> InsertTextures { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static ReplacementIndex FromJobs(IEnumerable<PatchJob> jobs)
     {
@@ -392,6 +692,11 @@ sealed class ReplacementIndex
             {
                 index.Add(index.Textures, Path.GetFileNameWithoutExtension(png), new Replacement(job.ModName, png, "replace_texture", job.AssetBackupDir));
             }
+
+            foreach (var png in job.InsertPngs ?? [])
+            {
+                index.Add(index.InsertTextures, Path.GetFileNameWithoutExtension(png), new Replacement(job.ModName, png, "insert_texture", job.AssetBackupDir));
+            }
         }
 
         return index;
@@ -411,6 +716,14 @@ sealed class ReplacementIndex
         }
 
         foreach (var (name, replacement) in Textures)
+        {
+            if (!changedKeys.Contains($"texture2d:{name}".ToLowerInvariant()))
+            {
+                missing.Add(new MissingAsset("Texture2D", name, replacement.Path, replacement.ModName));
+            }
+        }
+
+        foreach (var (name, replacement) in InsertTextures)
         {
             if (!changedKeys.Contains($"texture2d:{name}".ToLowerInvariant()))
             {
@@ -463,6 +776,7 @@ sealed class CliArgs
     public string Output { get; private init; } = "";
     public string JobManifest { get; private init; } = "";
     public string Compression { get; private init; } = "lz4";
+    public string? Target { get; private init; }
     public bool ShowHelp { get; private init; }
 
     public static CliArgs Parse(string[] args)
@@ -495,12 +809,13 @@ sealed class CliArgs
             Input = Required(values, "input"),
             Output = values.TryGetValue("output", out var output) ? output : "",
             JobManifest = values.TryGetValue("job-manifest", out var jobManifest) ? jobManifest : "",
-            Compression = values.TryGetValue("compression", out var compression) ? compression : "lz4"
+            Compression = values.TryGetValue("compression", out var compression) ? compression : "lz4",
+            Target = values.TryGetValue("target", out var target) ? target : null
         };
 
-        if (parsed.Mode is not ("patch" or "scan"))
+        if (parsed.Mode is not ("patch" or "scan" or "inspect"))
         {
-            throw new ArgumentException("--mode must be patch or scan");
+            throw new ArgumentException("--mode must be patch, scan, or inspect");
         }
 
         if (parsed.Mode == "patch" && (string.IsNullOrWhiteSpace(parsed.Output) || string.IsNullOrWhiteSpace(parsed.JobManifest)))

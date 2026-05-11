@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +19,7 @@ type PreparedPatchFiles = {
   atlases: string[];
   skels: string[];
   pngs: string[];
+  insertPngs?: string[];
 };
 
 type PatchBackendResult = {
@@ -78,11 +80,13 @@ export async function applyReadyPatches(
       try {
         emitPatchProgress(onProgress, "converting", progressCurrent, progressTotal, `Preparing skeleton file(s) for ${plan.modName}.`, plan, patchBackend);
         const patchFiles = await preparePatchFilesCached(mod, patchFilesByModName, options, onProgress, plan, progressCurrent, progressTotal);
+        const planPatchFiles = filterPatchFilesForPlan(patchFiles, plan);
         jobs.push({
           modName: plan.modName,
-          atlases: patchFiles.atlases,
-          skels: patchFiles.skels,
-          pngs: patchFiles.pngs,
+          atlases: planPatchFiles.atlases,
+          skels: planPatchFiles.skels,
+          pngs: planPatchFiles.pngs,
+          insertPngs: planPatchFiles.insertPngs,
           assetBackupDir: getAssetBackupDir(firstPlan.bundleId, plan.modName)
         });
         bundleEntries.push(entryBase);
@@ -577,6 +581,60 @@ async function preparePatchFiles(
     skels,
     pngs: mod.files.png.map((file) => file.path)
   };
+}
+
+function filterPatchFilesForPlan(files: PreparedPatchFiles, plan: PatchPlanEntry): PreparedPatchFiles {
+  const atlasNames = getTargetNames(plan.targets.atlas, plan.targets.atlases);
+  const skelNames = getTargetNames(plan.targets.skel, plan.targets.skels);
+  const textureNames = getTargetNames(plan.targets.texture, plan.targets.textures);
+  const atlases = files.atlases.filter((file) => atlasNames.has(path.basename(file).toLowerCase()));
+  const pngsByBaseName = new Map(files.pngs.map((file) => [path.basename(file, path.extname(file)).toLowerCase(), file]));
+  const insertTextureNames = getAtlasPageTextureNames(atlases).filter((name) =>
+    !textureNames.has(name) && pngsByBaseName.has(name)
+  );
+
+  return {
+    atlases,
+    skels: files.skels.filter((file) => skelNames.has(path.basename(file).toLowerCase())),
+    pngs: files.pngs.filter((file) => textureNames.has(path.basename(file, path.extname(file)).toLowerCase())),
+    insertPngs: insertTextureNames.map((name) => pngsByBaseName.get(name)).filter((file): file is string => Boolean(file))
+  };
+}
+
+function getTargetNames(
+  legacyTarget: PatchPlanEntry["targets"]["atlas"],
+  targets: PatchPlanEntry["targets"]["atlases"]
+) {
+  const names = new Set<string>();
+
+  for (const target of [legacyTarget, ...(targets ?? [])]) {
+    if (target?.assetName) {
+      names.add(target.assetName.toLowerCase());
+    }
+  }
+
+  return names;
+}
+
+function getAtlasPageTextureNames(atlases: string[]) {
+  const names = new Set<string>();
+
+  for (const atlas of atlases) {
+    for (const line of readAtlasTextSync(atlas).split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || line !== trimmed || trimmed.includes(":") || !trimmed.toLowerCase().endsWith(".png")) {
+        continue;
+      }
+
+      names.add(path.basename(trimmed, path.extname(trimmed)).toLowerCase());
+    }
+  }
+
+  return [...names];
+}
+
+function readAtlasTextSync(filePath: string) {
+  return fsSync.readFileSync(filePath, "utf8");
 }
 
 async function getRestorePatchFiles(plan: PatchPlanEntry) {
