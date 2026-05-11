@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import type { BundleAsset, ModsIndex, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, SharedIndex, SharedScanProgress } from "../../../core/types";
+import type { ApplyPatchOptions, BundleAsset, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, SharedIndex, SharedScanProgress } from "../../../core/types";
 
 type Settings = {
+  settingsVersion: number;
   sharedDir: string;
   modsDir: string;
   converterPath: string;
   pythonPath: string;
+  patchBackend: PatchBackend;
+  dotnetPath: string;
   unityVersion: string;
   decryptKey: string;
   scanLimit: string;
@@ -14,10 +17,13 @@ type Settings = {
 type SharedAssetCategory = "all" | "char" | "cutscene_char" | "illust_dating" | "other";
 
 const emptySettings: Settings = {
+  settingsVersion: 2,
   sharedDir: "",
   modsDir: "",
   converterPath: "",
   pythonPath: ".venv/bin/python",
+  patchBackend: "uabea",
+  dotnetPath: "manager-data/tools/dotnet/dotnet",
   unityVersion: "2021.3.33f1",
   decryptKey: "",
   scanLimit: "10"
@@ -39,8 +45,10 @@ export function App() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [sharedScanActive, setSharedScanActive] = useState(false);
 
-  const readyCount = useMemo(() => plans.filter((plan) => plan.status === "ready").length, [plans]);
+  const readyTargetCount = useMemo(() => plans.filter((plan) => plan.status === "ready").length, [plans]);
+  const readyModCount = useMemo(() => countReadyMods(plans), [plans]);
   const plansByModName = useMemo(() => new Map(plans.map((plan) => [plan.modName, plan])), [plans]);
   const patchHistoryByModName = useMemo(() => groupPatchHistoryByModName(patchHistory), [patchHistory]);
   const actualPatchStates = useMemo(() => getActualPatchStates(modsIndex, patchHistory), [modsIndex, patchHistory]);
@@ -81,6 +89,7 @@ export function App() {
     });
     const unsubscribeShared = window.bd2.onSharedScanProgress((progress) => {
       setSharedProgress(progress);
+      setSharedScanActive(!["done", "stopped"].includes(progress.phase));
       if (progress.phase === "found") {
         const discovered = progress.discoveredTotal ?? progress.total;
         const scanScope = progress.targetTotal ? `${progress.total} largest bundle(s)` : `${progress.total} bundle(s)`;
@@ -100,7 +109,7 @@ export function App() {
     });
     const unsubscribePatch = window.bd2.onPatchProgress((progress) => {
       setPatchProgress(progress);
-      pushLog(setLogs, `Patch ${progress.current}/${progress.total} ${progress.message}`);
+      pushLog(setLogs, formatPatchProgressLog(progress));
     });
 
     return () => {
@@ -116,7 +125,7 @@ export function App() {
     window.localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
   }, [settings, settingsLoaded]);
 
-  function updateSetting(key: keyof Settings, value: string) {
+  function updateSetting<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
@@ -172,27 +181,12 @@ export function App() {
       return;
     }
 
-    setSharedIndex({ bundles: [] });
-    setPlans([]);
-    setSharedProgress({ phase: "discovering", current: 0, total: 0 });
-    const nextSharedIndex = await window.bd2.scanShared(activeSettings.sharedDir, {
-      pythonPath: activeSettings.pythonPath,
-      unityVersion: activeSettings.unityVersion,
-      decryptKey: activeSettings.decryptKey,
-      scanLimit: parseScanLimit(activeSettings.scanLimit),
-      targetNames
-    });
-    setSharedIndex(nextSharedIndex);
-    const assetCount = nextSharedIndex.bundles.reduce((sum, bundle) => sum + bundle.assets.length, 0);
-    const errorCount = nextSharedIndex.bundles.filter((bundle) => bundle.scanError).length;
-    log(`Scanned Shared for Mods: ${nextSharedIndex.bundles.length} bundle(s), ${assetCount} candidate asset(s), ${errorCount} scan error(s).`);
-    for (const bundle of nextSharedIndex.bundles.filter((item) => item.scanError).slice(0, 5)) {
-      log(`${bundle.bundleId}: ${bundle.scanError}`);
-    }
+    const cachedSharedIndex = await window.bd2.readSharedIndex(activeSettings.sharedDir);
+    setSharedIndex(cachedSharedIndex);
 
-    const planIndex = await window.bd2.createPatchPlan(nextSharedIndex, index);
+    const planIndex = await window.bd2.createPatchPlan(cachedSharedIndex, index);
     setPlans(planIndex.plans);
-    log(`Generated patch plan: ${planIndex.plans.length} item(s).`);
+    log(`${formatPatchPlanSummary(planIndex.plans)} from cached Shared index. No Shared scan was started.`);
   }
 
   async function scanSharedForModsOnly(activeSettings: Settings) {
@@ -240,7 +234,9 @@ export function App() {
           <h1>BD2 Spine Mod Manager</h1>
           <p>Brown Dust 2 / PlayCover Spine module workflow</p>
         </div>
-        <div className="statusPill">{readyCount} ready</div>
+        <div className="statusPill" title={`${readyTargetCount} __data target(s) ready`}>
+          {readyModCount} mod(s) ready
+        </div>
       </header>
 
       <section className="panel settingsGrid">
@@ -255,6 +251,15 @@ export function App() {
           value={settings.modsDir}
           onChange={(value) => updateSetting("modsDir", value)}
           onBrowse={() => selectDirectory("modsDir")}
+        />
+        <SelectField
+          label="Patch Backend"
+          value={settings.patchBackend}
+          onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
+          options={[
+            { value: "unitypy", label: "UnityPy" },
+            { value: "uabea", label: "UABEA / AssetsTools.NET" }
+          ]}
         />
         <div className="settingsActions">
           <button type="button" onClick={() => setShowAdvancedSettings((current) => !current)}>
@@ -272,6 +277,11 @@ export function App() {
               label="Python"
               value={settings.pythonPath}
               onChange={(value) => updateSetting("pythonPath", value)}
+            />
+            <PathField
+              label="Dotnet for UABEA Patch"
+              value={settings.dotnetPath}
+              onChange={(value) => updateSetting("dotnetPath", value)}
             />
             <PathField
               label="Unity Fallback Version"
@@ -299,7 +309,7 @@ export function App() {
         })}>
           Scan Mods
         </button>
-        <button disabled={!busy} onClick={async () => {
+        <button disabled={!busy && !sharedScanActive} onClick={async () => {
           await window.bd2.stopSharedScan();
           log("Stop requested. Current bundle will finish before scanning stops.");
         }}>
@@ -339,7 +349,7 @@ export function App() {
             <button disabled={busy || !modsIndex.mods.length || !sharedIndex.bundles.length} onClick={() => runTask(async () => {
               const planIndex = await window.bd2.createPatchPlan(sharedIndex, modsIndex);
               setPlans(planIndex.plans);
-              log(`Generated patch plan: ${planIndex.plans.length} item(s).`);
+              log(formatPatchPlanSummary(planIndex.plans));
             })}>
               Generate Patch Plan
             </button>
@@ -542,10 +552,7 @@ export function App() {
           <div className="panelTitle">Actions</div>
           <button disabled={busy || !patchStateChanges.length || !plans.length} onClick={() => runTask(async () => {
             const result = await window.bd2.dryRunPatchStateChanges(plans, modsIndex, patchStateChanges, {
-              pythonPath: settings.pythonPath,
-              converterPath: settings.converterPath,
-              unityVersion: settings.unityVersion,
-              decryptKey: settings.decryptKey
+              ...createApplyPatchOptions(settings)
             });
             const converted = result.entries.filter((entry) => entry.status === "ready").length;
             const failed = result.entries.filter((entry) => entry.status === "failed").length;
@@ -560,10 +567,7 @@ export function App() {
           <button disabled>Apply Selected Mod</button>
           <button disabled={busy || !patchStateChanges.length || !plans.length} onClick={() => runTask(async () => {
             const result = await window.bd2.applyPatchStateChanges(plans, modsIndex, patchStateChanges, {
-              pythonPath: settings.pythonPath,
-              converterPath: settings.converterPath,
-              unityVersion: settings.unityVersion,
-              decryptKey: settings.decryptKey
+              ...createApplyPatchOptions(settings)
             });
             setPatchHistory(result.history);
             setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
@@ -646,12 +650,22 @@ function groupSharedErrors(errors: SharedIndex["bundles"]) {
     .slice(0, 6);
 }
 
+function countReadyMods(plans: PatchPlanEntry[]) {
+  return new Set(plans.filter((plan) => plan.status === "ready").map((plan) => plan.modName)).size;
+}
+
+function formatPatchPlanSummary(plans: PatchPlanEntry[]) {
+  const readyTargets = plans.filter((plan) => plan.status === "ready").length;
+  return `Generated patch plan: ${countReadyMods(plans)} ready mod(s), ${readyTargets} ready __data target(s), ${plans.length} plan item(s).`;
+}
+
 async function loadSavedSettings(): Promise<Settings> {
-  const defaults = await window.bd2.getDefaultPaths().catch(() => ({ modsDir: "mods", sharedDir: "" }));
+  const defaults = await window.bd2.getDefaultPaths().catch(() => ({ modsDir: "mods", sharedDir: "", dotnetPath: "manager-data/tools/dotnet/dotnet" }));
   const fallback: Settings = {
     ...emptySettings,
     modsDir: defaults.modsDir,
-    sharedDir: defaults.sharedDir
+    sharedDir: defaults.sharedDir,
+    dotnetPath: defaults.dotnetPath
   };
 
   try {
@@ -662,11 +676,34 @@ async function loadSavedSettings(): Promise<Settings> {
 
     return {
       ...fallback,
-      ...JSON.parse(stored)
+      ...migrateStoredSettings(JSON.parse(stored))
     };
   } catch {
     return fallback;
   }
+}
+
+function migrateStoredSettings(stored: Partial<Settings>): Partial<Settings> {
+  if (stored.settingsVersion === emptySettings.settingsVersion) {
+    return stored;
+  }
+
+  return {
+    ...stored,
+    settingsVersion: emptySettings.settingsVersion,
+    patchBackend: "uabea"
+  };
+}
+
+function createApplyPatchOptions(settings: Settings): ApplyPatchOptions {
+  return {
+    pythonPath: settings.pythonPath,
+    patchBackend: settings.patchBackend,
+    dotnetPath: settings.dotnetPath,
+    converterPath: settings.converterPath,
+    unityVersion: settings.unityVersion,
+    decryptKey: settings.decryptKey
+  };
 }
 
 function getModTargetNames(modsIndex: ModsIndex) {
@@ -1010,7 +1047,22 @@ function formatPatchProgressCounter(progress: PatchProgress) {
 
 function formatPatchProgress(progress: PatchProgress) {
   const target = [progress.modName, progress.bundleId].filter(Boolean).join(" / ");
-  return target ? `${progress.message} (${target})` : progress.message;
+  const backend = progress.backend ? `${formatPatchBackend(progress.backend)}: ` : "";
+  return target ? `${backend}${progress.message} (${target})` : `${backend}${progress.message}`;
+}
+
+function formatPatchProgressLog(progress: PatchProgress) {
+  const backend = progress.backend ? `${formatPatchBackend(progress.backend)} ` : "";
+  const timing = progress.timing ? ` [${progress.timing.name}: ${formatDuration(progress.timing.ms)}]` : "";
+  return `Patch ${backend}${progress.current}/${progress.total} ${progress.message}${timing}`;
+}
+
+function formatPatchBackend(backend: PatchBackend) {
+  return backend === "uabea" ? "UABEA" : "UnityPy";
+}
+
+function formatDuration(ms: number) {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)}ms`;
 }
 
 function parseScanLimit(value: string) {
@@ -1069,6 +1121,24 @@ function PathField(props: {
         <input type={props.type ?? "text"} value={props.value} onChange={(event) => props.onChange(event.target.value)} />
         {props.onBrowse && <button type="button" onClick={props.onBrowse}>Browse</button>}
       </div>
+    </label>
+  );
+}
+
+function SelectField(props: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <label className="field">
+      <span>{props.label}</span>
+      <select value={props.value} onChange={(event) => props.onChange(event.target.value)}>
+        {props.options.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </select>
     </label>
   );
 }

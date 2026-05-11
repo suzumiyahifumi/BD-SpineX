@@ -153,10 +153,15 @@ export type PatchHistory = {
 
 export type ApplyPatchOptions = {
   pythonPath: string;
+  patchBackend?: PatchBackend;
+  dotnetPath?: string;
+  uabeaPatcherProjectPath?: string;
   converterPath?: string;
   unityVersion?: string;
   decryptKey?: string;
 };
+
+export type PatchBackend = "unitypy" | "uabea";
 
 export type PatchStateChange = {
   modName: string;
@@ -179,7 +184,14 @@ export type PatchProgress = {
   total: number;
   modName?: string;
   bundleId?: string;
+  backend?: PatchBackend;
+  timing?: PatchTimingEntry;
   message: string;
+};
+
+export type PatchTimingEntry = {
+  name: string;
+  ms: number;
 };
 
 export type ApplyPatchResult = {

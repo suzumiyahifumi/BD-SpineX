@@ -2,16 +2,29 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyModded, getAssetBackupDir, getPatchTempPath, getPatchWorkPath, preparePatchWork, replacePatchWork, restoreOriginal } from "./backup-manager.js";
-import { patchBundle } from "./asset-patcher.js";
+import { patchBundleBatch, type PatchBundleJob } from "./asset-patcher.js";
 import { convertJsonToSkel } from "./spine-converter.js";
 import { ensureSpineConverter } from "./tool-manager.js";
-import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchStateChange } from "./types.js";
+import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchStateChange } from "./types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const managerDataDir = path.resolve("manager-data");
 const patchHistoryPath = path.join(managerDataDir, "patch-history.json");
 const convertedRoot = path.join(managerDataDir, "converted");
+
+type PreparedPatchFiles = {
+  atlases: string[];
+  skels: string[];
+  pngs: string[];
+};
+
+type PatchBackendResult = {
+  ok?: boolean;
+  changed?: unknown[];
+  error?: string;
+  timings?: unknown;
+};
 
 export async function applyReadyPatches(
   plans: PatchPlanEntry[],
@@ -24,9 +37,11 @@ export async function applyReadyPatches(
   const entries: PatchRunEntry[] = [];
   const modByName = new Map(modsIndex.mods.map((mod) => [mod.modName, mod]));
   const plansByBundle = groupBy(readyPlans, (plan) => plan.bundleId ?? "");
+  const patchFilesByModName = new Map<string, PreparedPatchFiles>();
+  const patchBackend = normalizePatchBackend(options.patchBackend);
   let progressCurrent = 0;
   const progressTotal = Math.max(readyPlans.length, 1);
-  emitPatchProgress(onProgress, "starting", progressCurrent, progressTotal, "Starting patch operation.");
+  emitPatchProgress(onProgress, "starting", progressCurrent, progressTotal, `Starting patch operation using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
 
   for (const bundlePlans of plansByBundle.values()) {
     const firstPlan = bundlePlans[0];
@@ -34,12 +49,13 @@ export async function applyReadyPatches(
       continue;
     }
 
-    emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Preparing backup B for ${firstPlan.bundleId}.`, firstPlan);
-    let workPath = await preparePatchWork(firstPlan.bundlePath, firstPlan.bundleId);
+    emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Preparing backup B for ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+    const workPath = await preparePatchWork(firstPlan.bundlePath, firstPlan.bundleId);
     let bundleOk = true;
     const bundleEntries: PatchRunEntry[] = [];
+    const jobs: PatchBundleJob[] = [];
 
-    for (const [index, plan] of bundlePlans.entries()) {
+    for (const plan of bundlePlans) {
       const mod = modByName.get(plan.modName);
       const entryBase = createPatchRunEntry(plan, "ready");
 
@@ -50,34 +66,16 @@ export async function applyReadyPatches(
       }
 
       try {
-        emitPatchProgress(onProgress, "converting", progressCurrent, progressTotal, `Preparing skeleton file(s) for ${plan.modName}.`, plan);
-        const patchFiles = await preparePatchFiles(mod, options, onProgress, plan, progressCurrent, progressTotal);
-        const outputPath = getPatchTempPath(firstPlan.bundleId, index + 1);
-        emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Patching backup B for ${plan.modName}.`, plan);
-        const result = await patchBundle({
-          pythonPath: options.pythonPath || "python3",
-          scriptPath: path.resolve(__dirname, "../../python/patch_bundle.py"),
-          input: workPath,
-          output: outputPath,
-          modName: plan.name,
+        emitPatchProgress(onProgress, "converting", progressCurrent, progressTotal, `Preparing skeleton file(s) for ${plan.modName}.`, plan, patchBackend);
+        const patchFiles = await preparePatchFilesCached(mod, patchFilesByModName, options, onProgress, plan, progressCurrent, progressTotal);
+        jobs.push({
+          modName: plan.modName,
           atlases: patchFiles.atlases,
           skels: patchFiles.skels,
           pngs: patchFiles.pngs,
-          unityVersion: options.unityVersion,
-          decryptKey: options.decryptKey,
           assetBackupDir: getAssetBackupDir(firstPlan.bundleId, plan.modName)
         });
-        const parsed = result as { ok?: boolean; changed?: unknown[]; error?: string };
-        if (!parsed.ok) {
-          bundleOk = false;
-          bundleEntries.push({ ...entryBase, status: "failed", message: parsed.error ?? "Patch script failed.", changed: parsed.changed });
-          break;
-        }
-
-        workPath = await replacePatchWork(firstPlan.bundleId, outputPath);
-        progressCurrent += 1;
-        emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Finished patching ${plan.modName}.`, plan);
-        bundleEntries.push({ ...entryBase, status: "patched", message: "Patched backup B incrementally.", changed: parsed.changed });
+        bundleEntries.push(entryBase);
       } catch (error) {
         bundleOk = false;
         bundleEntries.push({
@@ -90,11 +88,63 @@ export async function applyReadyPatches(
     }
 
     if (bundleOk) {
-      emitPatchProgress(onProgress, "copying", progressCurrent, progressTotal, `Copying patched backup B to game __data for ${firstPlan.bundleId}.`, firstPlan);
+      const outputPath = getPatchTempPath(firstPlan.bundleId, 1);
+      try {
+        emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Patching backup B with ${formatPatchBackend(patchBackend)} for ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+        const result = await patchBundleBatch({
+          pythonPath: options.pythonPath || "python3",
+          scriptPath: path.resolve(__dirname, "../../python/patch_bundle.py"),
+          input: workPath,
+          output: outputPath,
+          jobs,
+          manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
+          patchBackend,
+          dotnetPath: options.dotnetPath,
+          uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
+          unityVersion: options.unityVersion,
+          decryptKey: options.decryptKey
+        });
+        const parsed = result as PatchBackendResult;
+        emitPatchTimings(onProgress, patchBackend, parsed.timings, progressCurrent, progressTotal, "patching", firstPlan);
+        if (!parsed.ok) {
+          bundleOk = false;
+          entries.push(...bundleEntries.map((entry) => ({
+            ...entry,
+            status: "failed" as const,
+            message: parsed.error ?? "Patch script failed.",
+            changed: changedForMod(parsed.changed, entry.modName)
+          })));
+        } else {
+          await replacePatchWork(firstPlan.bundleId, outputPath);
+          progressCurrent += bundlePlans.length;
+          emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Finished patching ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+          bundleEntries.splice(0, bundleEntries.length, ...bundleEntries.map((entry) => ({
+            ...entry,
+            status: "patched" as const,
+            message: "Patched backup B in one bundle pass.",
+            changed: changedForMod(parsed.changed, entry.modName)
+          })));
+        }
+      } catch (error) {
+        bundleOk = false;
+        entries.push(...bundleEntries.map((entry) => ({
+          ...entry,
+          status: "failed" as const,
+          message: error instanceof Error ? error.message : String(error)
+        })));
+      }
+    }
+
+    if (bundleOk) {
+      emitPatchProgress(onProgress, "copying", progressCurrent, progressTotal, `Copying patched backup B to game __data for ${firstPlan.bundleId}.`, firstPlan, patchBackend);
       await applyModded(firstPlan.bundlePath, firstPlan.bundleId);
       entries.push(...bundleEntries.map((entry) => ({ ...entry, status: "patched" as const, message: "Patched backup B copied to game __data." })));
-    } else {
-      entries.push(...bundleEntries);
+    } else if (!entries.some((entry) => bundleEntries.some((bundleEntry) => bundleEntry.id === entry.id))) {
+      entries.push(...bundleEntries.map((entry) =>
+        entry.status === "ready"
+          ? { ...entry, status: "skipped" as const, message: "Skipped because another patch for this __data failed." }
+          : entry
+      ));
       for (const plan of bundlePlans.slice(bundleEntries.length)) {
         entries.push({ ...createPatchRunEntry(plan, "skipped"), message: "Skipped because another patch for this __data failed." });
       }
@@ -103,7 +153,7 @@ export async function applyReadyPatches(
 
   const nextHistory = mergePatchHistory(history, entries);
   await writePatchHistory(nextHistory);
-  emitPatchProgress(onProgress, entries.some((entry) => entry.status === "failed") ? "failed" : "done", progressCurrent, progressTotal, "Patch operation finished.");
+  emitPatchProgress(onProgress, entries.some((entry) => entry.status === "failed") ? "failed" : "done", progressCurrent, progressTotal, `Patch operation finished using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
   return { ok: entries.every((entry) => entry.status === "patched"), entries, history: nextHistory };
 }
 
@@ -125,7 +175,8 @@ export async function applyPatchStateChanges(
     .filter((change) => !change.enabled && patchedModNames.has(change.modName))
     .map((change) => change.modName);
   const entries: PatchRunEntry[] = [];
-  emitPatchProgress(onProgress, "starting", 0, Math.max(changes.length, 1), `Applying ${changes.length} staged change(s).`);
+  const patchBackend = normalizePatchBackend(options.patchBackend);
+  emitPatchProgress(onProgress, "starting", 0, Math.max(changes.length, 1), `Applying ${changes.length} staged change(s) using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
 
   if (toApply.length > 0) {
     const result = await applyReadyPatches(
@@ -148,7 +199,7 @@ export async function applyPatchStateChanges(
   }
 
   const nextHistory = await readPatchHistory();
-  emitPatchProgress(onProgress, entries.some((entry) => entry.status === "failed") ? "failed" : "done", Math.max(changes.length, 1), Math.max(changes.length, 1), "Staged changes finished.");
+  emitPatchProgress(onProgress, entries.some((entry) => entry.status === "failed") ? "failed" : "done", Math.max(changes.length, 1), Math.max(changes.length, 1), `Staged changes finished using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
   return { ok: entries.every((entry) => entry.status === "patched" || entry.status === "restored"), entries, history: nextHistory };
 }
 
@@ -210,7 +261,7 @@ export async function dryRunPatchStateChanges(
 export async function restoreModPatches(
   plans: PatchPlanEntry[],
   modNames: string[],
-  options: Pick<ApplyPatchOptions, "pythonPath" | "unityVersion" | "decryptKey">,
+  options: Pick<ApplyPatchOptions, "pythonPath" | "patchBackend" | "dotnetPath" | "uabeaPatcherProjectPath" | "unityVersion" | "decryptKey">,
   onProgress?: (progress: PatchProgress) => void
 ): Promise<ApplyPatchResult> {
   const history = await readPatchHistory();
@@ -218,9 +269,10 @@ export async function restoreModPatches(
   const restorablePlans = plans.filter((plan) => targetMods.has(plan.modName) && plan.bundleId && plan.bundlePath);
   const plansByBundle = groupBy(restorablePlans, (plan) => plan.bundleId ?? "");
   const entries: PatchRunEntry[] = [];
+  const patchBackend = normalizePatchBackend(options.patchBackend);
   let progressCurrent = 0;
   const progressTotal = Math.max(restorablePlans.length, 1);
-  emitPatchProgress(onProgress, "starting", progressCurrent, progressTotal, "Starting selected restore operation.");
+  emitPatchProgress(onProgress, "starting", progressCurrent, progressTotal, `Starting selected restore operation using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
 
   for (const bundlePlans of plansByBundle.values()) {
     const firstPlan = bundlePlans[0];
@@ -228,41 +280,24 @@ export async function restoreModPatches(
       continue;
     }
 
-    emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Preparing backup B for ${firstPlan.bundleId}.`, firstPlan);
-    let workPath = await preparePatchWork(firstPlan.bundlePath, firstPlan.bundleId);
+    emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Preparing backup B for ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+    const workPath = await preparePatchWork(firstPlan.bundlePath, firstPlan.bundleId);
     let bundleOk = true;
     const bundleEntries: PatchRunEntry[] = [];
+    const jobs: PatchBundleJob[] = [];
 
-    for (const [index, plan] of bundlePlans.entries()) {
+    for (const plan of bundlePlans) {
       const entryBase = createPatchRunEntry(plan, "ready");
 
       try {
         const restoreFiles = await getRestorePatchFiles(plan);
-        const outputPath = getPatchTempPath(firstPlan.bundleId, index + 1);
-        emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Restoring ${plan.modName} from per-asset backup.`, plan);
-        const result = await patchBundle({
-          pythonPath: options.pythonPath || "python3",
-          scriptPath: path.resolve(__dirname, "../../python/patch_bundle.py"),
-          input: workPath || getPatchWorkPath(firstPlan.bundleId),
-          output: outputPath,
-          modName: plan.name,
+        jobs.push({
+          modName: plan.modName,
           atlases: restoreFiles.atlases,
           skels: restoreFiles.skels,
-          pngs: restoreFiles.pngs,
-          unityVersion: options.unityVersion,
-          decryptKey: options.decryptKey
+          pngs: restoreFiles.pngs
         });
-        const parsed = result as { ok?: boolean; changed?: unknown[]; error?: string };
-        if (!parsed.ok) {
-          bundleOk = false;
-          bundleEntries.push({ ...entryBase, status: "failed", message: parsed.error ?? "Restore patch failed.", changed: parsed.changed });
-          break;
-        }
-
-        workPath = await replacePatchWork(firstPlan.bundleId, outputPath);
-        progressCurrent += 1;
-        emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Finished restoring ${plan.modName}.`, plan);
-        bundleEntries.push({ ...entryBase, status: "restored", message: "Restored this mod's assets in backup B.", changed: parsed.changed });
+        bundleEntries.push(entryBase);
       } catch (error) {
         bundleOk = false;
         bundleEntries.push({
@@ -275,11 +310,63 @@ export async function restoreModPatches(
     }
 
     if (bundleOk) {
-      emitPatchProgress(onProgress, "copying", progressCurrent, progressTotal, `Copying restored backup B to game __data for ${firstPlan.bundleId}.`, firstPlan);
+      const outputPath = getPatchTempPath(firstPlan.bundleId, 1);
+      try {
+        emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Restoring with ${formatPatchBackend(patchBackend)} for ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+        const result = await patchBundleBatch({
+          pythonPath: options.pythonPath || "python3",
+          scriptPath: path.resolve(__dirname, "../../python/patch_bundle.py"),
+          input: workPath || getPatchWorkPath(firstPlan.bundleId),
+          output: outputPath,
+          jobs,
+          manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
+          patchBackend,
+          dotnetPath: options.dotnetPath,
+          uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
+          unityVersion: options.unityVersion,
+          decryptKey: options.decryptKey
+        });
+        const parsed = result as PatchBackendResult;
+        emitPatchTimings(onProgress, patchBackend, parsed.timings, progressCurrent, progressTotal, "restoring", firstPlan);
+        if (!parsed.ok) {
+          bundleOk = false;
+          entries.push(...bundleEntries.map((entry) => ({
+            ...entry,
+            status: "failed" as const,
+            message: parsed.error ?? "Restore patch failed.",
+            changed: changedForMod(parsed.changed, entry.modName)
+          })));
+        } else {
+          await replacePatchWork(firstPlan.bundleId, outputPath);
+          progressCurrent += bundlePlans.length;
+          emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Finished restoring ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+          bundleEntries.splice(0, bundleEntries.length, ...bundleEntries.map((entry) => ({
+            ...entry,
+            status: "restored" as const,
+            message: "Restored this mod's assets in one bundle pass.",
+            changed: changedForMod(parsed.changed, entry.modName)
+          })));
+        }
+      } catch (error) {
+        bundleOk = false;
+        entries.push(...bundleEntries.map((entry) => ({
+          ...entry,
+          status: "failed" as const,
+          message: error instanceof Error ? error.message : String(error)
+        })));
+      }
+    }
+
+    if (bundleOk) {
+      emitPatchProgress(onProgress, "copying", progressCurrent, progressTotal, `Copying restored backup B to game __data for ${firstPlan.bundleId}.`, firstPlan, patchBackend);
       await applyModded(firstPlan.bundlePath, firstPlan.bundleId);
       entries.push(...bundleEntries.map((entry) => ({ ...entry, status: "restored" as const, message: "Updated backup B copied to game __data." })));
-    } else {
-      entries.push(...bundleEntries);
+    } else if (!entries.some((entry) => bundleEntries.some((bundleEntry) => bundleEntry.id === entry.id))) {
+      entries.push(...bundleEntries.map((entry) =>
+        entry.status === "ready"
+          ? { ...entry, status: "skipped" as const, message: "Skipped because another restore for this __data failed." }
+          : entry
+      ));
       for (const plan of bundlePlans.slice(bundleEntries.length)) {
         entries.push({ ...createPatchRunEntry(plan, "skipped"), message: "Skipped because another restore for this __data failed." });
       }
@@ -288,7 +375,7 @@ export async function restoreModPatches(
 
   const nextHistory = mergePatchHistory(history, entries);
   await writePatchHistory(nextHistory);
-  emitPatchProgress(onProgress, entries.some((entry) => entry.status === "failed") ? "failed" : "done", progressCurrent, progressTotal, "Selected restore finished.");
+  emitPatchProgress(onProgress, entries.some((entry) => entry.status === "failed") ? "failed" : "done", progressCurrent, progressTotal, `Selected restore finished using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
   return { ok: entries.every((entry) => entry.status === "restored"), entries, history: nextHistory };
 }
 
@@ -325,6 +412,25 @@ export async function readPatchHistory(): Promise<PatchHistory> {
   } catch {
     return { updatedAt: new Date().toISOString(), entries: [] };
   }
+}
+
+async function preparePatchFilesCached(
+  mod: ModEntry,
+  cache: Map<string, PreparedPatchFiles>,
+  options: ApplyPatchOptions,
+  onProgress?: (progress: PatchProgress) => void,
+  plan?: PatchPlanEntry,
+  progressCurrent = 0,
+  progressTotal = 1
+) {
+  const cached = cache.get(mod.modName);
+  if (cached) {
+    return cached;
+  }
+
+  const prepared = await preparePatchFiles(mod, options, onProgress, plan, progressCurrent, progressTotal);
+  cache.set(mod.modName, prepared);
+  return prepared;
 }
 
 async function preparePatchFiles(
@@ -381,6 +487,25 @@ async function getRestorePatchFiles(plan: PatchPlanEntry) {
   return { atlases, skels, pngs };
 }
 
+async function writePatchJobManifest(bundleId: string, jobs: PatchBundleJob[]) {
+  const manifestPath = path.join(path.dirname(getPatchWorkPath(bundleId)), "__data.patch-jobs.json");
+  await fs.writeFile(manifestPath, `${JSON.stringify({ jobs }, null, 2)}\n`, "utf8");
+  return manifestPath;
+}
+
+function changedForMod(changed: unknown[] | undefined, modName: string) {
+  if (!Array.isArray(changed)) {
+    return changed;
+  }
+
+  return changed.filter((item) =>
+    typeof item === "object" &&
+    item !== null &&
+    "modName" in item &&
+    (item as { modName?: unknown }).modName === modName
+  );
+}
+
 function getPatchedModNames(history: PatchHistory) {
   const patched = new Set<string>();
 
@@ -411,7 +536,9 @@ function emitPatchProgress(
   current: number,
   total: number,
   message: string,
-  plan?: PatchPlanEntry
+  plan?: PatchPlanEntry,
+  backend?: PatchBackend,
+  timing?: PatchProgress["timing"]
 ) {
   onProgress?.({
     phase,
@@ -419,8 +546,61 @@ function emitPatchProgress(
     total,
     modName: plan?.modName,
     bundleId: plan?.bundleId,
+    backend,
+    timing,
     message
   });
+}
+
+function emitPatchTimings(
+  onProgress: ((progress: PatchProgress) => void) | undefined,
+  backend: PatchBackend,
+  timings: unknown,
+  current: number,
+  total: number,
+  phase: PatchProgress["phase"],
+  plan?: PatchPlanEntry
+) {
+  if (!Array.isArray(timings)) {
+    return;
+  }
+
+  for (const timing of timings) {
+    if (!isPatchTimingEntry(timing)) {
+      continue;
+    }
+    emitPatchProgress(
+      onProgress,
+      phase,
+      current,
+      total,
+      `${formatPatchBackend(backend)} ${timing.name}: ${formatMs(timing.ms)}.`,
+      plan,
+      backend,
+      timing
+    );
+  }
+}
+
+function isPatchTimingEntry(value: unknown): value is NonNullable<PatchProgress["timing"]> {
+  return typeof value === "object" &&
+    value !== null &&
+    "name" in value &&
+    "ms" in value &&
+    typeof (value as { name?: unknown }).name === "string" &&
+    typeof (value as { ms?: unknown }).ms === "number";
+}
+
+function normalizePatchBackend(backend: ApplyPatchOptions["patchBackend"]): PatchBackend {
+  return backend === "uabea" ? "uabea" : "unitypy";
+}
+
+function formatPatchBackend(backend: PatchBackend) {
+  return backend === "uabea" ? "UABEA / AssetsTools.NET" : "UnityPy";
+}
+
+function formatMs(ms: number) {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)}ms`;
 }
 
 async function writePatchHistory(history: PatchHistory) {

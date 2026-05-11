@@ -14,7 +14,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -33,7 +34,8 @@ button:disabled {
   background: #eef2f6;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-width: 0;
   border: 1px solid #b9c4d2;

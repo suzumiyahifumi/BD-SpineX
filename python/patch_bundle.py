@@ -5,38 +5,49 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
 def main():
+    total_started = time.perf_counter()
+    timings = []
     parser = argparse.ArgumentParser(description="Patch Unity AssetBundle assets for BD2 Spine mods.")
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--mod-name", required=True)
+    parser.add_argument("--mod-name")
     parser.add_argument("--atlas", action="append", default=[])
     parser.add_argument("--skel", action="append", default=[])
     parser.add_argument("--png", action="append", default=[])
     parser.add_argument("--unity-version", default="2021.3.33f1")
     parser.add_argument("--decrypt-key")
     parser.add_argument("--asset-backup-dir")
+    parser.add_argument("--job-manifest")
     args = parser.parse_args()
 
     try:
         import UnityPy
         import UnityPy.config
     except Exception as error:
-        print(json.dumps({"ok": False, "error": f"UnityPy import failed: {error}"}))
+        add_timing(timings, "total", total_started)
+        print(json.dumps({"ok": False, "error": f"UnityPy import failed: {error}", "timings": timings, "elapsedMs": elapsed_ms(total_started)}))
         return 1
 
     try:
+        setup_started = time.perf_counter()
         UnityPy.config.FALLBACK_UNITY_VERSION = args.unity_version
         if args.decrypt_key:
             UnityPy.set_assetbundle_decrypt_key(args.decrypt_key)
 
         replacements = build_replacements(args)
         validate_replacements(replacements)
+        add_timing(timings, "prepare_replacements", setup_started)
 
+        load_started = time.perf_counter()
         env = UnityPy.load(args.input)
+        add_timing(timings, "load_bundle", load_started)
+
+        patch_started = time.perf_counter()
         changed = []
 
         for obj in env.objects:
@@ -49,35 +60,40 @@ def main():
 
             if type_name == "TextAsset" and name in replacements["text"]:
                 replacement = replacements["text"][name]
-                backup_path = backup_textasset(args.asset_backup_dir, data, name, replacement)
+                backup_path = backup_textasset(replacement.get("assetBackupDir"), data, name, replacement)
                 data.m_Script = read_textasset_payload(replacement["path"])
                 data.save()
                 changed.append({
                     "type": type_name,
                     "name": getattr(data, "m_Name", name),
                     "action": replacement["action"],
+                    "modName": replacement.get("modName"),
                     "source": replacement["path"],
                     "assetBackup": backup_path
                 })
 
             if type_name == "Texture2D" and name in replacements["texture"]:
                 replacement = replacements["texture"][name]
-                backup_path = backup_texture(args.asset_backup_dir, data, name, replacement)
+                backup_path = backup_texture(replacement.get("assetBackupDir"), data, name, replacement)
                 data.set_image(replacement["path"])
                 data.save()
                 changed.append({
                     "type": type_name,
                     "name": getattr(data, "m_Name", name),
                     "action": "replace_texture",
+                    "modName": replacement.get("modName"),
                     "source": replacement["path"],
                     "assetBackup": backup_path
                 })
 
         missing = find_missing(replacements, changed)
+        add_timing(timings, "patch_assets", patch_started)
         if missing:
-            print(json.dumps({"ok": False, "changed": changed, "missing": missing, "error": "Target asset(s) not found."}, ensure_ascii=False))
+            add_timing(timings, "total", total_started)
+            print(json.dumps({"ok": False, "changed": changed, "missing": missing, "error": "Target asset(s) not found.", "timings": timings, "elapsedMs": elapsed_ms(total_started)}, ensure_ascii=False))
             return 1
 
+        write_started = time.perf_counter()
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -90,37 +106,72 @@ def main():
                     return 1
                 saved = saved_files[0]
             shutil.copyfile(saved, output)
+        add_timing(timings, "write_bundle", write_started)
+        add_timing(timings, "total", total_started)
 
-        print(json.dumps({"ok": True, "changed": changed, "output": str(output)}, ensure_ascii=False))
+        print(json.dumps({"ok": True, "changed": changed, "output": str(output), "timings": timings, "elapsedMs": elapsed_ms(total_started)}, ensure_ascii=False))
         return 0
     except Exception as error:
-        print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False))
+        add_timing(timings, "total", total_started)
+        print(json.dumps({"ok": False, "error": str(error), "timings": timings, "elapsedMs": elapsed_ms(total_started)}, ensure_ascii=False))
         return 1
+
+
+def elapsed_ms(started):
+    return int((time.perf_counter() - started) * 1000)
+
+
+def add_timing(timings, name, started):
+    timings.append({"name": name, "ms": elapsed_ms(started)})
 
 
 def build_replacements(args):
     text = {}
     texture = {}
 
-    for atlas in args.atlas:
-        text[Path(atlas).name.lower()] = {
-            "path": atlas,
-            "action": "replace_atlas"
-        }
+    if args.job_manifest:
+        manifest = json.loads(Path(args.job_manifest).read_text(encoding="utf-8"))
+        for job in manifest.get("jobs", []):
+            add_job_replacements(
+                text,
+                texture,
+                job.get("modName"),
+                job.get("assetBackupDir"),
+                job.get("atlases", []),
+                job.get("skels", []),
+                job.get("pngs", [])
+            )
+        return {"text": text, "texture": texture}
 
-    for skel in args.skel:
-        text[Path(skel).name.lower()] = {
-            "path": skel,
-            "action": "replace_skel"
-        }
+    if not args.mod_name:
+        raise ValueError("--mod-name is required when --job-manifest is not used.")
 
-    for png in args.png:
-        texture[Path(png).stem.lower()] = {
-            "path": png,
-            "action": "replace_texture"
-        }
+    add_job_replacements(text, texture, args.mod_name, args.asset_backup_dir, args.atlas, args.skel, args.png)
 
     return {"text": text, "texture": texture}
+
+
+def add_job_replacements(text, texture, mod_name, asset_backup_dir, atlases, skels, pngs):
+    for atlas in atlases:
+        add_replacement(text, Path(atlas).name.lower(), atlas, "replace_atlas", mod_name, asset_backup_dir)
+
+    for skel in skels:
+        add_replacement(text, Path(skel).name.lower(), skel, "replace_skel", mod_name, asset_backup_dir)
+
+    for png in pngs:
+        add_replacement(texture, Path(png).stem.lower(), png, "replace_texture", mod_name, asset_backup_dir)
+
+
+def add_replacement(group, key, file_path, action, mod_name, asset_backup_dir):
+    if key in group:
+        raise ValueError(f"Duplicate replacement target in one batch: {key}")
+
+    group[key] = {
+        "path": file_path,
+        "action": action,
+        "modName": mod_name,
+        "assetBackupDir": asset_backup_dir
+    }
 
 
 def validate_replacements(replacements):

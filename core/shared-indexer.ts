@@ -17,9 +17,15 @@ export async function scanShared(
   shouldStop?: () => boolean
 ): Promise<SharedIndex> {
   onProgress?.({ phase: "discovering", current: 0, total: 0 });
-  const candidates = await findSharedBundleCandidates(sharedDir);
-  const fileIndex = createSharedFileIndex(sharedDir, candidates);
-  await writeJson(sharedFileIndexPath, fileIndex);
+  const cachedFileIndex = options.forceRescan ? undefined : await readExistingSharedFileIndex(sharedDir);
+  const candidates = cachedFileIndex
+    ? candidatesFromFileIndex(cachedFileIndex)
+    : await findSharedBundleCandidates(sharedDir);
+
+  if (!cachedFileIndex) {
+    const fileIndex = createSharedFileIndex(sharedDir, candidates);
+    await writeJson(sharedFileIndexPath, fileIndex);
+  }
 
   const targetNames = normalizeTargetNames(options.targetNames ?? []);
   const knownIndex = options.forceRescan
@@ -255,12 +261,43 @@ async function writeJson(filePath: string, data: unknown) {
   await fs.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
-async function readExistingSharedIndex(): Promise<SharedIndex> {
+export async function readSharedIndex(sharedDir?: string): Promise<SharedIndex> {
   try {
-    return JSON.parse(await fs.readFile(sharedIndexPath, "utf8")) as SharedIndex;
+    const index = JSON.parse(await fs.readFile(sharedIndexPath, "utf8")) as SharedIndex;
+    if (!sharedDir?.trim()) {
+      return index;
+    }
+
+    const root = path.resolve(sharedDir);
+    return {
+      bundles: index.bundles.filter((bundle) => path.resolve(bundle.dataPath).startsWith(root))
+    };
   } catch {
     return { bundles: [] };
   }
+}
+
+async function readExistingSharedIndex(): Promise<SharedIndex> {
+  return readSharedIndex();
+}
+
+async function readExistingSharedFileIndex(sharedDir: string): Promise<SharedFileIndex | undefined> {
+  try {
+    const index = JSON.parse(await fs.readFile(sharedFileIndexPath, "utf8")) as SharedFileIndex;
+    return path.resolve(index.sharedDir) === path.resolve(sharedDir) ? index : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function candidatesFromFileIndex(index: SharedFileIndex): SharedBundleCandidate[] {
+  return sortCandidatesBySize(index.files.map((file) => ({
+    bundleId: file.bundleId,
+    dataPath: file.dataPath,
+    infoPath: file.infoPath,
+    sizeBytes: file.sizeBytes,
+    modifiedAt: file.modifiedAt
+  })));
 }
 
 function mergeSharedIndexes(...indexes: SharedIndex[]): SharedIndex {

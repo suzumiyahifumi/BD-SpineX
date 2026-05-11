@@ -92,6 +92,8 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+**/bin/
+**/obj/
 
 # Gatsby files
 .cache/
@@ -152,6 +154,7 @@ manager-data/converted/**
 !manager-data/tools/**
 manager-data/tools/build/**
 manager-data/tools/downloads/**
+manager-data/tools/dotnet/**
 manager-data/tools/git-source/**
 manager-data/tools/source/**
 

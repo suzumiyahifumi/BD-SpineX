@@ -2,11 +2,12 @@ import { contextBridge, ipcRenderer } from "electron";
 import type { ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
 
 const api = {
-  getDefaultPaths: () => ipcRenderer.invoke("app:default-paths") as Promise<{ modsDir: string; sharedDir: string }>,
+  getDefaultPaths: () => ipcRenderer.invoke("app:default-paths") as Promise<{ modsDir: string; sharedDir: string; dotnetPath: string }>,
   selectDirectory: () => ipcRenderer.invoke("dialog:select-directory") as Promise<string | null>,
   scanMods: (modsDir: string) => ipcRenderer.invoke("mods:scan", modsDir) as Promise<ModsIndex>,
   scanShared: (sharedDir: string, options?: SharedScanOptions) =>
     ipcRenderer.invoke("shared:scan", { sharedDir, options }) as Promise<SharedIndex>,
+  readSharedIndex: (sharedDir?: string) => ipcRenderer.invoke("shared:read-index", sharedDir) as Promise<SharedIndex>,
   stopSharedScan: () => ipcRenderer.invoke("shared:stop-scan") as Promise<boolean>,
   onSharedScanProgress: (callback: (progress: SharedScanProgress) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: SharedScanProgress) => callback(progress);
