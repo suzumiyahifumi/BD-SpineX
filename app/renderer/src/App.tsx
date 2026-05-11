@@ -761,21 +761,7 @@ export function App() {
           })}>
             Apply Changes
           </button>
-          <button disabled={busy || !modPower.enabled || !plans.some((plan) => plan.bundleId)} onClick={() => runTask(async () => {
-            const result = await window.bd2.restoreAllPatches(plans);
-            setPatchHistory(result.history);
-            setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
-            const restored = result.entries.filter((entry) => entry.status === "restored").length;
-            const failed = result.entries.filter((entry) => entry.status === "failed").length;
-            const changed = result.entries.filter((entry) => entry.status === "changed").length;
-            log(`Restore all finished: ${restored} restored, ${failed} failed, ${changed} changed.`);
-            for (const entry of result.entries.filter((item) => item.status === "failed" || item.status === "changed").slice(0, 8)) {
-              log(`${entry.bundleId}: ${entry.message ?? "restore failed"}`);
-            }
-          })}>
-            Restore All
-          </button>
-          <p className="hint">Apply updates backup B incrementally, stores per-asset pre-patch backups, then copies B over game __data after the full bundle succeeds. Restore All copies backup A back to the game folder.</p>
+          <p className="hint">Apply updates backup B incrementally, stores per-asset pre-patch backups, then copies B over game __data after the full bundle succeeds.</p>
         </aside>
       </section>
 
