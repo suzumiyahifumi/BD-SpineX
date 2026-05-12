@@ -2,8 +2,6 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 
 export type PatchBundleArgs = {
-  pythonPath: string;
-  scriptPath: string;
   input: string;
   output: string;
   modName: string;
@@ -28,68 +26,17 @@ export type PatchBundleJob = {
 export type PatchBundleBatchArgs = Omit<PatchBundleArgs, "modName" | "atlases" | "skels" | "pngs" | "assetBackupDir"> & {
   jobs: PatchBundleJob[];
   manifestPath: string;
-  patchBackend?: "unitypy" | "uabea";
+  patchBackend?: "uabea";
   dotnetPath?: string;
   uabeaPatcherProjectPath?: string;
 };
 
 export async function patchBundle(args: PatchBundleArgs): Promise<unknown> {
-  const commandArgs = [
-    args.scriptPath,
-    "--input", args.input,
-    "--output", args.output,
-    "--mod-name", args.modName
-  ];
-
-  for (const atlas of args.atlases) {
-    commandArgs.push("--atlas", atlas);
-  }
-  for (const skel of args.skels) {
-    commandArgs.push("--skel", skel);
-  }
-  for (const png of args.pngs) {
-    commandArgs.push("--png", png);
-  }
-  for (const png of args.insertPngs ?? []) {
-    commandArgs.push("--insert-png", png);
-  }
-  if (args.unityVersion?.trim()) {
-    commandArgs.push("--unity-version", args.unityVersion.trim());
-  }
-  if (args.decryptKey?.trim()) {
-    commandArgs.push("--decrypt-key", args.decryptKey.trim());
-  }
-  if (args.assetBackupDir?.trim()) {
-    commandArgs.push("--asset-backup-dir", args.assetBackupDir.trim());
-  }
-
-  const stdout = await run(args.pythonPath, commandArgs);
-
-  return JSON.parse(stdout);
+  throw new Error(`patchBundle is no longer supported. Use patchBundleBatch with UABEA backend. (${args.modName})`);
 }
 
 export async function patchBundleBatch(args: PatchBundleBatchArgs): Promise<unknown> {
-  if (args.patchBackend === "uabea") {
-    return patchBundleBatchWithUabea(args);
-  }
-
-  const commandArgs = [
-    args.scriptPath,
-    "--input", args.input,
-    "--output", args.output,
-    "--job-manifest", args.manifestPath
-  ];
-
-  if (args.unityVersion?.trim()) {
-    commandArgs.push("--unity-version", args.unityVersion.trim());
-  }
-  if (args.decryptKey?.trim()) {
-    commandArgs.push("--decrypt-key", args.decryptKey.trim());
-  }
-
-  const stdout = await run(args.pythonPath, commandArgs);
-
-  return JSON.parse(stdout);
+  return patchBundleBatchWithUabea(args);
 }
 
 async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs): Promise<unknown> {

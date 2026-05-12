@@ -530,39 +530,7 @@ async function fileExists(filePath: string) {
 }
 
 async function scanBundleAssets(dataPath: string, options: SharedScanOptions) {
-  if ((options.scanBackend ?? "uabea") === "uabea") {
-    return scanBundleAssetsWithUabea(dataPath, options);
-  }
-
-  return scanBundleAssetsWithUnityPy(dataPath, options);
-}
-
-async function scanBundleAssetsWithUnityPy(dataPath: string, options: SharedScanOptions) {
-  const scriptPath = path.resolve(__dirname, "../../python/scan_bundle.py");
-  const args = [scriptPath, "--input", dataPath];
-
-  if (options.unityVersion?.trim()) {
-    args.push("--unity-version", options.unityVersion.trim());
-  }
-
-  if (options.decryptKey?.trim()) {
-    args.push("--decrypt-key", options.decryptKey.trim());
-  }
-
-  const stdout = await run(options.pythonPath || "python3", args);
-  let result: { ok: boolean; assets?: SharedBundle["assets"]; error?: string };
-
-  try {
-    result = JSON.parse(stdout);
-  } catch {
-    throw new Error(stdout.trim() || "Bundle scanner did not return JSON");
-  }
-
-  if (!result.ok) {
-    throw new Error(result.error ?? "Failed to scan Unity AssetBundle");
-  }
-
-  return result.assets ?? [];
+  return scanBundleAssetsWithUabea(dataPath, options);
 }
 
 async function scanBundleAssetsWithUabea(dataPath: string, options: SharedScanOptions) {

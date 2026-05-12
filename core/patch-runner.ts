@@ -106,9 +106,7 @@ export async function applyReadyPatches(
       try {
         emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Patching backup B with ${formatPatchBackend(patchBackend)} for ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
         const result = await patchBundleBatch({
-          pythonPath: options.pythonPath || "python3",
-          scriptPath: path.resolve(__dirname, "../../python/patch_bundle.py"),
-          input: workPath,
+                              input: workPath,
           output: outputPath,
           jobs,
           manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
@@ -291,7 +289,7 @@ export async function dryRunPatchStateChanges(
 export async function restoreModPatches(
   plans: PatchPlanEntry[],
   modNames: string[],
-  options: Pick<ApplyPatchOptions, "pythonPath" | "patchBackend" | "dotnetPath" | "uabeaPatcherProjectPath" | "unityVersion" | "decryptKey">,
+  options: Pick<ApplyPatchOptions, "patchBackend" | "dotnetPath" | "uabeaPatcherProjectPath" | "unityVersion" | "decryptKey">,
   onProgress?: (progress: PatchProgress) => void
 ): Promise<ApplyPatchResult> {
   const history = await readPatchHistory();
@@ -353,9 +351,7 @@ export async function restoreModPatches(
       try {
         emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Restoring with ${formatPatchBackend(patchBackend)} for ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
         const result = await patchBundleBatch({
-          pythonPath: options.pythonPath || "python3",
-          scriptPath: path.resolve(__dirname, "../../python/patch_bundle.py"),
-          input: workPath || getPatchWorkPath(firstPlan.bundleId),
+                              input: workPath || getPatchWorkPath(firstPlan.bundleId),
           output: outputPath,
           jobs,
           manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
@@ -924,11 +920,11 @@ function isPatchTimingEntry(value: unknown): value is NonNullable<PatchProgress[
 }
 
 function normalizePatchBackend(backend: ApplyPatchOptions["patchBackend"]): PatchBackend {
-  return backend === "uabea" ? "uabea" : "unitypy";
+  return "uabea";
 }
 
 function formatPatchBackend(backend: PatchBackend) {
-  return backend === "uabea" ? "UABEA / AssetsTools.NET" : "UnityPy";
+  return "UABEA / AssetsTools.NET";
 }
 
 function formatMs(ms: number) {
