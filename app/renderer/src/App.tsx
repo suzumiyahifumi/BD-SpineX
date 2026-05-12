@@ -6,7 +6,6 @@ type Settings = {
   sharedDir: string;
   modsDir: string;
   converterPath: string;
-  pythonPath: string;
   scanBackend: SharedScanBackend;
   patchBackend: PatchBackend;
   dotnetPath: string;
@@ -60,7 +59,6 @@ const emptySettings: Settings = {
   sharedDir: "",
   modsDir: "",
   converterPath: "",
-  pythonPath: ".venv/bin/python",
   scanBackend: "uabea",
   patchBackend: "uabea",
   dotnetPath: "manager-data/tools/dotnet/dotnet",
@@ -354,7 +352,6 @@ export function App() {
       log(`Scanned Mods first: ${currentModsIndex.mods.length} mod folder(s), ${currentModsIndex.mods.filter((mod) => mod.status === "ready").length} ready.`);
     }
     const index = await window.bd2.scanShared(activeSettings.sharedDir, {
-      pythonPath: activeSettings.pythonPath,
       scanBackend: activeSettings.scanBackend,
       dotnetPath: activeSettings.dotnetPath,
       unityVersion: activeSettings.unityVersion,
@@ -450,7 +447,6 @@ export function App() {
               value={settings.patchBackend}
               onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
               options={[
-                { value: "unitypy", label: "UnityPy" },
                 { value: "uabea", label: "UABEA / AssetsTools.NET" }
               ]}
             />
@@ -459,8 +455,7 @@ export function App() {
               value={settings.scanBackend}
               onChange={(value) => updateSetting("scanBackend", value as SharedScanBackend)}
               options={[
-                { value: "uabea", label: "UABEA / AssetsTools.NET" },
-                { value: "unitypy", label: "UnityPy" }
+                { value: "uabea", label: "UABEA / AssetsTools.NET" }
               ]}
             />
             <PathField
@@ -511,7 +506,6 @@ export function App() {
               setSharedAssetCategory("all");
               setSharedProgress({ phase: "discovering", current: 0, total: 0 });
               const index = await window.bd2.scanShared(settings.sharedDir, {
-                pythonPath: settings.pythonPath,
                 scanBackend: settings.scanBackend,
                 dotnetPath: settings.dotnetPath,
                 unityVersion: settings.unityVersion,
@@ -1016,7 +1010,6 @@ async function loadSavedSettings(): Promise<Settings> {
 function normalizeManagedToolSettings(settings: Settings, fallback: Settings): Settings {
   return {
     ...settings,
-    pythonPath: fallback.pythonPath,
     dotnetPath: fallback.dotnetPath
   };
 }
@@ -1054,7 +1047,6 @@ function loadModPowerState(): ModPowerState {
 
 function createApplyPatchOptions(settings: Settings): ApplyPatchOptions {
   return {
-    pythonPath: settings.pythonPath,
     patchBackend: settings.patchBackend,
     dotnetPath: settings.dotnetPath,
     converterPath: settings.converterPath,
@@ -1679,7 +1671,7 @@ function formatPatchAction(phase: PatchProgress["phase"]) {
 }
 
 function formatPatchBackend(backend: PatchBackend) {
-  return backend === "uabea" ? "UABEA" : "UnityPy";
+  return "UABEA";
 }
 
 function formatDuration(ms: number) {

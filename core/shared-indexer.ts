@@ -530,49 +530,23 @@ async function fileExists(filePath: string) {
 }
 
 async function scanBundleAssets(dataPath: string, options: SharedScanOptions) {
-  if ((options.scanBackend ?? "uabea") === "uabea") {
-    return scanBundleAssetsWithUabea(dataPath, options);
-  }
-
-  return scanBundleAssetsWithUnityPy(dataPath, options);
-}
-
-async function scanBundleAssetsWithUnityPy(dataPath: string, options: SharedScanOptions) {
-  const scriptPath = path.resolve(__dirname, "../../python/scan_bundle.py");
-  const args = [scriptPath, "--input", dataPath];
-
-  if (options.unityVersion?.trim()) {
-    args.push("--unity-version", options.unityVersion.trim());
-  }
-
-  if (options.decryptKey?.trim()) {
-    args.push("--decrypt-key", options.decryptKey.trim());
-  }
-
-  const stdout = await run(options.pythonPath || "python3", args);
-  let result: { ok: boolean; assets?: SharedBundle["assets"]; error?: string };
-
-  try {
-    result = JSON.parse(stdout);
-  } catch {
-    throw new Error(stdout.trim() || "Bundle scanner did not return JSON");
-  }
-
-  if (!result.ok) {
-    throw new Error(result.error ?? "Failed to scan Unity AssetBundle");
-  }
-
-  return result.assets ?? [];
+  return scanBundleAssetsWithUabea(dataPath, options);
 }
 
 async function scanBundleAssetsWithUabea(dataPath: string, options: SharedScanOptions) {
-  const dotnetPath = options.dotnetPath?.trim() || defaultDotnetPath();
+  const command = defaultRustCliCommand();
   const projectPath = options.uabeaScannerProjectPath?.trim() || defaultUabeaProjectPath();
-  const dllPath = defaultUabeaDllPath(projectPath);
-  const args = await fileExists(dllPath)
-    ? [dllPath, "--mode", "scan", "--input", dataPath]
-    : ["run", "--project", projectPath, "--", "--mode", "scan", "--input", dataPath];
-  const stdout = await run(dotnetPath, args);
+  const args = [
+    "run",
+    "--manifest-path", path.resolve("experiments/rust-uabea-cli/Cargo.toml"),
+    "--quiet",
+    "--",
+    "--mode", "scan",
+    "--input", dataPath,
+    "--dotnet-path", options.dotnetPath?.trim() || defaultDotnetPath(),
+    "--uabea-project", projectPath
+  ];
+  const stdout = await run(command, args);
   let result: { ok: boolean; assets?: SharedBundle["assets"]; error?: string };
 
   try {
@@ -596,8 +570,8 @@ function defaultUabeaProjectPath() {
   return path.resolve("experiments/uabea-patcher/UabeaPatchPrototype.csproj");
 }
 
-function defaultUabeaDllPath(projectPath: string) {
-  return path.join(path.dirname(projectPath), "bin", "Debug", "net8.0", "UabeaPatchPrototype.dll");
+function defaultRustCliCommand() {
+  return "cargo";
 }
 
 function run(command: string, args: string[]): Promise<string> {
