@@ -110,6 +110,10 @@ export function App() {
   const activeModNames = useMemo(() => Object.entries(actualPatchStates).filter(([, enabled]) => enabled).map(([modName]) => modName), [actualPatchStates]);
   const restorablePowerModNames = useMemo(() => modPower.restoreModNames.filter((modName) => modsIndex.mods.some((mod) => mod.modName === modName)), [modPower.restoreModNames, modsIndex.mods]);
   const visibleMods = useMemo(() => filterAndSortMods(modsIndex.mods, modFilter, modSort, plansByModName, patchHistoryByModName), [modsIndex.mods, modFilter, modSort, plansByModName, patchHistoryByModName]);
+  const selectableVisibleMods = useMemo(() => visibleMods.filter((mod) => mod.status === "ready" || actualPatchStates[mod.modName]), [visibleMods, actualPatchStates]);
+  const allVisibleModsSelected = useMemo(() =>
+    selectableVisibleMods.length > 0 && selectableVisibleMods.every((mod) => getDesiredPatchState(mod.modName, actualPatchStates, desiredPatchStates)),
+  [selectableVisibleMods, actualPatchStates, desiredPatchStates]);
   const modTargetNames = useMemo(() => getModTargetNames(modsIndex), [modsIndex]);
   const sharedAssets = useMemo(() => {
     return sharedIndex.bundles.flatMap((bundle) =>
@@ -374,6 +378,28 @@ export function App() {
     }));
   }
 
+  function resetPatchStateChanges() {
+    setDesiredPatchStates({});
+    log("Reset staged module changes.");
+  }
+
+  function toggleVisiblePatchStates() {
+    const enabled = !allVisibleModsSelected;
+    const nextStates = Object.fromEntries(
+      selectableVisibleMods
+        .map((mod) => [mod.modName, enabled])
+    );
+
+    if (Object.keys(nextStates).length === 0) {
+      return;
+    }
+
+    setDesiredPatchStates((current) => ({
+      ...current,
+      ...nextStates
+    }));
+  }
+
   function updateModSort(key: ModSortKey) {
     setModSort((current) => ({
       key,
@@ -549,14 +575,24 @@ export function App() {
               <div className="panelTitle">Mods</div>
               <div className="tableHint">{visibleMods.length} shown / {modsIndex.mods.length} scanned</div>
             </div>
-            <label className="modFilterField">
-              <span>Filter</span>
-              <input
-                value={modFilter}
-                onChange={(event) => setModFilter(event.target.value)}
-                placeholder="Search folder, name, category, status"
-              />
-            </label>
+            <div className="modsHeaderControls">
+              <button
+                disabled={busy || !patchStateChanges.length}
+                onClick={resetPatchStateChanges}
+                title="Restore checkbox state before Apply Changes"
+                type="button"
+              >
+                Reset Changes
+              </button>
+              <label className="modFilterField">
+                <span>Filter</span>
+                <input
+                  value={modFilter}
+                  onChange={(event) => setModFilter(event.target.value)}
+                  placeholder="Search folder, name, category, status"
+                />
+              </label>
+            </div>
           </div>
           <table>
             <colgroup>
@@ -568,7 +604,18 @@ export function App() {
             </colgroup>
             <thead>
               <tr>
-                <th className="patchColumn"></th>
+                <th className="patchColumn">
+                  <div className="patchBulkControls" aria-label="Bulk patch selection">
+                    <button
+                      disabled={busy || !modPower.enabled || selectableVisibleMods.length === 0}
+                      onClick={toggleVisiblePatchStates}
+                      title={allVisibleModsSelected ? "Clear all visible mods" : "Select all visible mods"}
+                      type="button"
+                    >
+                      {allVisibleModsSelected ? "×" : "✓"}
+                    </button>
+                  </div>
+                </th>
                 <th>{renderModSortButton("Folder", "folder", modSort, updateModSort)}</th>
                 <th>{renderModSortButton("Name", "name", modSort, updateModSort)}</th>
                 <th>{renderModSortButton("Category", "category", modSort, updateModSort)}</th>

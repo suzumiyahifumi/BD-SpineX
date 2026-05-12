@@ -278,6 +278,20 @@ progress {
   margin-bottom: 4px;
 }
 
+.modsHeaderControls {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 320px);
+  gap: 8px;
+  align-items: end;
+  justify-content: end;
+  min-width: 0;
+}
+
+.modsHeaderControls button {
+  min-height: 38px;
+  white-space: nowrap;
+}
+
 .modFilterField {
   display: grid;
   gap: 5px;
@@ -389,6 +403,23 @@ progress {
 .sortButton:hover,
 .sortButton.active {
   color: #9f1d1d;
+}
+
+.patchBulkControls {
+  display: flex;
+  justify-content: center;
+}
+
+.patchBulkControls button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .categoryBadge {
@@ -756,6 +787,15 @@ tr.pendingPatchChange.pendingPatchRemove td {
 
   .tableHeader {
     display: grid;
+  }
+
+  .modsHeader,
+  .modsHeaderControls {
+    grid-template-columns: 1fr;
+  }
+
+  .modsHeaderControls {
+    justify-content: stretch;
   }
 
   .segmentedControl {
