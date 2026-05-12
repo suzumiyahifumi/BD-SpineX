@@ -227,7 +227,7 @@ function getJson<T>(url: string): Promise<T> {
     https.get(url, {
       headers: {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "BD2-Spine-Mod-Manager"
+        "User-Agent": "BD-SpineX"
       }
     }, (response) => {
       if (isRedirect(response.statusCode) && response.headers.location) {
@@ -257,7 +257,7 @@ function downloadFile(url: string, outputPath: string): Promise<void> {
     const file = fsSync.createWriteStream(outputPath);
     https.get(url, {
       headers: {
-        "User-Agent": "BD2-Spine-Mod-Manager"
+        "User-Agent": "BD-SpineX"
       }
     }, (response) => {
       if (isRedirect(response.statusCode) && response.headers.location) {

@@ -47,6 +47,18 @@ export type SharedFileIndex = {
   files: SharedFileEntry[];
 };
 
+export type AppInfo = {
+  name: string;
+  subtitle: string;
+  version: string;
+};
+
+export type GameVersionInfo = {
+  version?: string;
+  sourcePath?: string;
+  detectedAt: string;
+};
+
 export type SharedScanOptions = {
   pythonPath?: string;
   scanBackend?: SharedScanBackend;

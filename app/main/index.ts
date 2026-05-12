@@ -5,11 +5,14 @@ import { scanMods } from "../../core/mod-indexer.js";
 import { createPatchPlan } from "../../core/patch-plan.js";
 import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, readPatchHistory, restoreAllPatches } from "../../core/patch-runner.js";
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
-import type { ApplyPatchOptions, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
+import { detectGameVersion } from "../../core/game-version.js";
+import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const appDisplayName = "BD-SpineX";
+const appSubtitle = "Mod Manager";
 const isDev = !app.isPackaged;
 let stopSharedScanRequested = false;
 
@@ -19,7 +22,7 @@ async function createWindow() {
     height: 820,
     minWidth: 980,
     minHeight: 640,
-    title: "BD2 Spine Mod Manager",
+    title: `${appDisplayName} - ${appSubtitle}`,
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.cjs"),
       contextIsolation: true,
@@ -47,6 +50,12 @@ ipcMain.handle("app:default-paths", async () => ({
   sharedDir: "",
   dotnetPath: path.resolve("manager-data/tools/dotnet/dotnet")
 }));
+ipcMain.handle("app:info", async (): Promise<AppInfo> => ({
+  name: appDisplayName,
+  subtitle: appSubtitle,
+  version: app.getVersion()
+}));
+ipcMain.handle("game:detect-version", async (_event, args?: { sharedDir?: string }) => detectGameVersion(args?.sharedDir));
 
 ipcMain.handle("mods:scan", async (_event, modsDir: string) => scanMods(modsDir));
 ipcMain.handle("shared:scan", async (event, args: { sharedDir: string; options?: SharedScanOptions }) => {
@@ -63,14 +72,14 @@ ipcMain.handle("shared:stop-scan", async () => {
 ipcMain.handle("patch-plan:create", async (_event, args) => createPatchPlan(args.sharedIndex, args.modsIndex));
 ipcMain.handle("patch:apply-ready", async (_event, args: { plans: PatchPlanEntry[]; modsIndex: unknown; options: ApplyPatchOptions }) => {
   const result = await applyReadyPatches(args.plans, args.modsIndex as ModsIndex, args.options);
-  notifyPatchFinished("Patch Complete", summarizePatchResult(result));
+  notifyPatchFinished("Apply Complete", summarizePatchResult(result));
   return result;
 });
 ipcMain.handle("patch:apply-state-changes", async (event, args: { plans: PatchPlanEntry[]; modsIndex: unknown; changes: PatchStateChange[]; options: ApplyPatchOptions }) => {
   const result = await applyPatchStateChanges(args.plans, args.modsIndex as ModsIndex, args.changes, args.options, (progress) => {
     event.sender.send("patch:progress", progress);
   });
-  notifyPatchFinished("Patch Complete", summarizePatchResult(result));
+  notifyPatchFinished("Changes Complete", summarizePatchResult(result));
   return result;
 });
 ipcMain.handle("patch:dry-run-state-changes", async (event, args: { plans: PatchPlanEntry[]; modsIndex: unknown; changes: PatchStateChange[]; options: ApplyPatchOptions }) =>
@@ -93,18 +102,38 @@ ipcMain.handle("patch:check-data-for-mods", async (_event, args: { plans: PatchP
 );
 ipcMain.handle("patch:history", async () => readPatchHistory());
 
-function summarizePatchResult(result: Awaited<ReturnType<typeof applyReadyPatches>>) {
-  const patched = result.entries.filter((entry) => entry.status === "patched").length;
-  const restored = result.entries.filter((entry) => entry.status === "restored").length;
-  const failed = result.entries.filter((entry) => entry.status === "failed").length;
-  const skipped = result.entries.filter((entry) => entry.status === "skipped").length;
+function summarizePatchResult(result: ApplyPatchResult) {
+  const changedLines = [
+    summarizeEntriesByStatus(result, "patched", "Applied"),
+    summarizeEntriesByStatus(result, "restored", "Restored")
+  ].filter(Boolean);
+  const issueLines = [
+    summarizeEntriesByStatus(result, "failed", "Failed"),
+    summarizeEntriesByStatus(result, "skipped", "Skipped")
+  ].filter(Boolean);
+  const lines = [...changedLines, ...issueLines];
 
-  return [
-    patched ? `${patched} patched` : "",
-    restored ? `${restored} restored` : "",
-    failed ? `${failed} failed` : "",
-    skipped ? `${skipped} skipped` : ""
-  ].filter(Boolean).join(", ") || "No changes applied.";
+  return lines.join("\n") || "No module changes";
+}
+
+function summarizeEntriesByStatus(result: ApplyPatchResult, status: ApplyPatchResult["entries"][number]["status"], label: string) {
+  const modNames = uniqueModNames(result.entries
+    .filter((entry) => entry.status === status)
+    .map((entry) => entry.modName));
+
+  return modNames.length > 0 ? `${label}: ${formatModNameList(modNames)}` : "";
+}
+
+function uniqueModNames(modNames: string[]) {
+  return [...new Set(modNames.filter(Boolean))];
+}
+
+function formatModNameList(modNames: string[]) {
+  const visibleLimit = 3;
+  const visibleNames = modNames.slice(0, visibleLimit).join(", ");
+  const remainingCount = modNames.length - visibleLimit;
+
+  return remainingCount > 0 ? `${visibleNames} and ${remainingCount} more` : visibleNames;
 }
 
 function notifyPatchFinished(title: string, body: string) {
@@ -113,7 +142,7 @@ function notifyPatchFinished(title: string, body: string) {
   }
 
   new Notification({
-    title: `BD2 Spine Mod Manager - ${title}`,
+    title: `${appDisplayName} - ${title}`,
     body
   }).show();
 }

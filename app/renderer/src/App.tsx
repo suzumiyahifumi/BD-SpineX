@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import type { ApplyPatchOptions, BundleAsset, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, SharedIndex, SharedScanBackend, SharedScanProgress } from "../../../core/types";
+import type { AppInfo, ApplyPatchOptions, BundleAsset, GameVersionInfo, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, SharedIndex, SharedScanBackend, SharedScanProgress } from "../../../core/types";
 
 type Settings = {
   settingsVersion: number;
@@ -68,11 +68,16 @@ const emptySettings: Settings = {
   decryptKey: "",
   scanLimit: "10"
 };
-const settingsStorageKey = "bd2-spine-mod-manager:settings";
-const modPowerStorageKey = "bd2-spine-mod-manager:mod-power";
+const settingsStorageKey = "bd-spinex:settings";
+const legacySettingsStorageKey = "bd2-spine-mod-manager:settings";
+const modPowerStorageKey = "bd-spinex:mod-power";
+const legacyModPowerStorageKey = "bd2-spine-mod-manager:mod-power";
 const defaultModPowerState: ModPowerState = { enabled: true, restoreModNames: [] };
+const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Mod Manager", version: "0.1.0" };
 
 export function App() {
+  const [appInfo, setAppInfo] = useState<AppInfo>(defaultAppInfo);
+  const [gameVersionInfo, setGameVersionInfo] = useState<GameVersionInfo | null>(null);
   const [settings, setSettings] = useState<Settings>(emptySettings);
   const [modsIndex, setModsIndex] = useState<ModsIndex>({ mods: [] });
   const [sharedIndex, setSharedIndex] = useState<SharedIndex>({ bundles: [] });
@@ -131,10 +136,12 @@ export function App() {
   const sharedErrorGroups = useMemo(() => groupSharedErrors(sharedErrors), [sharedErrors]);
 
   useEffect(() => {
+    void window.bd2.getAppInfo().then(setAppInfo).catch(() => undefined);
     void window.bd2.readPatchHistory().then(setPatchHistory).catch(() => undefined);
     void loadSavedSettings().then((loadedSettings) => {
       setSettings(loadedSettings);
       setSettingsLoaded(true);
+      void refreshGameVersion(loadedSettings.sharedDir);
       void runTask(async () => {
         await scanModsWorkflow(loadedSettings);
       });
@@ -181,12 +188,27 @@ export function App() {
     window.localStorage.setItem(modPowerStorageKey, JSON.stringify(modPower));
   }, [modPower]);
 
+  useEffect(() => {
+    if (!settingsLoaded) {
+      return;
+    }
+
+    void refreshGameVersion(settings.sharedDir);
+  }, [settings.sharedDir, settingsLoaded]);
+
   function updateSetting<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
   function log(input: LogInput) {
     pushLog(setLogs, input);
+  }
+
+  async function refreshGameVersion(sharedDir?: string) {
+    const info = await window.bd2.detectGameVersion(sharedDir).catch(() => null);
+    if (info) {
+      setGameVersionInfo(info);
+    }
   }
 
   async function selectDirectory(key: "sharedDir" | "modsDir") {
@@ -363,8 +385,14 @@ export function App() {
     <main className="shell">
       <header className="topbar">
         <div>
-          <h1>BD2 Spine Mod Manager</h1>
-          <p>Brown Dust 2 / PlayCover Spine module workflow</p>
+          <h1>{appInfo.name}</h1>
+          <p className="appSubtitle">
+            <span>{appInfo.subtitle}</span>
+            <span className="versionBadge" title={formatVersionTitle(appInfo, gameVersionInfo)}>
+              {formatVersionBadge(appInfo, gameVersionInfo)}
+            </span>
+          </p>
+          <p>BrownDust II Mod Management/Installation | Mac PlayCover Version</p>
         </div>
         <div className="statusPill" title={`${readyTargetCount} __data target(s) ready`}>
           {readyModCount} mod(s) ready
@@ -808,6 +836,24 @@ export function App() {
   );
 }
 
+function formatVersionBadge(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
+  const managerVersion = `v${appInfo.version}`;
+  const gameVersion = gameVersionInfo?.version;
+
+  return gameVersion && gameVersion !== appInfo.version
+    ? `${managerVersion} [${gameVersion}]`
+    : managerVersion;
+}
+
+function formatVersionTitle(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
+  const gameVersion = gameVersionInfo?.version;
+  const source = gameVersionInfo?.sourcePath ? `\nSource: ${gameVersionInfo.sourcePath}` : "";
+
+  return gameVersion && gameVersion !== appInfo.version
+    ? `Manager version: ${appInfo.version}\nGame version: ${gameVersion}${source}`
+    : `Manager version: ${appInfo.version}${gameVersion ? `\nGame version: ${gameVersion}${source}` : ""}`;
+}
+
 function groupSharedErrors(errors: SharedIndex["bundles"]) {
   const groups = new Map<string, number>();
 
@@ -906,7 +952,7 @@ async function loadSavedSettings(): Promise<Settings> {
   };
 
   try {
-    const stored = window.localStorage.getItem(settingsStorageKey);
+    const stored = window.localStorage.getItem(settingsStorageKey) ?? window.localStorage.getItem(legacySettingsStorageKey);
     if (!stored) {
       return fallback;
     }
@@ -942,7 +988,7 @@ function migrateStoredSettings(stored: Partial<Settings>): Partial<Settings> {
 
 function loadModPowerState(): ModPowerState {
   try {
-    const stored = window.localStorage.getItem(modPowerStorageKey);
+    const stored = window.localStorage.getItem(modPowerStorageKey) ?? window.localStorage.getItem(legacyModPowerStorageKey);
     if (!stored) {
       return defaultModPowerState;
     }

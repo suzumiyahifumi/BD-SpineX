@@ -1,8 +1,8 @@
 {
-  "name": "bd2-spine-mod-manager",
+  "name": "bd-spinex",
   "version": "0.1.0",
   "private": true,
-  "description": "macOS desktop manager for Brown Dust 2 / PlayCover Spine mods.",
+  "description": "BrownDust II mod management and installation for Mac PlayCover.",
   "main": "dist/app/main/index.js",
   "type": "module",
   "scripts": {

@@ -12,7 +12,7 @@ from pathlib import Path
 def main():
     total_started = time.perf_counter()
     timings = []
-    parser = argparse.ArgumentParser(description="Patch Unity AssetBundle assets for BD2 Spine mods.")
+    parser = argparse.ArgumentParser(description="Patch Unity AssetBundle assets for BD-SpineX mods.")
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--mod-name")

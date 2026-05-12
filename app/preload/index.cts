@@ -1,8 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
+import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, GameVersionInfo, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
 
 const api = {
   getDefaultPaths: () => ipcRenderer.invoke("app:default-paths") as Promise<{ modsDir: string; sharedDir: string; dotnetPath: string }>,
+  getAppInfo: () => ipcRenderer.invoke("app:info") as Promise<AppInfo>,
+  detectGameVersion: (sharedDir?: string) => ipcRenderer.invoke("game:detect-version", { sharedDir }) as Promise<GameVersionInfo>,
   selectDirectory: () => ipcRenderer.invoke("dialog:select-directory") as Promise<string | null>,
   scanMods: (modsDir: string) => ipcRenderer.invoke("mods:scan", modsDir) as Promise<ModsIndex>,
   scanShared: (sharedDir: string, options?: SharedScanOptions) =>

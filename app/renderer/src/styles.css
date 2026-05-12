@@ -76,6 +76,29 @@ input[type="checkbox"] {
   color: #5e6b7d;
 }
 
+.topbar .appSubtitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #2d394c;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.versionBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 750;
+}
+
 .statusPill,
 .badge {
   display: inline-flex;
