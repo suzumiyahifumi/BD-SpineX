@@ -8,7 +8,7 @@ import { createPatchPlan } from "../../core/patch-plan.js";
 import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, readPatchHistory, readPreviousPatchedMods, restoreAllPatches } from "../../core/patch-runner.js";
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
 import { detectGameVersion } from "../../core/game-version.js";
-import { isPackagedRuntime, managerDataRootDir, resourcePath } from "../../core/runtime-paths.js";
+import { isPackagedRuntime, managerDataRootDir, resourcePath, supportedGameVersion } from "../../core/runtime-paths.js";
 import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -91,7 +91,8 @@ ipcMain.handle("app:open-detected-shared-folder", async () => openDetectedShared
 ipcMain.handle("app:info", async (): Promise<AppInfo> => ({
   name: appDisplayName,
   subtitle: appSubtitle,
-  version: app.getVersion()
+  version: app.getVersion(),
+  supportedGameVersion: supportedGameVersion()
 }));
 ipcMain.handle("game:detect-version", async (_event, args?: { sharedDir?: string }) => detectGameVersion(args?.sharedDir));
 
