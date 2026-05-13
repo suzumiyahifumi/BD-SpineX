@@ -82,5 +82,6 @@ Each mod folder should contain matching Spine files:
 - BD-SpineX is macOS-only.
 - It is intended for the PlayCover version of _BrownDust II_.
 - The packaged app includes its required backend tools; users do not need to build them.
+- BD-SpineX source code is GPLv3; release bundles include `SpineSkeletonDataConverter` under PolyForm Noncommercial License 1.0.0.
 - The app is currently unsigned, so macOS may require manual approval the first time you open it.
 - Keep your own backup before experimenting with mods, especially after game updates.
