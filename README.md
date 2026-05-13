@@ -1,214 +1,139 @@
-# BD-SpineX Developer README
+<p align="center">
+  <img src="build/icon.png" alt="BD-SpineX icon" width="128" height="128">
+</p>
 
-BD-SpineX is an Electron + TypeScript desktop app for managing Spine mods for the PlayCover version of _BrownDust II_ on macOS.
+<h1 align="center">BD-SpineX</h1>
 
-This repository contains the application source, packaging scripts, bundled index data, and backend experiments used by the release build.
+<p align="center">
+  A macOS Spine mod manager for the PlayCover version of BrownDust II.
+</p>
 
-For user-facing release copy, see [RELEASE_NOTES.md](RELEASE_NOTES.md).
+[![GitHub Release](https://img.shields.io/github/v/release/suzumiyahifumi/BD-SpineX?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
+[![Downloads](https://img.shields.io/github/downloads/suzumiyahifumi/BD-SpineX/total?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)](#requirements)
 
-## Current Product Shape
+> ✨ Install and manage Spine mods for the PlayCover version of BrownDust II on macOS.
+>
+> ⬇️ Download the latest version: [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 
-The app provides:
+BD-SpineX is built for players who want a simpler BrownDust II mod workflow on macOS: choose your PlayCover game data, scan your mod folders, apply selected Spine mods, and restore changes without manually editing AssetBundles.
 
-- PlayCover `Shared` AssetBundle scanning
-- Portable shared index loading from bundled release resources
-- Recursive Mods folder scanning
-- Patch plan generation from mod files and indexed Unity assets
-- Incremental apply/restore workflows with backups
-- Mod Power for turning all active mods off and restoring saved state
-- Version locking between BD-SpineX and the detected game version
-- macOS release packaging with bundled backend tools
+---
 
-## Tech Stack
+## ✨ Current Release
 
-- Electron main/preload/renderer
-- React renderer
-- TypeScript
-- Vite
-- UABEA / AssetsTools.NET patch backend
-- Rust CLI wrapper and native scanner/patch-planner experiment
-- Bundled SpineSkeletonDataConverter
-- electron-builder for macOS packaging
-
-## Project Layout
+The app version is tied to the supported BrownDust II game version.
 
 ```text
-app/
-  main/        Electron main process and IPC handlers
-  preload/     Safe renderer bridge
-  renderer/    React UI
-core/
-  asset-patcher.ts     Backend patch runner selection
-  backup-manager.ts    Original/modded backup handling
-  game-version.ts      PlayCover game version detection
-  mod-indexer.ts       Recursive Mods folder scanner
-  patch-plan.ts        Shared asset to mod matching
-  patch-runner.ts      Apply/restore orchestration
-  runtime-paths.ts     Dev vs packaged resource/userData paths
-  shared-indexer.ts    Shared cache scanner and portable index loader
-  spine-converter.ts   Spine JSON to SKEL conversion wrapper
-  tool-manager.ts      Converter discovery/download in dev
-experiments/
-  rust-uabea-cli/      Rust CLI wrapper and native backend experiment
-  uabea-patcher/       AssetsTools.NET patch backend
-manager-data/
-  shared-index.json       Release-bundled portable index
-  shared-file-index.json  Release-bundled Shared file index
-scripts/
-  build-backends.mjs      Publishes backend binaries for release
-  prepare-release.mjs     Version sync and release input validation
+BD-SpineX 2.25.19 -> BrownDust II 2.25.19
 ```
 
-## Runtime Paths
+If your installed game version does not match the BD-SpineX release version, mod actions are locked until you use a matching release.
 
-Development mode reads and writes local project data:
+### 🚀 Highlights
+
+- 🔎 PlayCover `Shared` AssetBundle scanning
+- 📁 Recursive Mods folder scanning
+- ✅ Mod status table with selectable apply/restore workflow
+- 🧩 Spine `.atlas`, `.skel`, `.json`, and `.png` patch support
+- 🔄 Automatic supported Spine JSON conversion when needed
+- 🛟 Incremental backups and restore support
+- 🗂️ Versioned history, backups, converted files, and user-scanned indexes
+- ⚡ Mod Power for turning active mods off and restoring saved selections later
+- 📦 Bundled backend tools, so release users do not need .NET, Rust, or build tools
+
+---
+
+## 🖥️ Requirements
+
+- 🍎 macOS
+- 🎮 PlayCover version of BrownDust II
+- 🔐 A BD-SpineX release matching your current BrownDust II version
+
+⚠️ The current release build is unsigned. On first launch, macOS may require manual approval in System Settings.
+
+---
+
+## 🛠️ How to Use
+
+1. Download the macOS build from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
+2. Open BD-SpineX.
+3. Select your PlayCover BrownDust II `Shared` folder.
+4. Select the folder where you store your mods.
+5. Click `Scan Mods`.
+6. Click `Scan Shared for Mods`.
+7. Select the mods you want to install.
+8. Click `Apply Changes`.
+
+💡 After changing mod selections, apply changes again so the game files match your current enabled list.
+
+---
+
+## 📁 Recommended Mods Layout
+
+BD-SpineX supports nested folders, so you can organize mods by source, author, pack, character, or any structure you prefer.
 
 ```text
-manager-data/
+Mods/
+  Nexus/
+    AuthorName/
+      CostumePack/
+        char123456.skel
+        char123456.atlas
+        char123456.png
+  Discord/
+    CollectionName/
+      AnotherMod/
+        char654321.json
+        char654321.atlas
+        char654321.png
 ```
 
-Packaged mode splits data by purpose:
+Each mod folder should contain matching Spine files:
 
-- Bundled read-only resources: `process.resourcesPath`
-- Runtime writable data: Electron `app.getPath("userData")`
-- Versioned runtime data: `manager-data/versions/<app-version>/`
+- `.atlas`
+- `.png`
+- `.skel` or `.json`
 
-Patch history, backups, converted files, and user-generated shared indexes are versioned by app/game version. This prevents a newer game build from reusing stale bundle hashes or backups from an older index.
+---
 
-Example packaged data path:
+## 🔐 Version Matching
 
-```text
-~/Library/Application Support/BD-SpineX/manager-data/versions/2.25.19/
-```
+Use the BD-SpineX release that matches your BrownDust II game version.
 
-This keeps private local paths, patch history, converted files, and backups out of the release bundle.
+When the game updates, install the matching BD-SpineX release and rescan your `Shared` folder. BD-SpineX keeps history and backups separated by version so old bundle hashes are not reused on a newer game build.
 
-If an older version history contains mods whose latest state is `patched`, the renderer asks the user whether to inherit that selection. Acceptance triggers a fresh patch using the current version's Shared index; rejection simply unlocks the UI while keeping the imported checkbox selection for manual review.
+If BD-SpineX finds patched mods from an older version, it can select them for review and ask whether to inherit the previous install state. Confirming runs a fresh patch against the current version's index.
 
-## Development
+---
 
-Install dependencies:
+## 📝 Notes
 
-```sh
-npm install
-```
+- 🍎 BD-SpineX is macOS-only.
+- 🎮 BD-SpineX is intended for the PlayCover version of BrownDust II.
+- 🛟 Keep your own backup before experimenting with mods, especially after game updates.
+- 📦 The packaged app includes the required patch backend and Spine converter.
+- 🧰 Development and packaging notes are kept in [RELEASE.md](RELEASE.md).
 
-Run the app in development mode:
+---
 
-```sh
-npm run dev
-```
+## ❓ FAQ
 
-Run type checks:
+### 🔒 Why are mod actions locked?
 
-```sh
-npm run typecheck
-```
+BD-SpineX locks mod actions when required folders are missing or when the app version does not match the detected BrownDust II version.
 
-Build the Electron app and renderer:
+### 📦 Do I need to install .NET, Rust, or UABEA?
 
-```sh
-npm run build
-```
+No. Release builds bundle the backend tools needed by the app.
 
-## Backend Builds
+### 🪟 Can I use this with the Windows version of BrownDust II?
 
-Build release backend binaries:
+No. This project is currently built for macOS and the PlayCover version of BrownDust II.
 
-```sh
-npm run build:backends
-```
+---
 
-This publishes:
+## 🙏 Credits
 
-- `dist-native/uabea-patcher/UabeaPatchPrototype`
-- `dist-native/uabea-cli/uabea_cli`
-
-The packaged app uses those binaries directly, so end users do not need .NET, Cargo, or backend build tools.
-
-## Release Build
-
-Set the app version to the target _BrownDust II_ game version:
-
-```sh
-BD_SPINEX_GAME_VERSION=2.25.19 npm run dist:mac
-```
-
-The release script performs:
-
-1. Backend build
-2. Version sync into `package.json` and `package-lock.json`
-3. Release input validation
-4. TypeScript/Vite build
-5. macOS DMG/zip packaging
-
-Outputs:
-
-```text
-release/BD-SpineX-<version>-arm64.dmg
-release/BD-SpineX-<version>-arm64-mac.zip
-```
-
-## Release Inputs
-
-The release package includes only selected runtime resources:
-
-- `manager-data/shared-index.json`
-- `manager-data/shared-file-index.json`
-- `manager-data/tools/SpineSkeletonDataConverter`
-- `dist-native/uabea-patcher`
-- `dist-native/uabea-cli`
-- `build/icon.icns`
-
-It must not include:
-
-- `manager-data/patch-history.json`
-- `manager-data/backups`
-- `manager-data/converted`
-- local `/Users/...` or `/Volumes/...` paths
-
-`npm run release:prepare` checks required inputs and scans release-relevant files for private path leaks.
-
-## Version Locking
-
-The app version is treated as the supported game version. At runtime, BD-SpineX detects the installed _BrownDust II_ version from PlayCover-related metadata and locks mod actions if it does not match `app.getVersion()`.
-
-Example:
-
-```text
-BD-SpineX 2.25.19 supports BrownDust II 2.25.19
-```
-
-## macOS App Icon
-
-The release icon is:
-
-```text
-build/icon.icns
-```
-
-Keep `build/icon.png` as the source image when regenerating the icon.
-
-## DevTools Policy
-
-DevTools are available in development mode.
-
-Packaged builds disable DevTools, remove the application menu, and intercept common DevTools shortcuts.
-
-## Signing
-
-The current build config skips macOS code signing:
-
-```json
-"identity": null
-```
-
-For public distribution, sign and notarize with an Apple Developer ID certificate.
-
-## Notes For Release Repositories
-
-For a separate release-only repository, use:
-
-- `RELEASE_NOTES.md` as the user-facing description
-- The generated `.dmg` and `.zip` from `release/`
-- Versioned release titles matching the game version
+- 💬 Thanks to the BrownDust II modding community for the workflows and testing needs this tool is built around.
+- 🧩 Thanks to the projects and tools that make Spine and AssetBundle patching possible.
