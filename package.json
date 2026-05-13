@@ -1,6 +1,6 @@
 {
   "name": "bd-spinex",
-  "version": "2.25.19",
+  "version": "2.25.29-b2",
   "private": true,
   "description": "BrownDust II mod management and installation for Mac PlayCover.",
   "license": "GPL-3.0-only",
@@ -43,6 +43,10 @@
       {
         "from": "dist-native/uabea-cli",
         "to": "backend/uabea-cli"
+      },
+      {
+        "from": "dist-native/unitypy-backend",
+        "to": "backend/unitypy"
       },
       {
         "from": "python",

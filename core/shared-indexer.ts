@@ -553,11 +553,12 @@ async function scanBundleAssets(dataPath: string, options: SharedScanOptions) {
 }
 
 async function scanBundleAssetsWithUnityPy(dataPath: string, options: SharedScanOptions) {
-  const command = options.pythonPath?.trim() || defaultPythonPath();
-  const args = [
-    defaultUnityPyScanScriptPath(),
+  const executablePath = unityPyScanExecutablePath();
+  const command = executablePath ?? options.pythonPath?.trim() ?? defaultPythonPath();
+  const args = executablePath ? [] : [defaultUnityPyScanScriptPath()];
+  args.push(
     "--input", dataPath
-  ];
+  );
 
   if (options.unityVersion?.trim()) {
     args.push("--unity-version", options.unityVersion.trim());
@@ -648,6 +649,14 @@ function defaultPythonPath() {
 
 function defaultUnityPyScanScriptPath() {
   return resourcePath("python", "scan_bundle.py");
+}
+
+function unityPyScanExecutablePath() {
+  const executablePath = isPackagedRuntime()
+    ? resourcePath("backend", "unitypy", "unitypy_scan_bundle")
+    : path.resolve("dist-native/unitypy-backend/unitypy_scan_bundle");
+
+  return existsSync(executablePath) ? executablePath : undefined;
 }
 
 function defaultUabeaProjectPath() {

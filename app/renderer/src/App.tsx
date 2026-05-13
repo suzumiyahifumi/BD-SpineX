@@ -71,7 +71,7 @@ const legacySettingsStorageKey = "bd2-spine-mod-manager:settings";
 const modPowerStorageKey = "bd-spinex:mod-power";
 const legacyModPowerStorageKey = "bd2-spine-mod-manager:mod-power";
 const defaultModPowerState: ModPowerState = { enabled: true, restoreModNames: [] };
-const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Mod Manager", version: "0.1.0" };
+const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0" };
 
 export function App() {
   const [appInfo, setAppInfo] = useState<AppInfo>(defaultAppInfo);
@@ -1092,25 +1092,29 @@ export function App() {
 function formatVersionBadge(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
   const managerVersion = `v${appInfo.version}`;
   const gameVersion = gameVersionInfo?.version;
+  const supportedGameVersion = appInfo.supportedGameVersion || appInfo.version;
 
-  return gameVersion && gameVersion !== appInfo.version
+  return gameVersion && normalizeVersionForCompare(gameVersion) !== normalizeVersionForCompare(supportedGameVersion)
     ? `${managerVersion} [${gameVersion}]`
     : managerVersion;
 }
 
 function formatVersionTitle(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
   const gameVersion = gameVersionInfo?.version;
+  const supportedGameVersion = appInfo.supportedGameVersion || appInfo.version;
   const source = gameVersionInfo?.sourcePath ? `\nSource: ${gameVersionInfo.sourcePath}` : "";
+  const managerLine = `Manager version: ${appInfo.version}`;
+  const supportLine = supportedGameVersion !== appInfo.version ? `\nSupported game version: ${supportedGameVersion}` : "";
 
-  return gameVersion && gameVersion !== appInfo.version
-    ? `Manager version: ${appInfo.version}\nGame version: ${gameVersion}${source}`
-    : `Manager version: ${appInfo.version}${gameVersion ? `\nGame version: ${gameVersion}${source}` : ""}`;
+  return gameVersion && normalizeVersionForCompare(gameVersion) !== normalizeVersionForCompare(supportedGameVersion)
+    ? `${managerLine}${supportLine}\nGame version: ${gameVersion}${source}`
+    : `${managerLine}${supportLine}${gameVersion ? `\nGame version: ${gameVersion}${source}` : ""}`;
 }
 
 function isGameVersionMismatch(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
   const gameVersion = normalizeVersionForCompare(gameVersionInfo?.version);
-  const managerVersion = normalizeVersionForCompare(appInfo.version);
-  return Boolean(gameVersion && managerVersion && gameVersion !== managerVersion);
+  const supportedGameVersion = normalizeVersionForCompare(appInfo.supportedGameVersion || appInfo.version);
+  return Boolean(gameVersion && supportedGameVersion && gameVersion !== supportedGameVersion);
 }
 
 function normalizeVersionForCompare(version?: string) {

@@ -1,6 +1,6 @@
 # BD-SpineX Mac Release
 
-This app is packaged for macOS only. The release bundle includes the shared index files, the Spine converter, the UABEA patch backend, and the Rust native CLI so users do not need to compile backend tools after installing.
+This app is packaged for macOS only. The release bundle includes the shared index files, the Spine converter, the UABEA patch backend, the UnityPy backend, and the Rust native CLI so users do not need to compile backend tools after installing.
 
 ## Licensing
 
@@ -8,10 +8,11 @@ BD-SpineX source code is licensed under GPLv3. The packaged release bundle inclu
 
 ## Build
 
-Set the release version to the game version you are building against:
+Set the supported game version and, when needed, a separate hotfix release version:
 
 ```sh
 BD_SPINEX_GAME_VERSION=1.2.3 npm run dist:mac
+BD_SPINEX_GAME_VERSION=1.2.3 BD_SPINEX_RELEASE_VERSION=1.2.3-b2 npm run dist:mac
 ```
 
 The command writes:
@@ -31,10 +32,10 @@ Only these `manager-data` files are bundled:
 Runtime data such as patch history, converted files, user-scanned indexes, and backups is written to a versioned Electron `userData` folder, not into the app bundle:
 
 ```text
-manager-data/versions/<app-version>/
+manager-data/versions/<supported-game-version>/
 ```
 
-This prevents a new game/index version from reusing stale history or backup files from older `__data` bundle hashes.
+For hotfix builds, suffixes such as `-b2` are stripped for runtime data, so `2.25.29-b2` stores data under `manager-data/versions/2.25.29/`. This prevents a new game/index version from reusing stale history or backup files from older `__data` bundle hashes while allowing same-game hotfixes to keep using the same history.
 
 ## Checks
 

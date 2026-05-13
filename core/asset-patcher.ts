@@ -70,13 +70,14 @@ async function patchBundleBatchWithUnityPy(args: PatchBundleBatchArgs): Promise<
     throw new Error("UnityPy backend does not support inserting new Texture2D assets. Use UABEA for mods that need extra atlas pages.");
   }
 
-  const command = args.pythonPath?.trim() || defaultPythonPath();
-  const commandArgs = [
-    defaultUnityPyPatchScriptPath(),
+  const executablePath = unityPyPatchExecutablePath();
+  const command = executablePath ?? args.pythonPath?.trim() ?? defaultPythonPath();
+  const commandArgs = executablePath ? [] : [defaultUnityPyPatchScriptPath()];
+  commandArgs.push(
     "--input", args.input,
     "--output", args.output,
     "--job-manifest", args.manifestPath
-  ];
+  );
 
   if (args.unityVersion?.trim()) {
     commandArgs.push("--unity-version", args.unityVersion.trim());
@@ -195,6 +196,14 @@ function defaultPythonPath() {
 
 function defaultUnityPyPatchScriptPath() {
   return resourcePath("python", "patch_bundle.py");
+}
+
+function unityPyPatchExecutablePath() {
+  const executablePath = isPackagedRuntime()
+    ? resourcePath("backend", "unitypy", "unitypy_patch_bundle")
+    : path.resolve("dist-native/unitypy-backend/unitypy_patch_bundle");
+
+  return existsSync(executablePath) ? executablePath : undefined;
 }
 
 function defaultUabeaProjectPath() {
