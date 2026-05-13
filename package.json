@@ -45,6 +45,10 @@
         "to": "backend/uabea-cli"
       },
       {
+        "from": "dist-native/unitypy-backend",
+        "to": "backend/unitypy"
+      },
+      {
         "from": "python",
         "to": "python",
         "filter": [
