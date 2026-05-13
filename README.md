@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="build/readme-icon.png" alt="BD-SpineX icon" width="128" height="128">
+  <img src="build/icon.png" alt="BD-SpineX icon" width="128" height="128">
 </p>
 
 <h1 align="center">BD-SpineX</h1>
