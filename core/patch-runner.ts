@@ -2,18 +2,12 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { applyModded, getAssetBackupDir, getOriginalBackupPath, getPatchTempPath, getPatchWorkPath, preparePatchWork, replacePatchWork, restoreOriginal } from "./backup-manager.js";
 import { patchBundleBatch, type PatchBundleJob } from "./asset-patcher.js";
+import { managerDataDir, managerDataRootDir, managerDataVersion } from "./runtime-paths.js";
 import { convertJsonToSkel } from "./spine-converter.js";
 import { ensureSpineConverter } from "./tool-manager.js";
-import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchDataCheckEntry, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchStateChange } from "./types.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const managerDataDir = path.resolve("manager-data");
-const patchHistoryPath = path.join(managerDataDir, "patch-history.json");
-const convertedRoot = path.join(managerDataDir, "converted");
+import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchDataCheckEntry, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchStateChange, PreviousPatchedMods } from "./types.js";
 
 type PreparedPatchFiles = {
   atlases: string[];
@@ -519,10 +513,38 @@ export async function copyPatchBackupsForMods(
 
 export async function readPatchHistory(): Promise<PatchHistory> {
   try {
-    return JSON.parse(await fs.readFile(patchHistoryPath, "utf8")) as PatchHistory;
+    return JSON.parse(await fs.readFile(patchHistoryPath(), "utf8")) as PatchHistory;
   } catch {
     return { updatedAt: new Date().toISOString(), entries: [] };
   }
+}
+
+export async function readPreviousPatchedMods(): Promise<PreviousPatchedMods> {
+  const currentHistoryPath = path.resolve(patchHistoryPath());
+  const histories = await findPreviousPatchHistoryPaths(currentHistoryPath);
+  const modNames = new Set<string>();
+  const sourceVersions = new Set<string>();
+
+  for (const historyPath of histories) {
+    const history = await readHistoryFile(historyPath);
+    if (!history) {
+      continue;
+    }
+
+    const sourceVersion = versionFromHistoryPath(historyPath);
+    if (sourceVersion) {
+      sourceVersions.add(sourceVersion);
+    }
+
+    for (const modName of getActivePatchedModNames(history)) {
+      modNames.add(modName);
+    }
+  }
+
+  return {
+    modNames: [...modNames].sort((a, b) => a.localeCompare(b)),
+    sourceVersions: [...sourceVersions].sort((a, b) => a.localeCompare(b))
+  };
 }
 
 async function preparePatchFilesCached(
@@ -552,7 +574,7 @@ async function preparePatchFiles(
   progressCurrent = 0,
   progressTotal = 1
 ) {
-  const skelDir = path.join(convertedRoot, sanitizePathPart(mod.modName));
+  const skelDir = path.join(convertedRoot(), sanitizePathPart(mod.modName));
   const skels = mod.files.skel.map((file) => file.path);
   const skelBaseNames = new Set(mod.files.skel.map((file) => file.baseName.toLowerCase()));
   const jsonsToConvert = mod.files.json.filter((file) => !skelBaseNames.has(file.baseName.toLowerCase()));
@@ -920,11 +942,11 @@ function isPatchTimingEntry(value: unknown): value is NonNullable<PatchProgress[
 }
 
 function normalizePatchBackend(backend: ApplyPatchOptions["patchBackend"]): PatchBackend {
-  return "uabea";
+  return backend === "rust-native" ? "rust-native" : "uabea";
 }
 
 function formatPatchBackend(backend: PatchBackend) {
-  return "UABEA / AssetsTools.NET";
+  return backend === "rust-native" ? "Rust native" : "UABEA / AssetsTools.NET";
 }
 
 function formatMs(ms: number) {
@@ -932,8 +954,84 @@ function formatMs(ms: number) {
 }
 
 async function writePatchHistory(history: PatchHistory) {
-  await fs.mkdir(path.dirname(patchHistoryPath), { recursive: true });
-  await fs.writeFile(patchHistoryPath, `${JSON.stringify(history, null, 2)}\n`, "utf8");
+  const historyPath = patchHistoryPath();
+  await fs.mkdir(path.dirname(historyPath), { recursive: true });
+  await fs.writeFile(historyPath, `${JSON.stringify(history, null, 2)}\n`, "utf8");
+}
+
+async function findPreviousPatchHistoryPaths(currentHistoryPath: string) {
+  const root = managerDataRootDir();
+  const histories = new Set<string>();
+  const legacyPath = path.join(root, "patch-history.json");
+
+  if (path.resolve(legacyPath) !== currentHistoryPath && await fileExists(legacyPath)) {
+    histories.add(legacyPath);
+  }
+
+  const versionsRoot = path.join(root, "versions");
+  try {
+    const entries = await fs.readdir(versionsRoot, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name === managerDataVersion()) {
+        continue;
+      }
+
+      const historyPath = path.join(versionsRoot, entry.name, "patch-history.json");
+      if (path.resolve(historyPath) !== currentHistoryPath && await fileExists(historyPath)) {
+        histories.add(historyPath);
+      }
+    }
+  } catch {
+    // No previous versioned histories yet.
+  }
+
+  return [...histories];
+}
+
+async function readHistoryFile(historyPath: string): Promise<PatchHistory | undefined> {
+  try {
+    return JSON.parse(await fs.readFile(historyPath, "utf8")) as PatchHistory;
+  } catch {
+    return undefined;
+  }
+}
+
+function versionFromHistoryPath(historyPath: string) {
+  const parts = path.resolve(historyPath).split(path.sep);
+  const versionsIndex = parts.lastIndexOf("versions");
+  return versionsIndex >= 0 ? parts[versionsIndex + 1] : "legacy";
+}
+
+function getActivePatchedModNames(history: PatchHistory) {
+  const byModName = new Map<string, PatchRunEntry[]>();
+  for (const entry of history.entries) {
+    byModName.set(entry.modName, [...(byModName.get(entry.modName) ?? []), entry]);
+  }
+
+  return [...byModName.entries()]
+    .filter(([, entries]) => getLatestEntriesById(entries).some((entry) => entry.status === "patched"))
+    .map(([modName]) => modName);
+}
+
+function getLatestEntriesById(entries: PatchRunEntry[]) {
+  const latestById = new Map<string, PatchRunEntry>();
+  const sortedEntries = [...entries].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  for (const entry of sortedEntries) {
+    if (!latestById.has(entry.id)) {
+      latestById.set(entry.id, entry);
+    }
+  }
+
+  return [...latestById.values()];
+}
+
+function patchHistoryPath() {
+  return path.join(managerDataDir(), "patch-history.json");
+}
+
+function convertedRoot() {
+  return path.join(managerDataDir(), "converted");
 }
 
 function createPatchRunEntry(plan: PatchPlanEntry, status: PatchRunEntry["status"]): PatchRunEntry {

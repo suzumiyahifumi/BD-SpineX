@@ -1,8 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, GameVersionInfo, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
+import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, GameVersionInfo, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, PreviousPatchedMods, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
 
 const api = {
   getDefaultPaths: () => ipcRenderer.invoke("app:default-paths") as Promise<{ modsDir: string; sharedDir: string; dotnetPath: string }>,
+  readSettings: () => ipcRenderer.invoke("app:read-settings") as Promise<unknown>,
+  writeSettings: (settings: unknown) => ipcRenderer.invoke("app:write-settings", settings) as Promise<boolean>,
   getAppInfo: () => ipcRenderer.invoke("app:info") as Promise<AppInfo>,
   detectGameVersion: (sharedDir?: string) => ipcRenderer.invoke("game:detect-version", { sharedDir }) as Promise<GameVersionInfo>,
   selectDirectory: () => ipcRenderer.invoke("dialog:select-directory") as Promise<string | null>,
@@ -39,7 +41,8 @@ const api = {
     ipcRenderer.invoke("patch:copy-backups-for-mods", { plans, modNames, source }) as Promise<ApplyPatchResult>,
   checkPatchDataForMods: (plans: PatchPlanEntry[], modNames: string[]) =>
     ipcRenderer.invoke("patch:check-data-for-mods", { plans, modNames }) as Promise<PatchDataCheckResult>,
-  readPatchHistory: () => ipcRenderer.invoke("patch:history") as Promise<PatchHistory>
+  readPatchHistory: () => ipcRenderer.invoke("patch:history") as Promise<PatchHistory>,
+  readPreviousPatchedMods: () => ipcRenderer.invoke("patch:previous-patched-mods") as Promise<PreviousPatchedMods>
 };
 
 contextBridge.exposeInMainWorld("bd2", api);

@@ -1,15 +1,9 @@
 import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { isPackagedRuntime, resourcePath, seedManagerDataDir, managerDataDir } from "./runtime-paths.js";
 import type { SharedBundle, SharedFileEntry, SharedFileIndex, SharedIndex, SharedScanOptions, SharedScanProgress } from "./types.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const managerDataDir = path.resolve("manager-data");
-const sharedFileIndexPath = path.join(managerDataDir, "shared-file-index.json");
-const sharedIndexPath = path.join(managerDataDir, "shared-index.json");
 
 export async function scanShared(
   sharedDir: string,
@@ -25,7 +19,7 @@ export async function scanShared(
 
   if (!cachedFileIndex) {
     const fileIndex = createSharedFileIndex(sharedDir, candidates);
-    await writeJson(sharedFileIndexPath, fileIndex);
+    await writeJson(sharedFileIndexPath(), fileIndex);
   }
 
   const targetNames = normalizeTargetNames(options.targetNames ?? []);
@@ -263,20 +257,24 @@ async function writeJson(filePath: string, data: unknown) {
 }
 
 async function writeSharedIndex(index: SharedIndex) {
-  await writeJson(sharedIndexPath, toPortableSharedIndex(index));
+  await writeJson(sharedIndexPath(), toPortableSharedIndex(index));
 }
 
 export async function readSharedIndex(sharedDir?: string): Promise<SharedIndex> {
-  try {
-    const index = JSON.parse(await fs.readFile(sharedIndexPath, "utf8")) as SharedIndex;
-    if (!sharedDir?.trim()) {
-      return toPortableSharedIndex(index);
-    }
+  for (const indexPath of sharedIndexReadPaths()) {
+    try {
+      const index = JSON.parse(await fs.readFile(indexPath, "utf8")) as SharedIndex;
+      if (!sharedDir?.trim()) {
+        return toPortableSharedIndex(index);
+      }
 
-    return hydrateSharedIndex(index, sharedDir);
-  } catch {
-    return { bundles: [] };
+      return hydrateSharedIndex(index, sharedDir);
+    } catch {
+      continue;
+    }
   }
+
+  return { bundles: [] };
 }
 
 async function readExistingSharedIndex(): Promise<SharedIndex> {
@@ -284,31 +282,38 @@ async function readExistingSharedIndex(): Promise<SharedIndex> {
 }
 
 async function readExistingSharedFileIndex(sharedDir: string): Promise<SharedFileIndex | undefined> {
-  try {
-    const index = JSON.parse(await fs.readFile(sharedFileIndexPath, "utf8")) as SharedFileIndex;
-    if ("sharedRootKey" in index) {
-      return index.sharedRootKey === sharedDirCacheKey(sharedDir) ? index : undefined;
-    }
-
-    const legacyIndex = index as SharedFileIndex & { sharedDir?: string };
-    return legacyIndex.sharedDir && path.resolve(legacyIndex.sharedDir) === path.resolve(sharedDir)
-      ? {
-          generatedAt: legacyIndex.generatedAt,
-          sharedRootKey: sharedDirCacheKey(sharedDir),
-          files: legacyIndex.files.map((file) => {
-            const legacyFile = file as SharedFileEntry & { infoPath?: string };
-            return {
-              bundleId: file.bundleId,
-              sizeBytes: file.sizeBytes,
-              modifiedAt: file.modifiedAt,
-              hasInfo: Boolean(legacyFile.infoPath)
-            };
-          })
+  for (const indexPath of sharedFileIndexReadPaths()) {
+    try {
+      const index = JSON.parse(await fs.readFile(indexPath, "utf8")) as SharedFileIndex;
+      if ("sharedRootKey" in index) {
+        if (index.sharedRootKey === sharedDirCacheKey(sharedDir)) {
+          return index;
         }
-      : undefined;
-  } catch {
-    return undefined;
+        continue;
+      }
+
+      const legacyIndex = index as SharedFileIndex & { sharedDir?: string };
+      if (legacyIndex.sharedDir && path.resolve(legacyIndex.sharedDir) === path.resolve(sharedDir)) {
+        return {
+            generatedAt: legacyIndex.generatedAt,
+            sharedRootKey: sharedDirCacheKey(sharedDir),
+            files: legacyIndex.files.map((file) => {
+              const legacyFile = file as SharedFileEntry & { infoPath?: string };
+              return {
+                bundleId: file.bundleId,
+                sizeBytes: file.sizeBytes,
+                modifiedAt: file.modifiedAt,
+                hasInfo: Boolean(legacyFile.infoPath)
+              };
+            })
+          };
+      }
+    } catch {
+      continue;
+    }
   }
+
+  return undefined;
 }
 
 function candidatesFromFileIndex(index: SharedFileIndex, sharedDir?: string): SharedBundleCandidate[] {
@@ -530,22 +535,50 @@ async function fileExists(filePath: string) {
 }
 
 async function scanBundleAssets(dataPath: string, options: SharedScanOptions) {
+  if (options.scanBackend === "rust-native") {
+    return scanBundleAssetsWithRustNative(dataPath);
+  }
+
   return scanBundleAssetsWithUabea(dataPath, options);
 }
 
-async function scanBundleAssetsWithUabea(dataPath: string, options: SharedScanOptions) {
-  const command = defaultRustCliCommand();
-  const projectPath = options.uabeaScannerProjectPath?.trim() || defaultUabeaProjectPath();
-  const args = [
-    "run",
-    "--manifest-path", path.resolve("experiments/rust-uabea-cli/Cargo.toml"),
-    "--quiet",
-    "--",
+async function scanBundleAssetsWithRustNative(dataPath: string) {
+  const command = rustCliCommand();
+  const args = rustCliBaseArgs([
+    "--rust-backend", "native",
     "--mode", "scan",
-    "--input", dataPath,
-    "--dotnet-path", options.dotnetPath?.trim() || defaultDotnetPath(),
-    "--uabea-project", projectPath
+    "--input", dataPath
+  ]);
+  const stdout = await run(command, args);
+  let result: { ok: boolean; assets?: SharedBundle["assets"]; error?: string };
+
+  try {
+    result = JSON.parse(stdout);
+  } catch {
+    throw new Error(stdout.trim() || "Rust native scanner did not return JSON");
+  }
+
+  if (!result.ok) {
+    throw new Error(result.error ?? "Failed to scan Unity AssetBundle with Rust native scanner");
+  }
+
+  return result.assets ?? [];
+}
+
+async function scanBundleAssetsWithUabea(dataPath: string, options: SharedScanOptions) {
+  const command = uabeaCommand();
+  const projectPath = options.uabeaScannerProjectPath?.trim() || defaultUabeaProjectPath();
+  const backendArgs = [
+    "--mode", "scan",
+    "--input", dataPath
   ];
+  const args = uabeaBaseArgs(isPackagedRuntime()
+    ? backendArgs
+    : [
+        ...backendArgs,
+        "--dotnet-path", options.dotnetPath?.trim() || defaultDotnetPath(),
+        "--uabea-project", projectPath
+      ]);
   const stdout = await run(command, args);
   let result: { ok: boolean; assets?: SharedBundle["assets"]; error?: string };
 
@@ -567,11 +600,75 @@ function defaultDotnetPath() {
 }
 
 function defaultUabeaProjectPath() {
-  return path.resolve("experiments/uabea-patcher/UabeaPatchPrototype.csproj");
+  return isPackagedRuntime()
+    ? path.join(process.resourcesPath, "backend", "uabea-patcher", "UabeaPatchPrototype")
+    : path.resolve("experiments/uabea-patcher/UabeaPatchPrototype.csproj");
 }
 
-function defaultRustCliCommand() {
-  return "cargo";
+function rustCliCommand() {
+  return isPackagedRuntime()
+    ? resourcePath("backend", "uabea-cli", "uabea_cli")
+    : "cargo";
+}
+
+function uabeaCommand() {
+  return isPackagedRuntime()
+    ? resourcePath("backend", "uabea-patcher", "UabeaPatchPrototype")
+    : "cargo";
+}
+
+function uabeaBaseArgs(args: string[]) {
+  if (isPackagedRuntime()) {
+    return args;
+  }
+
+  return rustCliBaseArgs(args);
+}
+
+function rustCliBaseArgs(args: string[]) {
+  if (isPackagedRuntime()) {
+    return args;
+  }
+
+  return [
+    "run",
+    "--manifest-path", path.resolve("experiments/rust-uabea-cli/Cargo.toml"),
+    "--quiet",
+    "--",
+    ...args
+  ];
+}
+
+function sharedIndexPath() {
+  return path.join(managerDataDir(), "shared-index.json");
+}
+
+function sharedFileIndexPath() {
+  return path.join(managerDataDir(), "shared-file-index.json");
+}
+
+function seedSharedIndexPath() {
+  return path.join(seedManagerDataDir(), "shared-index.json");
+}
+
+function seedSharedFileIndexPath() {
+  return path.join(seedManagerDataDir(), "shared-file-index.json");
+}
+
+function sharedIndexReadPaths() {
+  return isPackagedRuntime()
+    ? uniquePaths([sharedIndexPath(), seedSharedIndexPath()])
+    : [sharedIndexPath()];
+}
+
+function sharedFileIndexReadPaths() {
+  return isPackagedRuntime()
+    ? uniquePaths([sharedFileIndexPath(), seedSharedFileIndexPath()])
+    : [sharedFileIndexPath()];
+}
+
+function uniquePaths(paths: string[]) {
+  return [...new Set(paths)];
 }
 
 function run(command: string, args: string[]): Promise<string> {
