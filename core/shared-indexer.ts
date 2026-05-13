@@ -656,15 +656,11 @@ function seedSharedFileIndexPath() {
 }
 
 function sharedIndexReadPaths() {
-  return isPackagedRuntime()
-    ? uniquePaths([sharedIndexPath(), seedSharedIndexPath()])
-    : [sharedIndexPath()];
+  return uniquePaths([sharedIndexPath(), seedSharedIndexPath()]);
 }
 
 function sharedFileIndexReadPaths() {
-  return isPackagedRuntime()
-    ? uniquePaths([sharedFileIndexPath(), seedSharedFileIndexPath()])
-    : [sharedFileIndexPath()];
+  return uniquePaths([sharedFileIndexPath(), seedSharedFileIndexPath()]);
 }
 
 function uniquePaths(paths: string[]) {

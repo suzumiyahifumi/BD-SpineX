@@ -166,13 +166,16 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
-.field span {
+.field > .fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: #445268;
   font-size: 13px;
   font-weight: 650;
 }
 
-.field.invalid span {
+.field.invalid > .fieldLabel {
   color: #b42318;
 }
 
@@ -193,6 +196,95 @@ input[type="checkbox"] {
   flex-wrap: wrap;
   gap: 10px;
   margin: 14px 0;
+}
+
+.actionWithHelp,
+.titleWithHelp,
+.modPowerLabel.titleWithHelp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.helpRoot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.helpButton {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  place-items: center;
+  border-color: #cbd5e1;
+  border-radius: 999px;
+  padding: 0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.72;
+}
+
+.helpButton:hover {
+  border-color: #94a3b8;
+  color: #256f63;
+  opacity: 1;
+}
+
+.helpPopup {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  gap: 8px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(24, 33, 47, 0.18);
+  color: #18212f;
+  text-align: left;
+  white-space: normal;
+}
+
+.helpPopup.below {
+  top: calc(100% + 8px);
+}
+
+.helpPopup.above {
+  bottom: calc(100% + 8px);
+}
+
+.helpPopupTitle {
+  color: #18212f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.helpPopupText {
+  color: #536276;
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.45;
+}
+
+.helpCloseButton {
+  justify-self: start;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #445268;
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .advancedToolbar {
@@ -273,6 +365,7 @@ progress {
 
 .modsPanel {
   max-height: 520px;
+  overflow: visible;
 }
 
 .modsHeader {
