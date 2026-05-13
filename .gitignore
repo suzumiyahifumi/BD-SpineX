@@ -128,6 +128,7 @@ dist
 
 # TernJS port file
 .tern-port
+._*
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
@@ -141,6 +142,7 @@ dist
 
 # BD2 Mod Manager runtime output
 manager-data/*.json
+manager-data/versions/**
 manager-data/backups/**
 manager-data/converted/**
 !manager-data/.gitkeep
@@ -162,3 +164,10 @@ manager-data/tools/source/**
 mods/**
 !mods/
 !mods/.gitkeep
+
+# Packaged release outputs.
+dist-native/**
+release/**
+experiments/rust-uabea-cli/target/**
+experiments/rust-uabea-cli/._target
+experiments/rust-uabea-cli/._target/**

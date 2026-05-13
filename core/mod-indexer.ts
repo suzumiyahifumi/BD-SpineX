@@ -3,19 +3,22 @@ import path from "node:path";
 import type { ModEntry, ModsIndex } from "./types.js";
 
 const spineNamePattern = /(?:cutscene_)?char\d+/i;
+const supportedModExtensions = new Set([".json", ".skel", ".atlas", ".png"]);
+
+type ModDirectory = {
+  dir: string;
+  relativePath: string;
+  files: string[];
+};
 
 export async function scanMods(modsDir: string): Promise<ModsIndex> {
-  const entries = await fs.readdir(modsDir, { withFileTypes: true });
+  const modDirs = await findModDirectories(modsDir);
   const mods: ModEntry[] = [];
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const dir = path.join(modsDir, entry.name);
-    const files = await fs.readdir(dir);
-    const baseName = detectModName(files, entry.name);
+  for (const modDir of modDirs) {
+    const dir = modDir.dir;
+    const files = modDir.files;
+    const baseName = detectModName(files, path.basename(modDir.relativePath));
     const modFiles = collectModFiles(dir, files);
     const json = findFileForBase(files, baseName, ".json");
     const skel = findFileForBase(files, baseName, ".skel");
@@ -23,7 +26,7 @@ export async function scanMods(modsDir: string): Promise<ModsIndex> {
     const png = findFileForBase(files, baseName, ".png");
 
     mods.push({
-      modName: entry.name,
+      modName: modDir.relativePath,
       name: baseName,
       dir,
       jsonPath: json ? path.join(dir, json) : undefined,
@@ -40,6 +43,51 @@ export async function scanMods(modsDir: string): Promise<ModsIndex> {
   }
 
   return { mods };
+}
+
+async function findModDirectories(modsDir: string): Promise<ModDirectory[]> {
+  const entries = await fs.readdir(modsDir, { withFileTypes: true });
+  const modDirs: ModDirectory[] = [];
+
+  for (const entry of sortDirEntries(entries)) {
+    if (!entry.isDirectory() || shouldSkipDirectory(entry.name)) {
+      continue;
+    }
+
+    modDirs.push(...await findModDirectoriesIn(path.join(modsDir, entry.name), entry.name));
+  }
+
+  return modDirs.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+}
+
+async function findModDirectoriesIn(dir: string, relativePath: string): Promise<ModDirectory[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const files = sortDirEntries(entries)
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name);
+  const nestedDirs = sortDirEntries(entries)
+    .filter((entry) => entry.isDirectory() && !shouldSkipDirectory(entry.name));
+  const modDirs: ModDirectory[] = hasModAssetFiles(files)
+    ? [{ dir, relativePath, files }]
+    : [];
+
+  for (const entry of nestedDirs) {
+    modDirs.push(...await findModDirectoriesIn(path.join(dir, entry.name), path.join(relativePath, entry.name)));
+  }
+
+  return modDirs;
+}
+
+function sortDirEntries<T extends { name: string }>(entries: T[]) {
+  return [...entries].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function shouldSkipDirectory(name: string) {
+  return name.startsWith(".") || name === "__MACOSX";
+}
+
+function hasModAssetFiles(files: string[]) {
+  return files.some((file) => supportedModExtensions.has(path.extname(file).toLowerCase()));
 }
 
 function getModStatus(hasSkeleton: boolean, hasAtlas: boolean, hasPng: boolean): ModEntry["status"] {
@@ -80,7 +128,7 @@ function collectFilesByExtension(dir: string, files: string[], extension: string
 
 function detectModName(files: string[], fallback: string) {
   const stems = files
-    .filter((file) => [".json", ".skel", ".atlas", ".png"].includes(path.extname(file).toLowerCase()))
+    .filter((file) => supportedModExtensions.has(path.extname(file).toLowerCase()))
     .map((file) => path.basename(file, path.extname(file)));
 
   const skeletonStem = files

@@ -60,7 +60,6 @@ export type GameVersionInfo = {
 };
 
 export type SharedScanOptions = {
-  pythonPath?: string;
   scanBackend?: SharedScanBackend;
   dotnetPath?: string;
   uabeaScannerProjectPath?: string;
@@ -71,7 +70,7 @@ export type SharedScanOptions = {
   forceRescan?: boolean;
 };
 
-export type SharedScanBackend = "unitypy" | "uabea";
+export type SharedScanBackend = "uabea" | "rust-native";
 
 export type SharedScanProgress = {
   phase: "discovering" | "found" | "scanning" | "scanned" | "done" | "stopped";
@@ -180,6 +179,11 @@ export type PatchHistory = {
   entries: PatchRunEntry[];
 };
 
+export type PreviousPatchedMods = {
+  modNames: string[];
+  sourceVersions: string[];
+};
+
 export type PatchDataCheckStatus = "ok" | "missing" | "changed" | "no_backup";
 
 export type PatchDataCheckEntry = {
@@ -197,7 +201,6 @@ export type PatchDataCheckResult = {
 };
 
 export type ApplyPatchOptions = {
-  pythonPath: string;
   patchBackend?: PatchBackend;
   dotnetPath?: string;
   uabeaPatcherProjectPath?: string;
@@ -206,7 +209,7 @@ export type ApplyPatchOptions = {
   decryptKey?: string;
 };
 
-export type PatchBackend = "unitypy" | "uabea";
+export type PatchBackend = "uabea" | "rust-native";
 
 export type PatchStateChange = {
   modName: string;

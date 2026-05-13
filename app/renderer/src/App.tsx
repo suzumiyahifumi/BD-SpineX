@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import type { AppInfo, ApplyPatchOptions, BundleAsset, GameVersionInfo, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, SharedIndex, SharedScanBackend, SharedScanProgress } from "../../../core/types";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import type { AppInfo, ApplyPatchOptions, BundleAsset, GameVersionInfo, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, PreviousPatchedMods, SharedIndex, SharedScanBackend, SharedScanProgress } from "../../../core/types";
 
 type Settings = {
   settingsVersion: number;
   sharedDir: string;
   modsDir: string;
   converterPath: string;
-  pythonPath: string;
   scanBackend: SharedScanBackend;
   patchBackend: PatchBackend;
   dotnetPath: string;
@@ -60,7 +59,6 @@ const emptySettings: Settings = {
   sharedDir: "",
   modsDir: "",
   converterPath: "",
-  pythonPath: ".venv/bin/python",
   scanBackend: "uabea",
   patchBackend: "uabea",
   dotnetPath: "manager-data/tools/dotnet/dotnet",
@@ -86,6 +84,7 @@ export function App() {
   const [desiredPatchStates, setDesiredPatchStates] = useState<Record<string, boolean>>({});
   const [logs, setLogs] = useState<LogEntry[]>(() => [createLogEntry("Ready.")]);
   const [busy, setBusy] = useState(false);
+  const [modsActionLocked, setModsActionLocked] = useState(false);
   const [sharedProgress, setSharedProgress] = useState<SharedScanProgress | null>(null);
   const [patchProgress, setPatchProgress] = useState<PatchProgress | null>(null);
   const [sharedAssetCategory, setSharedAssetCategory] = useState<SharedAssetCategory>("all");
@@ -97,6 +96,8 @@ export function App() {
   const [modPower, setModPower] = useState<ModPowerState>(() => loadModPowerState());
   const [modFilter, setModFilter] = useState("");
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
+  const [previousHistoryPrompt, setPreviousHistoryPrompt] = useState<PreviousPatchedMods | null>(null);
+  const [previousHistoryChecked, setPreviousHistoryChecked] = useState(false);
 
   const readyTargetCount = useMemo(() => plans.filter((plan) => plan.status === "ready").length, [plans]);
   const readyModCount = useMemo(() => countReadyMods(plans), [plans]);
@@ -115,6 +116,12 @@ export function App() {
     selectableVisibleMods.length > 0 && selectableVisibleMods.every((mod) => getDesiredPatchState(mod.modName, actualPatchStates, desiredPatchStates)),
   [selectableVisibleMods, actualPatchStates, desiredPatchStates]);
   const modTargetNames = useMemo(() => getModTargetNames(modsIndex), [modsIndex]);
+  const missingSharedDir = !settings.sharedDir.trim();
+  const missingModsDir = !settings.modsDir.trim();
+  const settingsLocked = missingSharedDir || missingModsDir;
+  const versionLocked = isGameVersionMismatch(appInfo, gameVersionInfo);
+  const previousHistoryLocked = Boolean(previousHistoryPrompt);
+  const modsLocked = modsActionLocked || !modPower.enabled || versionLocked || settingsLocked || previousHistoryLocked;
   const sharedAssets = useMemo(() => {
     return sharedIndex.bundles.flatMap((bundle) =>
       bundle.assets.map((asset) => ({
@@ -146,9 +153,9 @@ export function App() {
       setSettings(loadedSettings);
       setSettingsLoaded(true);
       void refreshGameVersion(loadedSettings.sharedDir);
-      void runTask(async () => {
+      window.setTimeout(() => void runTask(async () => {
         await scanModsWorkflow(loadedSettings);
-      });
+      }), 50);
     });
     const unsubscribeShared = window.bd2.onSharedScanProgress((progress) => {
       setSharedProgress(progress);
@@ -186,6 +193,7 @@ export function App() {
       return;
     }
     window.localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
+    void window.bd2.writeSettings(settings).catch(() => undefined);
   }, [settings, settingsLoaded]);
 
   useEffect(() => {
@@ -232,6 +240,12 @@ export function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function runActionTask(task: () => Promise<void>) {
+    setModsActionLocked(true);
+    await runTask(task);
+    setModsActionLocked(false);
   }
 
   async function toggleModPower() {
@@ -301,6 +315,90 @@ export function App() {
     }
   }
 
+  async function checkPreviousPatchedMods(index: ModsIndex, baseStates: Record<string, boolean>, currentHistory: PatchHistory) {
+    if (previousHistoryChecked) {
+      return;
+    }
+
+    setPreviousHistoryChecked(true);
+    if (hasCurrentVersionPatchActivity(currentHistory)) {
+      return;
+    }
+
+    const previous = await window.bd2.readPreviousPatchedMods().catch(() => ({ modNames: [], sourceVersions: [] }));
+    const availableModNames = new Set(index.mods.map((mod) => mod.modName));
+    const matchedModNames = previous.modNames.filter((modName) => availableModNames.has(modName));
+    if (matchedModNames.length === 0) {
+      return;
+    }
+
+    setDesiredPatchStates({
+      ...baseStates,
+      ...Object.fromEntries(matchedModNames.map((modName) => [modName, true]))
+    });
+    setPreviousHistoryPrompt({
+      modNames: matchedModNames,
+      sourceVersions: previous.sourceVersions
+    });
+    log(`Found previous patched mod history: ${matchedModNames.length} mod(s) selected for review.`);
+  }
+
+  async function inheritPreviousPatchedMods() {
+    const prompt = previousHistoryPrompt;
+    if (!prompt) {
+      return;
+    }
+
+    setPreviousHistoryPrompt(null);
+    await runActionTask(async () => {
+      const currentModsIndex = settings.modsDir
+        ? await window.bd2.scanMods(settings.modsDir)
+        : modsIndex;
+      setModsIndex(currentModsIndex);
+
+      const targetNames = getModTargetNames(currentModsIndex);
+      if (!targetNames.length) {
+        throw new Error("No mod target names found. Scan Mods before inheriting previous installations.");
+      }
+
+      setSharedIndex({ bundles: [] });
+      setPlans([]);
+      setSharedProgress({ phase: "discovering", current: 0, total: 0 });
+      const index = await window.bd2.scanShared(settings.sharedDir, {
+        scanBackend: settings.scanBackend,
+        dotnetPath: settings.dotnetPath,
+        unityVersion: settings.unityVersion,
+        decryptKey: settings.decryptKey,
+        forceRescan: true,
+        targetNames
+      });
+      setSharedIndex(index);
+
+      const planIndex = await window.bd2.createPatchPlan(index, currentModsIndex);
+      setPlans(planIndex.plans);
+      const modNames = prompt.modNames.filter((modName) => currentModsIndex.mods.some((mod) => mod.modName === modName));
+      const changes = modNames.map((modName) => ({ modName, enabled: true }));
+      if (changes.length === 0) {
+        throw new Error("No previous patched mods are available in the current Mods Folder.");
+      }
+
+      const result = await window.bd2.applyPatchStateChanges(planIndex.plans, currentModsIndex, changes, {
+        ...createApplyPatchOptions(settings)
+      });
+      setPatchHistory(result.history);
+      setDesiredPatchStates(getActualPatchStates(currentModsIndex, result.history));
+      const patched = result.entries.filter((entry) => entry.status === "patched").length;
+      const failed = result.entries.filter((entry) => entry.status === "failed").length;
+      const skipped = result.entries.filter((entry) => entry.status === "skipped").length;
+      log(`Inherited previous mod installation: ${patched} patched, ${failed} failed, ${skipped} skipped.`);
+    });
+  }
+
+  function declinePreviousPatchedMods() {
+    setPreviousHistoryPrompt(null);
+    log("Previous mod installation selection kept for review.");
+  }
+
   async function scanModsWorkflow(activeSettings: Settings) {
     if (!activeSettings.modsDir) {
       return;
@@ -312,8 +410,10 @@ export function App() {
     ]);
     setModsIndex(index);
     setPatchHistory(history);
-    setDesiredPatchStates(getActualPatchStates(index, history));
+    const actualStates = getActualPatchStates(index, history);
+    setDesiredPatchStates(actualStates);
     log(`Scanned Mods: ${index.mods.length} mod folder(s), ${index.mods.filter((mod) => mod.status === "ready").length} ready.`);
+    await checkPreviousPatchedMods(index, actualStates, history);
 
     if (!activeSettings.sharedDir) {
       setSharedIndex({ bundles: [] });
@@ -351,10 +451,9 @@ export function App() {
       : modsIndex;
     if (activeSettings.modsDir) {
       setModsIndex(currentModsIndex);
-      log(`Scanned Mods first: ${currentModsIndex.mods.length} mod folder(s), ${currentModsIndex.mods.filter((mod) => mod.status === "ready").length} ready.`);
+      log(`Scanned Mods first: ${currentModsIndex.mods.length} mod folder(s), including nested folders, ${currentModsIndex.mods.filter((mod) => mod.status === "ready").length} ready.`);
     }
     const index = await window.bd2.scanShared(activeSettings.sharedDir, {
-      pythonPath: activeSettings.pythonPath,
       scanBackend: activeSettings.scanBackend,
       dotnetPath: activeSettings.dotnetPath,
       unityVersion: activeSettings.unityVersion,
@@ -417,6 +516,9 @@ export function App() {
             <span className="versionBadge" title={formatVersionTitle(appInfo, gameVersionInfo)}>
               {formatVersionBadge(appInfo, gameVersionInfo)}
             </span>
+            <HelpButton title="Version lock">
+              BD-SpineX expects the manager version to match the BrownDust II game version. If they differ, mod operations are locked until a matching release is used.
+            </HelpButton>
           </p>
           <p>BrownDust II Mod Management/Installation | Mac PlayCover Version</p>
         </div>
@@ -428,15 +530,21 @@ export function App() {
       <section className="panel settingsGrid">
         <PathField
           label="Shared Folder"
+          helpTitle="Shared Folder"
+          helpText="Select BrownDust II's UnityCache Shared folder from the PlayCover app data. BD-SpineX reads game __data bundles here and writes patched bundles back after Apply Changes."
           value={settings.sharedDir}
           onChange={(value) => updateSetting("sharedDir", value)}
           onBrowse={() => selectDirectory("sharedDir")}
+          invalid={missingSharedDir}
         />
         <PathField
           label="Mods Folder"
+          helpTitle="Mods Folder"
+          helpText="Select the folder that contains your mods. Nested folders are supported, so you can group mods by source or author."
           value={settings.modsDir}
           onChange={(value) => updateSetting("modsDir", value)}
           onBrowse={() => selectDirectory("modsDir")}
+          invalid={missingModsDir}
         />
         <div className="settingsActions">
           <button className="advancedToggle" type="button" onClick={() => setShowAdvancedSettings((current) => !current)}>
@@ -447,35 +555,45 @@ export function App() {
           <div className="advancedSettingsGrid">
             <SelectField
               label="Patch Backend"
+              helpTitle="Patch Backend"
+              helpText="UABEA is the stable patch backend. Rust native is experimental and should only be used when testing the native patcher workflow."
               value={settings.patchBackend}
               onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
               options={[
-                { value: "unitypy", label: "UnityPy" },
-                { value: "uabea", label: "UABEA / AssetsTools.NET" }
+                { value: "uabea", label: "UABEA / AssetsTools.NET" },
+                { value: "rust-native", label: "Rust native patcher" }
               ]}
             />
             <SelectField
               label="Shared Scan Backend"
+              helpTitle="Shared Scan Backend"
+              helpText="Choose how Shared bundles are scanned. UABEA is the stable option; Rust native is experimental parser support."
               value={settings.scanBackend}
               onChange={(value) => updateSetting("scanBackend", value as SharedScanBackend)}
               options={[
                 { value: "uabea", label: "UABEA / AssetsTools.NET" },
-                { value: "unitypy", label: "UnityPy" }
+                { value: "rust-native", label: "Rust native parser" }
               ]}
             />
             <PathField
               label="Unity Fallback Version"
+              helpTitle="Unity Fallback Version"
+              helpText="Used only when a bundle does not expose enough Unity version metadata for the backend. The default should normally be left unchanged."
               value={settings.unityVersion}
               onChange={(value) => updateSetting("unityVersion", value)}
             />
             <PathField
               label="AssetBundle Decrypt Key"
+              helpTitle="AssetBundle Decrypt Key"
+              helpText="Optional key for encrypted AssetBundles. Leave this empty unless a specific game update requires one."
               value={settings.decryptKey}
               onChange={(value) => updateSetting("decryptKey", value)}
               type="password"
             />
             <PathField
               label="Scan Limit"
+              helpTitle="Scan Limit"
+              helpText="Limits targeted Shared scans to the largest candidate bundles for faster checks. Use Scan Entire Shared when rebuilding the full index."
               value={settings.scanLimit}
               onChange={(value) => updateSetting("scanLimit", value)}
             />
@@ -484,11 +602,16 @@ export function App() {
       </section>
 
       <section className="toolbar">
-        <button disabled={busy || !settings.modsDir} onClick={() => runTask(async () => {
-          await scanModsWorkflow(settings);
-        })}>
-          Scan Mods
-        </button>
+        <div className="actionWithHelp">
+          <button disabled={busy || !settings.modsDir} onClick={() => runTask(async () => {
+            await scanModsWorkflow(settings);
+          })}>
+            Scan Mods
+          </button>
+          <HelpButton title="Scan Mods">
+            Reads the Mods Folder, detects valid mod files, loads the current patch history, and builds a patch plan from the cached Shared index when available.
+          </HelpButton>
+        </div>
         <button disabled={!busy && !sharedScanActive} onClick={async () => {
           await window.bd2.stopSharedScan();
           log("Stop requested. Current bundle will finish before scanning stops.");
@@ -505,13 +628,15 @@ export function App() {
             })}>
               Scan Shared for Mods
             </button>
+            <HelpButton title="Scan Shared for Mods">
+              Scans only Shared bundles likely to contain assets used by the currently detected mods. This is faster than scanning the entire Shared folder.
+            </HelpButton>
             <button disabled={busy || !settings.sharedDir} onClick={() => runTask(async () => {
               setSharedIndex({ bundles: [] });
               setPlans([]);
               setSharedAssetCategory("all");
               setSharedProgress({ phase: "discovering", current: 0, total: 0 });
               const index = await window.bd2.scanShared(settings.sharedDir, {
-                pythonPath: settings.pythonPath,
                 scanBackend: settings.scanBackend,
                 dotnetPath: settings.dotnetPath,
                 unityVersion: settings.unityVersion,
@@ -572,12 +697,17 @@ export function App() {
         <div className="panel tablePanel modsPanel">
           <div className="modsHeader">
             <div>
-              <div className="panelTitle">Mods</div>
+              <div className="panelTitle titleWithHelp">
+                <span>Mods</span>
+                <HelpButton title="Mods table">
+                  Check a mod to stage it for installation. Uncheck an active mod to stage restore. Sorting, filtering, and scrolling remain available while operations are locked.
+                </HelpButton>
+              </div>
               <div className="tableHint">{visibleMods.length} shown / {modsIndex.mods.length} scanned</div>
             </div>
             <div className="modsHeaderControls">
               <button
-                disabled={busy || !patchStateChanges.length}
+                disabled={busy || modsLocked || !patchStateChanges.length}
                 onClick={resetPatchStateChanges}
                 title="Restore checkbox state before Apply Changes"
                 type="button"
@@ -594,7 +724,8 @@ export function App() {
               </label>
             </div>
           </div>
-          <table>
+          <div className={`modsTableFrame ${modsLocked ? "locked" : ""}`}>
+            <table>
             <colgroup>
               <col className="patchCol" />
               <col className="folderCol" />
@@ -607,7 +738,7 @@ export function App() {
                 <th className="patchColumn">
                   <div className="patchBulkControls" aria-label="Bulk patch selection">
                     <button
-                      disabled={busy || !modPower.enabled || selectableVisibleMods.length === 0}
+                      disabled={modsLocked || selectableVisibleMods.length === 0}
                       onClick={toggleVisiblePatchStates}
                       title={allVisibleModsSelected ? "Clear all visible mods" : "Select all visible mods"}
                       type="button"
@@ -639,12 +770,12 @@ export function App() {
                       <input
                         aria-label={`Patch ${mod.modName}`}
                         checked={getDesiredPatchState(mod.modName, actualPatchStates, desiredPatchStates)}
-                        disabled={!modPower.enabled || (mod.status !== "ready" && !actualPatchStates[mod.modName])}
+                        disabled={modsLocked || (mod.status !== "ready" && !actualPatchStates[mod.modName])}
                         type="checkbox"
                         onChange={(event) => updateDesiredPatchState(mod.modName, event.target.checked)}
                       />
                     </td>
-                    <td className="folderCell" title={mod.dir}>{mod.modName}</td>
+                    <td className="folderCell" title={mod.modName}>{formatModFolderName(mod.modName)}</td>
                     <td title={mod.name}>{mod.name}</td>
                   <td>
                     <span className={`categoryBadge ${classifyMod(mod)}`}>{formatModCategory(classifyMod(mod))}</span>
@@ -658,13 +789,24 @@ export function App() {
                 );
               })}
             </tbody>
-          </table>
+            </table>
+            {modsLocked && (
+              <div className="modsLockOverlay" aria-hidden="true">
+                <span>{formatModsLockMessage({ modsActionLocked, modPowerEnabled: modPower.enabled, versionLocked, missingSharedDir, missingModsDir, previousHistoryLocked })}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className={`panel tablePanel sharedPanel ${showSharedCandidates ? "expanded" : "collapsed"}`}>
           <div className="tableHeader">
             <div>
-              <div className="panelTitle">Shared Candidates</div>
+              <div className="panelTitle titleWithHelp">
+                <span>Shared Candidates</span>
+                <HelpButton title="Shared Candidates">
+                  Shows game assets found in Shared bundles that match your mod target names. These candidates are used to generate patch plans.
+                </HelpButton>
+              </div>
               <div className="tableHint">{filteredSharedAssets.length} shown / {relatedSharedAssets.length} related / {sharedAssets.length} indexed</div>
             </div>
             <div className="tableHeaderActions">
@@ -768,7 +910,12 @@ export function App() {
 
       <section className="contentGrid">
         <div className="panel tablePanel">
-          <div className="panelTitle">Pending Changes</div>
+          <div className="panelTitle titleWithHelp">
+            <span>Pending Changes</span>
+            <HelpButton title="Pending Changes">
+              This table shows what will change when Apply Changes is pressed. Nothing is written to the game until you apply.
+            </HelpButton>
+          </div>
           <table>
             <thead>
               <tr>
@@ -794,10 +941,20 @@ export function App() {
         </div>
 
         <aside className="panel sidePanel">
-          <div className="panelTitle">Actions</div>
+          <div className="panelTitle titleWithHelp">
+            <span>Actions</span>
+            <HelpButton title="Actions">
+              Actions write or verify game __data files. BD-SpineX locks mod checkboxes while an action is running to keep staged changes consistent.
+            </HelpButton>
+          </div>
           <div className={`modPowerPanel ${modPower.enabled ? "enabled" : "disabled"}`}>
             <div>
-              <div className="modPowerLabel">Mod Power</div>
+              <div className="modPowerLabel titleWithHelp">
+                <span>Mod Power</span>
+                <HelpButton title="Mod Power">
+                  Turn Off All restores currently active mods and remembers them. Restore Saved applies that remembered set again.
+                </HelpButton>
+              </div>
               <div className="modPowerState">
                 {modPower.enabled
                   ? `${activeModNames.length} active mod(s)`
@@ -805,20 +962,40 @@ export function App() {
               </div>
             </div>
             <button
-              disabled={busy || (modPower.enabled && activeModNames.length > 0 && !plans.length) || (!modPower.enabled && restorablePowerModNames.length > 0 && !plans.length)}
-              onClick={() => runTask(toggleModPower)}
+              disabled={busy || versionLocked || settingsLocked || (modPower.enabled && activeModNames.length > 0 && !plans.length) || (!modPower.enabled && restorablePowerModNames.length > 0 && !plans.length)}
+              onClick={() => runActionTask(toggleModPower)}
               type="button"
             >
               {modPower.enabled ? "Turn Off All" : "Restore Saved"}
             </button>
           </div>
+          {versionLocked && (
+            <p className="hint warning">Update BD-SpineX version.</p>
+          )}
+          {settingsLocked && (
+            <p className="hint warning">{formatMissingSettingsMessage({ missingSharedDir, missingModsDir })}.</p>
+          )}
+          {previousHistoryPrompt && !versionLocked && !settingsLocked && (
+            <div className="inheritHistoryPanel">
+              <div>
+                <div className="inheritHistoryTitle">Inherit installed mods automatically?</div>
+                <div className="inheritHistoryText">
+                  {previousHistoryPrompt.modNames.length} previously patched mod(s) were selected from old history.
+                </div>
+              </div>
+              <div className="inheritHistoryActions">
+                <button disabled={busy} type="button" onClick={inheritPreviousPatchedMods}>Confirm</button>
+                <button disabled={busy} type="button" onClick={declinePreviousPatchedMods}>Not now</button>
+              </div>
+            </div>
+          )}
           {!modPower.enabled && (
             <p className="hint">Mod power is off. Module controls are locked until saved mods are restored.</p>
           )}
-          <button disabled={busy || !modPower.enabled || !activeModNames.length || !plans.length} onClick={() => runTask(checkActivePatchData)}>
+          <button disabled={busy || versionLocked || settingsLocked || !modPower.enabled || !activeModNames.length || !plans.length} onClick={() => runActionTask(checkActivePatchData)}>
             Check Active __data
           </button>
-          <button disabled={busy || !modPower.enabled || !effectivePatchStateChanges.length || !plans.length} onClick={() => runTask(async () => {
+          <button disabled={busy || versionLocked || settingsLocked || !modPower.enabled || !effectivePatchStateChanges.length || !plans.length} onClick={() => runActionTask(async () => {
             const result = await window.bd2.applyPatchStateChanges(plans, modsIndex, effectivePatchStateChanges, {
               ...createApplyPatchOptions(settings)
             });
@@ -836,7 +1013,9 @@ export function App() {
           })}>
             Apply Changes
           </button>
-          <p className="hint">Apply updates backup B incrementally, stores per-asset pre-patch backups, then copies B over game __data after the full bundle succeeds.</p>
+          <HelpButton title="Apply Changes">
+            Applies staged install/restore changes. BD-SpineX updates backup B first, stores per-asset backups, then copies the patched bundle back to the game only after the bundle succeeds.
+          </HelpButton>
         </aside>
       </section>
 
@@ -901,6 +1080,60 @@ function formatVersionTitle(appInfo: AppInfo, gameVersionInfo: GameVersionInfo |
     : `Manager version: ${appInfo.version}${gameVersion ? `\nGame version: ${gameVersion}${source}` : ""}`;
 }
 
+function isGameVersionMismatch(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
+  const gameVersion = normalizeVersionForCompare(gameVersionInfo?.version);
+  const managerVersion = normalizeVersionForCompare(appInfo.version);
+  return Boolean(gameVersion && managerVersion && gameVersion !== managerVersion);
+}
+
+function normalizeVersionForCompare(version?: string) {
+  return version?.trim().replace(/^v/i, "");
+}
+
+function formatModsLockMessage(lock: {
+  modsActionLocked: boolean;
+  modPowerEnabled: boolean;
+  versionLocked: boolean;
+  missingSharedDir: boolean;
+  missingModsDir: boolean;
+  previousHistoryLocked: boolean;
+}) {
+  if (lock.versionLocked) {
+    return "Update BD-SpineX version";
+  }
+
+  const missingSettingsMessage = formatMissingSettingsMessage(lock);
+  if (missingSettingsMessage) {
+    return missingSettingsMessage;
+  }
+
+  if (lock.previousHistoryLocked) {
+    return "Inherit installed mods automatically?";
+  }
+
+  if (lock.modsActionLocked) {
+    return "Action running";
+  }
+
+  return lock.modPowerEnabled ? "Locked" : "Mod Power off";
+}
+
+function formatMissingSettingsMessage(settings: { missingSharedDir: boolean; missingModsDir: boolean }) {
+  if (settings.missingSharedDir && settings.missingModsDir) {
+    return "Set Shared Folder and Mods Folder";
+  }
+
+  if (settings.missingSharedDir) {
+    return "Set Shared Folder";
+  }
+
+  if (settings.missingModsDir) {
+    return "Set Mods Folder";
+  }
+
+  return "";
+}
+
 function groupSharedErrors(errors: SharedIndex["bundles"]) {
   const groups = new Map<string, number>();
 
@@ -959,6 +1192,10 @@ function getModSearchText(mod: ModsIndex["mods"][number], plansByModName: Map<st
   ].join(" ").toLowerCase();
 }
 
+function formatModFolderName(modName: string) {
+  return modName.split(/[\\/]/).filter(Boolean).at(-1) ?? modName;
+}
+
 function getModSortValue(
   mod: ModsIndex["mods"][number],
   key: ModSortKey,
@@ -999,24 +1236,42 @@ async function loadSavedSettings(): Promise<Settings> {
   };
 
   try {
-    const stored = window.localStorage.getItem(settingsStorageKey) ?? window.localStorage.getItem(legacySettingsStorageKey);
+    const stored = await readStoredSettings();
     if (!stored) {
       return fallback;
     }
 
     return normalizeManagedToolSettings({
       ...fallback,
-      ...migrateStoredSettings(JSON.parse(stored))
+      ...migrateStoredSettings(stored)
     }, fallback);
   } catch {
     return fallback;
   }
 }
 
+async function readStoredSettings(): Promise<Partial<Settings> | null> {
+  const persisted = await window.bd2.readSettings().catch(() => null);
+  if (isStoredSettings(persisted)) {
+    return persisted;
+  }
+
+  const browserStored = window.localStorage.getItem(settingsStorageKey) ?? window.localStorage.getItem(legacySettingsStorageKey);
+  if (!browserStored) {
+    return null;
+  }
+
+  const parsed = JSON.parse(browserStored) as unknown;
+  return isStoredSettings(parsed) ? parsed : null;
+}
+
+function isStoredSettings(value: unknown): value is Partial<Settings> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function normalizeManagedToolSettings(settings: Settings, fallback: Settings): Settings {
   return {
     ...settings,
-    pythonPath: fallback.pythonPath,
     dotnetPath: fallback.dotnetPath
   };
 }
@@ -1054,7 +1309,6 @@ function loadModPowerState(): ModPowerState {
 
 function createApplyPatchOptions(settings: Settings): ApplyPatchOptions {
   return {
-    pythonPath: settings.pythonPath,
     patchBackend: settings.patchBackend,
     dotnetPath: settings.dotnetPath,
     converterPath: settings.converterPath,
@@ -1113,6 +1367,11 @@ function getActualPatchStates(modsIndex: ModsIndex, history: PatchHistory) {
   }
 
   return states;
+}
+
+function hasCurrentVersionPatchActivity(history: PatchHistory) {
+  const activityStatuses = new Set(["patched", "restored", "failed", "changed"]);
+  return history.entries.some((entry) => activityStatuses.has(entry.status));
 }
 
 function getDesiredPatchState(modName: string, actualStates: Record<string, boolean>, desiredStates: Record<string, boolean>) {
@@ -1679,7 +1938,7 @@ function formatPatchAction(phase: PatchProgress["phase"]) {
 }
 
 function formatPatchBackend(backend: PatchBackend) {
-  return backend === "uabea" ? "UABEA" : "UnityPy";
+  return backend === "rust-native" ? "Rust" : "UABEA";
 }
 
 function formatDuration(ms: number) {
@@ -1734,10 +1993,18 @@ function PathField(props: {
   onChange: (value: string) => void;
   onBrowse?: () => void;
   type?: "text" | "password";
+  invalid?: boolean;
+  helpTitle?: string;
+  helpText?: string;
 }) {
   return (
-    <label className="field">
-      <span>{props.label}</span>
+    <label className={`field ${props.invalid ? "invalid" : ""}`}>
+      <span className="fieldLabel">
+        <span>{props.label}</span>
+        {props.helpTitle && props.helpText && (
+          <HelpButton title={props.helpTitle}>{props.helpText}</HelpButton>
+        )}
+      </span>
       <div className="pathRow">
         <input type={props.type ?? "text"} value={props.value} onChange={(event) => props.onChange(event.target.value)} />
         {props.onBrowse && <button type="button" onClick={props.onBrowse}>Browse</button>}
@@ -1751,15 +2018,137 @@ function SelectField(props: {
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  helpTitle?: string;
+  helpText?: string;
 }) {
   return (
     <label className="field">
-      <span>{props.label}</span>
+      <span className="fieldLabel">
+        <span>{props.label}</span>
+        {props.helpTitle && props.helpText && (
+          <HelpButton title={props.helpTitle}>{props.helpText}</HelpButton>
+        )}
+      </span>
       <select value={props.value} onChange={(event) => props.onChange(event.target.value)}>
         {props.options.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>
     </label>
+  );
+}
+
+function HelpButton(props: {
+  title: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [popupPosition, setPopupPosition] = useState({ left: 0, placement: "below" as "below" | "above" });
+  const rootRef = useRef<HTMLSpanElement | null>(null);
+  const popupRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function updatePopupPosition() {
+      const root = rootRef.current;
+      const popup = popupRef.current;
+      if (!root || !popup) {
+        return;
+      }
+
+      const margin = 16;
+      const rootRect = root.getBoundingClientRect();
+      const popupRect = popup.getBoundingClientRect();
+      const desiredViewportLeft = rootRect.left + rootRect.width / 2 - popupRect.width / 2;
+      const maxViewportLeft = Math.max(margin, window.innerWidth - popupRect.width - margin);
+      const clampedViewportLeft = Math.min(Math.max(desiredViewportLeft, margin), maxViewportLeft);
+      const hasBelowSpace = rootRect.bottom + 8 + popupRect.height <= window.innerHeight - margin;
+      const hasAboveSpace = rootRect.top - 8 - popupRect.height >= margin;
+
+      setPopupPosition({
+        left: clampedViewportLeft - rootRect.left,
+        placement: !hasBelowSpace && hasAboveSpace ? "above" : "below"
+      });
+    }
+
+    updatePopupPosition();
+    window.addEventListener("resize", updatePopupPosition);
+    window.addEventListener("scroll", updatePopupPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePopupPosition);
+      window.removeEventListener("scroll", updatePopupPosition, true);
+    };
+  }, [open]);
+
+  return (
+    <span className="helpRoot" ref={rootRef}>
+      <button
+        aria-expanded={open}
+        aria-label={`About ${props.title}`}
+        className="helpButton"
+        type="button"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          className={`helpPopup ${popupPosition.placement === "above" ? "above" : "below"}`}
+          ref={popupRef}
+          role="dialog"
+          aria-label={props.title}
+          style={{ left: `${popupPosition.left}px` }}
+        >
+          <span className="helpPopupTitle">{props.title}</span>
+          <span className="helpPopupText">{props.children}</span>
+          <button
+            aria-label="Close help"
+            className="helpCloseButton"
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setOpen(false);
+            }}
+          >
+            Close
+          </button>
+        </span>
+      )}
+    </span>
   );
 }
