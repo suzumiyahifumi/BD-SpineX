@@ -2,6 +2,10 @@
 
 This app is packaged for macOS only. The release bundle includes the shared index files, the Spine converter, the UABEA patch backend, and the Rust native CLI so users do not need to compile backend tools after installing.
 
+## Licensing
+
+BD-SpineX source code is licensed under GPLv3. The packaged release bundle includes `SpineSkeletonDataConverter`, which is licensed under PolyForm Noncommercial License 1.0.0, so the downloadable release bundle should be presented as noncommercial. Keep [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) up to date when bundled tools change.
+
 ## Build
 
 Set the release version to the game version you are building against:

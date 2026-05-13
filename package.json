@@ -3,6 +3,7 @@
   "version": "2.25.19",
   "private": true,
   "description": "BrownDust II mod management and installation for Mac PlayCover.",
+  "license": "GPL-3.0-only",
   "main": "dist/app/main/index.js",
   "type": "module",
   "scripts": {

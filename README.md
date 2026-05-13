@@ -11,10 +11,14 @@
 [![GitHub Release](https://img.shields.io/github/v/release/suzumiyahifumi/BD-SpineX?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 [![Downloads](https://img.shields.io/github/downloads/suzumiyahifumi/BD-SpineX/total?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)](#requirements)
+[![License](https://img.shields.io/badge/source-GPLv3-blue?style=flat-square)](LICENSE)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?style=flat-square)](https://buymeacoffee.com/suzumiyahifumi)
 
 > ✨ Install and manage Spine mods for the PlayCover version of BrownDust II on macOS.
 >
 > ⬇️ Download the latest version: [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases)
+>
+> ☕ Like this project? [Buy me a coffee](https://buymeacoffee.com/suzumiyahifumi)
 
 BD-SpineX is built for players who want a simpler BrownDust II mod workflow on macOS: choose your PlayCover game data, scan your mod folders, apply selected Spine mods, and restore changes without manually editing AssetBundles.
 
@@ -114,6 +118,14 @@ If BD-SpineX finds patched mods from an older version, it can select them for re
 - 🛟 Keep your own backup before experimenting with mods, especially after game updates.
 - 📦 The packaged app includes the required patch backend and Spine converter.
 - 🧰 Development and packaging notes are kept in [RELEASE.md](RELEASE.md).
+
+---
+
+## 📜 License
+
+BD-SpineX source code is licensed under **GPLv3**. See [LICENSE](LICENSE).
+
+Packaged release builds include `SpineSkeletonDataConverter`, which is licensed separately under **PolyForm Noncommercial License 1.0.0**. Treat the downloadable release bundle as noncommercial because that converter is bundled. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.
 
 ---
 
