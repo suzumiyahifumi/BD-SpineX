@@ -1,5 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, Notification } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from "electron";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scanMods } from "../../core/mod-indexer.js";
@@ -86,6 +87,7 @@ ipcMain.handle("app:write-settings", async (_event, settings: unknown) => {
   await writeSavedSettings(settings);
   return true;
 });
+ipcMain.handle("app:open-detected-shared-folder", async () => openDetectedSharedFolder());
 ipcMain.handle("app:info", async (): Promise<AppInfo> => ({
   name: appDisplayName,
   subtitle: appSubtitle,
@@ -194,6 +196,52 @@ function defaultBackendPath() {
   return isPackagedRuntime()
     ? resourcePath("backend", "uabea-patcher", "UabeaPatchPrototype")
     : path.resolve("manager-data/tools/dotnet/dotnet");
+}
+
+async function detectSharedFolder() {
+  for (const candidate of await sharedFolderCandidates()) {
+    if (await isDirectory(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function openDetectedSharedFolder() {
+  const sharedFolder = await detectSharedFolder();
+  if (!sharedFolder) {
+    return null;
+  }
+
+  await shell.openPath(sharedFolder);
+  return sharedFolder;
+}
+
+async function sharedFolderCandidates() {
+  const containersDir = path.join(os.homedir(), "Library", "Containers");
+  const knownCandidates = [
+    path.join(containersDir, "com.neowizgames.game.browndust2ios", "Data", "Library", "UnityCache", "Shared")
+  ];
+
+  try {
+    const entries = await fs.readdir(containersDir, { withFileTypes: true });
+    const guessedCandidates = entries
+      .filter((entry) => entry.isDirectory() && /browndust|brown.?dust|neowiz/i.test(entry.name))
+      .map((entry) => path.join(containersDir, entry.name, "Data", "Library", "UnityCache", "Shared"));
+
+    return [...new Set([...knownCandidates, ...guessedCandidates])];
+  } catch {
+    return knownCandidates;
+  }
+}
+
+async function isDirectory(filePath: string) {
+  try {
+    return (await fs.stat(filePath)).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function settingsPath() {

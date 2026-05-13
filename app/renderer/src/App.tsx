@@ -231,6 +231,16 @@ export function App() {
     }
   }
 
+  async function openDetectedSharedFolderFromPlayCover() {
+    const opened = await window.bd2.openDetectedSharedFolder().catch(() => null);
+    if (!opened) {
+      log("Could not auto-detect the BrownDust II PlayCover Shared folder.");
+      return;
+    }
+
+    log(`Opened detected Shared Folder: ${opened}`);
+  }
+
   async function runTask(task: () => Promise<void>) {
     setBusy(true);
     try {
@@ -531,7 +541,23 @@ export function App() {
         <PathField
           label="Shared Folder"
           helpTitle="Shared Folder"
-          helpText="Select BrownDust II's UnityCache Shared folder from the PlayCover app data. BD-SpineX reads game __data bundles here and writes patched bundles back after Apply Changes."
+          helpContent={
+            <div className="helpContentStack">
+              <span>Select BrownDust II's UnityCache Shared folder from the PlayCover app data. BD-SpineX reads game __data bundles here and writes patched bundles back after Apply Changes.</span>
+              <span>Manual path: PlayCover app data / BrownDust II container / Data / Library / UnityCache / Shared.</span>
+              <button
+                className="helpLinkButton"
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  void openDetectedSharedFolderFromPlayCover();
+                }}
+              >
+                Open detected Shared Folder
+              </button>
+            </div>
+          }
           value={settings.sharedDir}
           onChange={(value) => updateSetting("sharedDir", value)}
           onBrowse={() => selectDirectory("sharedDir")}
@@ -1996,13 +2022,16 @@ function PathField(props: {
   invalid?: boolean;
   helpTitle?: string;
   helpText?: string;
+  helpContent?: ReactNode;
 }) {
+  const helpContent = props.helpContent ?? props.helpText;
+
   return (
     <label className={`field ${props.invalid ? "invalid" : ""}`}>
       <span className="fieldLabel">
         <span>{props.label}</span>
-        {props.helpTitle && props.helpText && (
-          <HelpButton title={props.helpTitle}>{props.helpText}</HelpButton>
+        {props.helpTitle && helpContent && (
+          <HelpButton title={props.helpTitle}>{helpContent}</HelpButton>
         )}
       </span>
       <div className="pathRow">
@@ -2134,7 +2163,7 @@ function HelpButton(props: {
           style={{ left: `${popupPosition.left}px` }}
         >
           <span className="helpPopupTitle">{props.title}</span>
-          <span className="helpPopupText">{props.children}</span>
+          <div className="helpPopupText">{props.children}</div>
           <button
             aria-label="Close help"
             className="helpCloseButton"
