@@ -61,6 +61,7 @@ export type AppInfo = {
   name: string;
   subtitle: string;
   version: string;
+  supportedGameVersion: string;
 };
 
 export type GameVersionInfo = {

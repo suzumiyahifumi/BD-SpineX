@@ -26,13 +26,13 @@ BD-SpineX is built for players who want a simpler BrownDust II mod workflow on m
 
 ## ✨ Current Release
 
-The app version is tied to the supported BrownDust II game version.
+The release version is tied to the supported BrownDust II game version. Hotfix builds may add a suffix such as `-b2` while still supporting the same game version.
 
 ```text
-BD-SpineX 2.25.19 -> BrownDust II 2.25.19
+BD-SpineX 2.25.29-b2 -> BrownDust II 2.25.29
 ```
 
-If your installed game version does not match the BD-SpineX release version, mod actions are locked until you use a matching release.
+If your installed game version does not match the supported BrownDust II version, mod actions are locked until you use a matching release.
 
 ### 🚀 Highlights
 
@@ -103,7 +103,7 @@ Each mod folder should contain matching Spine files:
 
 ## 🔐 Version Matching
 
-Use the BD-SpineX release that matches your BrownDust II game version.
+Use the BD-SpineX release that matches your BrownDust II game version. A suffix such as `-b2` marks a BD-SpineX hotfix for the same game version and does not create a separate game-data history version.
 
 When the game updates, install the matching BD-SpineX release and rescan your `Shared` folder. BD-SpineX keeps history and backups separated by version so old bundle hashes are not reused on a newer game build.
 

@@ -16,7 +16,7 @@ export function managerDataRootDir() {
 }
 
 export function managerDataVersion() {
-  return sanitizePathPart(app.getVersion());
+  return sanitizePathPart(supportedGameVersion());
 }
 
 export function seedManagerDataDir() {
@@ -33,4 +33,8 @@ export function resourcePath(...parts: string[]) {
 
 function sanitizePathPart(value: string) {
   return value.replace(/[/:\\]/g, "_");
+}
+
+export function supportedGameVersion() {
+  return app.getVersion().trim().replace(/^v/i, "").split(/[+-]/)[0] || app.getVersion();
 }

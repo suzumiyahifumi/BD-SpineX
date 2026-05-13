@@ -4,18 +4,34 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const gameVersion = readGameVersion();
+const releaseVersion = readReleaseVersion(gameVersion);
 
-await updatePackageVersions(gameVersion);
+await updatePackageVersions(releaseVersion);
 await assertRequiredReleaseInputs();
 await assertNoPrivatePaths();
 
-console.log(`Prepared BD-SpineX release ${gameVersion}.`);
+console.log(`Prepared BD-SpineX release ${releaseVersion} for BrownDust II ${gameVersion}.`);
 
 function readGameVersion() {
   const argVersion = process.argv.find((arg) => arg.startsWith("--game-version="))?.split("=")[1];
   const version = argVersion ?? process.env.BD_SPINEX_GAME_VERSION;
   if (!version || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
     throw new Error("Set BD_SPINEX_GAME_VERSION=major.minor.patch or pass --game-version=major.minor.patch.");
+  }
+
+  return version;
+}
+
+function readReleaseVersion(gameVersion) {
+  const argVersion = process.argv.find((arg) => arg.startsWith("--release-version="))?.split("=")[1];
+  const version = argVersion ?? process.env.BD_SPINEX_RELEASE_VERSION ?? gameVersion;
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
+    throw new Error("Set BD_SPINEX_RELEASE_VERSION=major.minor.patch[-suffix] or pass --release-version=major.minor.patch[-suffix].");
+  }
+
+  const supportedGameVersion = version.trim().replace(/^v/i, "").split(/[+-]/)[0];
+  if (supportedGameVersion !== gameVersion) {
+    throw new Error(`Release version ${version} must target game version ${gameVersion}.`);
   }
 
   return version;
