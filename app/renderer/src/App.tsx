@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { AppInfo, ApplyPatchOptions, BundleAsset, GameVersionInfo, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, PreviousPatchedMods, SharedIndex, SharedScanBackend, SharedScanProgress } from "../../../core/types";
 
 type Settings = {
@@ -516,6 +516,9 @@ export function App() {
             <span className="versionBadge" title={formatVersionTitle(appInfo, gameVersionInfo)}>
               {formatVersionBadge(appInfo, gameVersionInfo)}
             </span>
+            <HelpButton title="Version lock">
+              BD-SpineX expects the manager version to match the BrownDust II game version. If they differ, mod operations are locked until a matching release is used.
+            </HelpButton>
           </p>
           <p>BrownDust II Mod Management/Installation | Mac PlayCover Version</p>
         </div>
@@ -527,6 +530,8 @@ export function App() {
       <section className="panel settingsGrid">
         <PathField
           label="Shared Folder"
+          helpTitle="Shared Folder"
+          helpText="Select BrownDust II's UnityCache Shared folder from the PlayCover app data. BD-SpineX reads game __data bundles here and writes patched bundles back after Apply Changes."
           value={settings.sharedDir}
           onChange={(value) => updateSetting("sharedDir", value)}
           onBrowse={() => selectDirectory("sharedDir")}
@@ -534,6 +539,8 @@ export function App() {
         />
         <PathField
           label="Mods Folder"
+          helpTitle="Mods Folder"
+          helpText="Select the folder that contains your mods. Nested folders are supported, so you can group mods by source or author."
           value={settings.modsDir}
           onChange={(value) => updateSetting("modsDir", value)}
           onBrowse={() => selectDirectory("modsDir")}
@@ -548,6 +555,8 @@ export function App() {
           <div className="advancedSettingsGrid">
             <SelectField
               label="Patch Backend"
+              helpTitle="Patch Backend"
+              helpText="UABEA is the stable patch backend. Rust native is experimental and should only be used when testing the native patcher workflow."
               value={settings.patchBackend}
               onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
               options={[
@@ -557,6 +566,8 @@ export function App() {
             />
             <SelectField
               label="Shared Scan Backend"
+              helpTitle="Shared Scan Backend"
+              helpText="Choose how Shared bundles are scanned. UABEA is the stable option; Rust native is experimental parser support."
               value={settings.scanBackend}
               onChange={(value) => updateSetting("scanBackend", value as SharedScanBackend)}
               options={[
@@ -566,17 +577,23 @@ export function App() {
             />
             <PathField
               label="Unity Fallback Version"
+              helpTitle="Unity Fallback Version"
+              helpText="Used only when a bundle does not expose enough Unity version metadata for the backend. The default should normally be left unchanged."
               value={settings.unityVersion}
               onChange={(value) => updateSetting("unityVersion", value)}
             />
             <PathField
               label="AssetBundle Decrypt Key"
+              helpTitle="AssetBundle Decrypt Key"
+              helpText="Optional key for encrypted AssetBundles. Leave this empty unless a specific game update requires one."
               value={settings.decryptKey}
               onChange={(value) => updateSetting("decryptKey", value)}
               type="password"
             />
             <PathField
               label="Scan Limit"
+              helpTitle="Scan Limit"
+              helpText="Limits targeted Shared scans to the largest candidate bundles for faster checks. Use Scan Entire Shared when rebuilding the full index."
               value={settings.scanLimit}
               onChange={(value) => updateSetting("scanLimit", value)}
             />
@@ -585,11 +602,16 @@ export function App() {
       </section>
 
       <section className="toolbar">
-        <button disabled={busy || !settings.modsDir} onClick={() => runTask(async () => {
-          await scanModsWorkflow(settings);
-        })}>
-          Scan Mods
-        </button>
+        <div className="actionWithHelp">
+          <button disabled={busy || !settings.modsDir} onClick={() => runTask(async () => {
+            await scanModsWorkflow(settings);
+          })}>
+            Scan Mods
+          </button>
+          <HelpButton title="Scan Mods">
+            Reads the Mods Folder, detects valid mod files, loads the current patch history, and builds a patch plan from the cached Shared index when available.
+          </HelpButton>
+        </div>
         <button disabled={!busy && !sharedScanActive} onClick={async () => {
           await window.bd2.stopSharedScan();
           log("Stop requested. Current bundle will finish before scanning stops.");
@@ -606,6 +628,9 @@ export function App() {
             })}>
               Scan Shared for Mods
             </button>
+            <HelpButton title="Scan Shared for Mods">
+              Scans only Shared bundles likely to contain assets used by the currently detected mods. This is faster than scanning the entire Shared folder.
+            </HelpButton>
             <button disabled={busy || !settings.sharedDir} onClick={() => runTask(async () => {
               setSharedIndex({ bundles: [] });
               setPlans([]);
@@ -672,7 +697,12 @@ export function App() {
         <div className="panel tablePanel modsPanel">
           <div className="modsHeader">
             <div>
-              <div className="panelTitle">Mods</div>
+              <div className="panelTitle titleWithHelp">
+                <span>Mods</span>
+                <HelpButton title="Mods table">
+                  Check a mod to stage it for installation. Uncheck an active mod to stage restore. Sorting, filtering, and scrolling remain available while operations are locked.
+                </HelpButton>
+              </div>
               <div className="tableHint">{visibleMods.length} shown / {modsIndex.mods.length} scanned</div>
             </div>
             <div className="modsHeaderControls">
@@ -771,7 +801,12 @@ export function App() {
         <div className={`panel tablePanel sharedPanel ${showSharedCandidates ? "expanded" : "collapsed"}`}>
           <div className="tableHeader">
             <div>
-              <div className="panelTitle">Shared Candidates</div>
+              <div className="panelTitle titleWithHelp">
+                <span>Shared Candidates</span>
+                <HelpButton title="Shared Candidates">
+                  Shows game assets found in Shared bundles that match your mod target names. These candidates are used to generate patch plans.
+                </HelpButton>
+              </div>
               <div className="tableHint">{filteredSharedAssets.length} shown / {relatedSharedAssets.length} related / {sharedAssets.length} indexed</div>
             </div>
             <div className="tableHeaderActions">
@@ -875,7 +910,12 @@ export function App() {
 
       <section className="contentGrid">
         <div className="panel tablePanel">
-          <div className="panelTitle">Pending Changes</div>
+          <div className="panelTitle titleWithHelp">
+            <span>Pending Changes</span>
+            <HelpButton title="Pending Changes">
+              This table shows what will change when Apply Changes is pressed. Nothing is written to the game until you apply.
+            </HelpButton>
+          </div>
           <table>
             <thead>
               <tr>
@@ -901,10 +941,20 @@ export function App() {
         </div>
 
         <aside className="panel sidePanel">
-          <div className="panelTitle">Actions</div>
+          <div className="panelTitle titleWithHelp">
+            <span>Actions</span>
+            <HelpButton title="Actions">
+              Actions write or verify game __data files. BD-SpineX locks mod checkboxes while an action is running to keep staged changes consistent.
+            </HelpButton>
+          </div>
           <div className={`modPowerPanel ${modPower.enabled ? "enabled" : "disabled"}`}>
             <div>
-              <div className="modPowerLabel">Mod Power</div>
+              <div className="modPowerLabel titleWithHelp">
+                <span>Mod Power</span>
+                <HelpButton title="Mod Power">
+                  Turn Off All restores currently active mods and remembers them. Restore Saved applies that remembered set again.
+                </HelpButton>
+              </div>
               <div className="modPowerState">
                 {modPower.enabled
                   ? `${activeModNames.length} active mod(s)`
@@ -963,7 +1013,9 @@ export function App() {
           })}>
             Apply Changes
           </button>
-          <p className="hint">Apply updates backup B incrementally, stores per-asset pre-patch backups, then copies B over game __data after the full bundle succeeds.</p>
+          <HelpButton title="Apply Changes">
+            Applies staged install/restore changes. BD-SpineX updates backup B first, stores per-asset backups, then copies the patched bundle back to the game only after the bundle succeeds.
+          </HelpButton>
         </aside>
       </section>
 
@@ -1942,10 +1994,17 @@ function PathField(props: {
   onBrowse?: () => void;
   type?: "text" | "password";
   invalid?: boolean;
+  helpTitle?: string;
+  helpText?: string;
 }) {
   return (
     <label className={`field ${props.invalid ? "invalid" : ""}`}>
-      <span>{props.label}</span>
+      <span className="fieldLabel">
+        <span>{props.label}</span>
+        {props.helpTitle && props.helpText && (
+          <HelpButton title={props.helpTitle}>{props.helpText}</HelpButton>
+        )}
+      </span>
       <div className="pathRow">
         <input type={props.type ?? "text"} value={props.value} onChange={(event) => props.onChange(event.target.value)} />
         {props.onBrowse && <button type="button" onClick={props.onBrowse}>Browse</button>}
@@ -1959,15 +2018,137 @@ function SelectField(props: {
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  helpTitle?: string;
+  helpText?: string;
 }) {
   return (
     <label className="field">
-      <span>{props.label}</span>
+      <span className="fieldLabel">
+        <span>{props.label}</span>
+        {props.helpTitle && props.helpText && (
+          <HelpButton title={props.helpTitle}>{props.helpText}</HelpButton>
+        )}
+      </span>
       <select value={props.value} onChange={(event) => props.onChange(event.target.value)}>
         {props.options.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>
     </label>
+  );
+}
+
+function HelpButton(props: {
+  title: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [popupPosition, setPopupPosition] = useState({ left: 0, placement: "below" as "below" | "above" });
+  const rootRef = useRef<HTMLSpanElement | null>(null);
+  const popupRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function updatePopupPosition() {
+      const root = rootRef.current;
+      const popup = popupRef.current;
+      if (!root || !popup) {
+        return;
+      }
+
+      const margin = 16;
+      const rootRect = root.getBoundingClientRect();
+      const popupRect = popup.getBoundingClientRect();
+      const desiredViewportLeft = rootRect.left + rootRect.width / 2 - popupRect.width / 2;
+      const maxViewportLeft = Math.max(margin, window.innerWidth - popupRect.width - margin);
+      const clampedViewportLeft = Math.min(Math.max(desiredViewportLeft, margin), maxViewportLeft);
+      const hasBelowSpace = rootRect.bottom + 8 + popupRect.height <= window.innerHeight - margin;
+      const hasAboveSpace = rootRect.top - 8 - popupRect.height >= margin;
+
+      setPopupPosition({
+        left: clampedViewportLeft - rootRect.left,
+        placement: !hasBelowSpace && hasAboveSpace ? "above" : "below"
+      });
+    }
+
+    updatePopupPosition();
+    window.addEventListener("resize", updatePopupPosition);
+    window.addEventListener("scroll", updatePopupPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePopupPosition);
+      window.removeEventListener("scroll", updatePopupPosition, true);
+    };
+  }, [open]);
+
+  return (
+    <span className="helpRoot" ref={rootRef}>
+      <button
+        aria-expanded={open}
+        aria-label={`About ${props.title}`}
+        className="helpButton"
+        type="button"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          className={`helpPopup ${popupPosition.placement === "above" ? "above" : "below"}`}
+          ref={popupRef}
+          role="dialog"
+          aria-label={props.title}
+          style={{ left: `${popupPosition.left}px` }}
+        >
+          <span className="helpPopupTitle">{props.title}</span>
+          <span className="helpPopupText">{props.children}</span>
+          <button
+            aria-label="Close help"
+            className="helpCloseButton"
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setOpen(false);
+            }}
+          >
+            Close
+          </button>
+        </span>
+      )}
+    </span>
   );
 }
