@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -400,7 +401,12 @@ function buildAssetNameIndex(bundles: SharedBundle[]) {
         type: asset.type,
         pathId: asset.pathId,
         width: asset.width,
-        height: asset.height
+        height: asset.height,
+        textureFormat: asset.textureFormat,
+        textureFormatName: asset.textureFormatName,
+        streamDataSize: asset.streamDataSize,
+        streamDataPath: asset.streamDataPath,
+        imageDataSize: asset.imageDataSize
       };
 
       for (const key of assetNameIndexKeys(asset.name, asset.type)) {
@@ -539,7 +545,42 @@ async function scanBundleAssets(dataPath: string, options: SharedScanOptions) {
     return scanBundleAssetsWithRustNative(dataPath);
   }
 
+  if (options.scanBackend === "unitypy") {
+    return scanBundleAssetsWithUnityPy(dataPath, options);
+  }
+
   return scanBundleAssetsWithUabea(dataPath, options);
+}
+
+async function scanBundleAssetsWithUnityPy(dataPath: string, options: SharedScanOptions) {
+  const command = options.pythonPath?.trim() || defaultPythonPath();
+  const args = [
+    defaultUnityPyScanScriptPath(),
+    "--input", dataPath
+  ];
+
+  if (options.unityVersion?.trim()) {
+    args.push("--unity-version", options.unityVersion.trim());
+  }
+
+  if (options.decryptKey?.trim()) {
+    args.push("--decrypt-key", options.decryptKey.trim());
+  }
+
+  const stdout = await run(command, args);
+  let result: { ok: boolean; assets?: SharedBundle["assets"]; error?: string };
+
+  try {
+    result = JSON.parse(stdout);
+  } catch {
+    throw new Error(stdout.trim() || "UnityPy scanner did not return JSON");
+  }
+
+  if (!result.ok) {
+    throw new Error(result.error ?? "Failed to scan Unity AssetBundle with UnityPy scanner");
+  }
+
+  return result.assets ?? [];
 }
 
 async function scanBundleAssetsWithRustNative(dataPath: string) {
@@ -568,11 +609,12 @@ async function scanBundleAssetsWithRustNative(dataPath: string) {
 async function scanBundleAssetsWithUabea(dataPath: string, options: SharedScanOptions) {
   const command = uabeaCommand();
   const projectPath = options.uabeaScannerProjectPath?.trim() || defaultUabeaProjectPath();
+  const directUabea = usesDirectUabeaExecutable();
   const backendArgs = [
     "--mode", "scan",
     "--input", dataPath
   ];
-  const args = uabeaBaseArgs(isPackagedRuntime()
+  const args = uabeaBaseArgs(directUabea
     ? backendArgs
     : [
         ...backendArgs,
@@ -599,6 +641,15 @@ function defaultDotnetPath() {
   return path.resolve("manager-data/tools/dotnet/dotnet");
 }
 
+function defaultPythonPath() {
+  const venvPython = path.resolve(".venv/bin/python");
+  return existsSync(venvPython) ? venvPython : "python3";
+}
+
+function defaultUnityPyScanScriptPath() {
+  return resourcePath("python", "scan_bundle.py");
+}
+
 function defaultUabeaProjectPath() {
   return isPackagedRuntime()
     ? path.join(process.resourcesPath, "backend", "uabea-patcher", "UabeaPatchPrototype")
@@ -614,15 +665,24 @@ function rustCliCommand() {
 function uabeaCommand() {
   return isPackagedRuntime()
     ? resourcePath("backend", "uabea-patcher", "UabeaPatchPrototype")
-    : "cargo";
+    : devUabeaExecutablePath() ?? "cargo";
 }
 
 function uabeaBaseArgs(args: string[]) {
-  if (isPackagedRuntime()) {
+  if (usesDirectUabeaExecutable()) {
     return args;
   }
 
   return rustCliBaseArgs(args);
+}
+
+function usesDirectUabeaExecutable() {
+  return isPackagedRuntime() || Boolean(devUabeaExecutablePath());
+}
+
+function devUabeaExecutablePath() {
+  const executablePath = path.resolve("dist-native/uabea-patcher/UabeaPatchPrototype");
+  return existsSync(executablePath) ? executablePath : undefined;
 }
 
 function rustCliBaseArgs(args: string[]) {

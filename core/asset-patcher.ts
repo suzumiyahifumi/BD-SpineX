@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { isPackagedRuntime, resourcePath } from "./runtime-paths.js";
+import type { PatchBackend, PatchTarget } from "./types.js";
 
 export type PatchBundleArgs = {
   input: string;
@@ -22,12 +24,16 @@ export type PatchBundleJob = {
   pngs: string[];
   insertPngs?: string[];
   assetBackupDir?: string;
+  textureTargets?: PatchTarget[];
 };
+
+type ExecutablePatchBackend = Exclude<PatchBackend, "auto">;
 
 export type PatchBundleBatchArgs = Omit<PatchBundleArgs, "modName" | "atlases" | "skels" | "pngs" | "assetBackupDir"> & {
   jobs: PatchBundleJob[];
   manifestPath: string;
-  patchBackend?: "uabea" | "rust-native";
+  patchBackend?: PatchBackend;
+  pythonPath?: string;
   dotnetPath?: string;
   uabeaPatcherProjectPath?: string;
 };
@@ -37,23 +43,64 @@ export async function patchBundle(args: PatchBundleArgs): Promise<unknown> {
 }
 
 export async function patchBundleBatch(args: PatchBundleBatchArgs): Promise<unknown> {
-  if (args.patchBackend === "rust-native") {
-    return patchBundleBatchWithRustNative(args);
+  const requestedBackend = args.patchBackend ?? "uabea";
+  const patchBackend = resolvePatchBackend(args);
+
+  if (patchBackend === "rust-native") {
+    return withResolvedBackend(await patchBundleBatchWithRustNative(args), patchBackend);
   }
 
-  return patchBundleBatchWithUabea(args);
+  if (patchBackend === "unitypy") {
+    try {
+      return withResolvedBackend(await patchBundleBatchWithUnityPy(args), patchBackend);
+    } catch (error) {
+      if (requestedBackend === "auto" && isUnityPyUnavailableError(error)) {
+        return withResolvedBackend(await patchBundleBatchWithUabea(args), "uabea");
+      }
+
+      throw error;
+    }
+  }
+
+  return withResolvedBackend(await patchBundleBatchWithUabea(args), patchBackend);
+}
+
+async function patchBundleBatchWithUnityPy(args: PatchBundleBatchArgs): Promise<unknown> {
+  if (args.jobs.some((job) => (job.insertPngs?.length ?? 0) > 0)) {
+    throw new Error("UnityPy backend does not support inserting new Texture2D assets. Use UABEA for mods that need extra atlas pages.");
+  }
+
+  const command = args.pythonPath?.trim() || defaultPythonPath();
+  const commandArgs = [
+    defaultUnityPyPatchScriptPath(),
+    "--input", args.input,
+    "--output", args.output,
+    "--job-manifest", args.manifestPath
+  ];
+
+  if (args.unityVersion?.trim()) {
+    commandArgs.push("--unity-version", args.unityVersion.trim());
+  }
+  if (args.decryptKey?.trim()) {
+    commandArgs.push("--decrypt-key", args.decryptKey.trim());
+  }
+
+  const stdout = await run(command, commandArgs);
+
+  return JSON.parse(stdout);
 }
 
 async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs): Promise<unknown> {
   const command = uabeaCommand();
   const projectPath = args.uabeaPatcherProjectPath?.trim() || defaultUabeaProjectPath();
+  const directUabea = usesDirectUabeaExecutable();
   const backendArgs = [
     "--input", args.input,
     "--output", args.output,
     "--job-manifest", args.manifestPath,
     "--compression", "lz4"
   ];
-  const commandArgs = uabeaBaseArgs(isPackagedRuntime()
+  const commandArgs = uabeaBaseArgs(directUabea
     ? backendArgs
     : [
         ...backendArgs,
@@ -85,6 +132,71 @@ function defaultDotnetPath() {
   return path.resolve("manager-data/tools/dotnet/dotnet");
 }
 
+function resolvePatchBackend(args: PatchBundleBatchArgs): ExecutablePatchBackend {
+  if (args.patchBackend === "uabea" || args.patchBackend === "unitypy" || args.patchBackend === "rust-native") {
+    return args.patchBackend;
+  }
+
+  return shouldUseUnityPy(args.jobs) ? "unitypy" : "uabea";
+}
+
+function shouldUseUnityPy(jobs: PatchBundleJob[]) {
+  const pngCount = jobs.reduce((sum, job) => sum + job.pngs.length, 0);
+  const insertCount = jobs.reduce((sum, job) => sum + (job.insertPngs?.length ?? 0), 0);
+  if (insertCount > 0 || pngCount === 0) {
+    return false;
+  }
+
+  const textureTargets = jobs.flatMap((job) => job.textureTargets ?? []);
+  if (textureTargets.some(isRiskyTextureTarget)) {
+    return true;
+  }
+
+  const largeTextureCount = textureTargets.filter((target) =>
+    typeof target.width === "number" &&
+    typeof target.height === "number" &&
+    target.width * target.height >= 2048 * 2048
+  ).length;
+
+  return pngCount >= 4 && largeTextureCount >= 2;
+}
+
+function isRiskyTextureTarget(target: PatchTarget) {
+  if ((target.streamDataSize ?? 0) > 0 || Boolean(target.streamDataPath?.trim())) {
+    return true;
+  }
+
+  const format = target.textureFormatName?.toLowerCase() ?? "";
+  return [
+    "astc",
+    "etc",
+    "pvrtc",
+    "crunched",
+    "dxt",
+    "bc"
+  ].some((keyword) => format.includes(keyword));
+}
+
+function withResolvedBackend(result: unknown, backend: ExecutablePatchBackend) {
+  return typeof result === "object" && result !== null && !Array.isArray(result)
+    ? { ...result, backend }
+    : result;
+}
+
+function isUnityPyUnavailableError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /UnityPy import failed|No module named ['"]?UnityPy|python3 ENOENT|spawn .*python.*ENOENT/i.test(message);
+}
+
+function defaultPythonPath() {
+  const venvPython = path.resolve(".venv/bin/python");
+  return existsSync(venvPython) ? venvPython : "python3";
+}
+
+function defaultUnityPyPatchScriptPath() {
+  return resourcePath("python", "patch_bundle.py");
+}
+
 function defaultUabeaProjectPath() {
   return isPackagedRuntime()
     ? path.join(process.resourcesPath, "backend", "uabea-patcher", "UabeaPatchPrototype")
@@ -94,15 +206,24 @@ function defaultUabeaProjectPath() {
 function uabeaCommand() {
   return isPackagedRuntime()
     ? resourcePath("backend", "uabea-patcher", "UabeaPatchPrototype")
-    : "cargo";
+    : devUabeaExecutablePath() ?? "cargo";
 }
 
 function uabeaBaseArgs(args: string[]) {
-  if (isPackagedRuntime()) {
+  if (usesDirectUabeaExecutable()) {
     return args;
   }
 
   return rustCliBaseArgs(args);
+}
+
+function usesDirectUabeaExecutable() {
+  return isPackagedRuntime() || Boolean(devUabeaExecutablePath());
+}
+
+function devUabeaExecutablePath() {
+  const executablePath = path.resolve("dist-native/uabea-patcher/UabeaPatchPrototype");
+  return existsSync(executablePath) ? executablePath : undefined;
 }
 
 function rustCliCommand() {
