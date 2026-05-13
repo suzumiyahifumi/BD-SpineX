@@ -1,6 +1,6 @@
 {
   "name": "bd-spinex",
-  "version": "0.1.0",
+  "version": "2.25.19",
   "private": true,
   "description": "BrownDust II mod management and installation for Mac PlayCover.",
   "main": "dist/app/main/index.js",
@@ -8,22 +8,69 @@
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"tsc -p tsconfig.main.json --watch\" \"wait-on tcp:5173 dist/app/main/index.js dist/app/preload/index.cjs && electron .\"",
     "build": "tsc -p tsconfig.main.json && vite build",
+    "build:backends": "node scripts/build-backends.mjs",
+    "release:prepare": "node scripts/prepare-release.mjs",
+    "dist:mac": "npm run build:backends && npm run release:prepare && npm run build && electron-builder --mac --arm64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.main.json",
     "start": "electron ."
   },
+  "build": {
+    "appId": "com.bdspinex.manager",
+    "productName": "BD-SpineX",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "manager-data/shared-index.json",
+        "to": "manager-data/shared-index.json"
+      },
+      {
+        "from": "manager-data/shared-file-index.json",
+        "to": "manager-data/shared-file-index.json"
+      },
+      {
+        "from": "manager-data/tools/SpineSkeletonDataConverter",
+        "to": "tools/SpineSkeletonDataConverter"
+      },
+      {
+        "from": "dist-native/uabea-patcher",
+        "to": "backend/uabea-patcher"
+      },
+      {
+        "from": "dist-native/uabea-cli",
+        "to": "backend/uabea-cli"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null
+    }
+  },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
-    "vite": "^7.0.0",
-    "typescript": "^5.8.0",
+    "concurrently": "^9.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "electron": "^37.0.0",
-    "concurrently": "^9.0.0",
+    "typescript": "^5.8.0",
+    "vite": "^7.0.0",
     "wait-on": "^8.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "electron": "^37.0.0",
+    "electron-builder": "^26.8.1"
   }
 }

@@ -172,6 +172,15 @@ input[type="checkbox"] {
   font-weight: 650;
 }
 
+.field.invalid span {
+  color: #b42318;
+}
+
+.field.invalid input {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgb(220 38 38 / 0.14);
+}
+
 .pathRow {
   display: flex;
   gap: 8px;
@@ -316,6 +325,37 @@ progress {
 
 .sharedPanel.collapsed {
   min-height: 0;
+}
+
+.modsTableFrame {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modsLockOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: rgb(15 23 42 / 0.34);
+}
+
+.modsLockOverlay span {
+  border: 1px solid rgb(255 255 255 / 0.42);
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: rgb(15 23 42 / 0.72);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.modsTableFrame.locked input[type="checkbox"] {
+  cursor: not-allowed;
 }
 
 .modsPanel table,
@@ -625,11 +665,44 @@ tr.pendingPatchChange.pendingPatchRemove td {
   color: #6d28d9;
 }
 
+.inheritHistoryPanel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #f5c77f;
+  border-radius: 6px;
+  padding: 10px;
+  background: #fff7e6;
+}
+
+.inheritHistoryTitle {
+  color: #8a4b09;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inheritHistoryText {
+  margin-top: 3px;
+  color: #6f5a36;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.inheritHistoryActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .hint {
   margin: 4px 0 0;
   color: #6b7789;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.hint.warning {
+  color: #9f1d1d;
+  font-weight: 750;
 }
 
 .logPanel {

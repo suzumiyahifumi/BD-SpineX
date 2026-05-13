@@ -70,7 +70,7 @@ export type SharedScanOptions = {
   forceRescan?: boolean;
 };
 
-export type SharedScanBackend = "uabea";
+export type SharedScanBackend = "uabea" | "rust-native";
 
 export type SharedScanProgress = {
   phase: "discovering" | "found" | "scanning" | "scanned" | "done" | "stopped";
@@ -179,6 +179,11 @@ export type PatchHistory = {
   entries: PatchRunEntry[];
 };
 
+export type PreviousPatchedMods = {
+  modNames: string[];
+  sourceVersions: string[];
+};
+
 export type PatchDataCheckStatus = "ok" | "missing" | "changed" | "no_backup";
 
 export type PatchDataCheckEntry = {
@@ -204,7 +209,7 @@ export type ApplyPatchOptions = {
   decryptKey?: string;
 };
 
-export type PatchBackend = "uabea";
+export type PatchBackend = "uabea" | "rust-native";
 
 export type PatchStateChange = {
   modName: string;

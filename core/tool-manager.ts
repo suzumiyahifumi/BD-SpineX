@@ -4,8 +4,8 @@ import https from "node:https";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { isPackagedRuntime, resourcePath, managerDataRootDir } from "./runtime-paths.js";
 
-const toolsRoot = path.resolve("manager-data/tools");
 const converterRepoApi = "https://api.github.com/repos/wang606/SpineSkeletonDataConverter/releases/latest";
 
 type GitHubRelease = {
@@ -23,6 +23,12 @@ export async function ensureSpineConverter(converterPath?: string): Promise<stri
     return converterPath.trim();
   }
 
+  if (isPackagedRuntime()) {
+    const packagedPath = resourcePath("tools", executableName());
+    await assertExecutableExists(packagedPath);
+    return packagedPath;
+  }
+
   const managed = await findManagedConverter();
   if (managed) {
     return managed;
@@ -32,19 +38,20 @@ export async function ensureSpineConverter(converterPath?: string): Promise<stri
 }
 
 async function findManagedConverter() {
-  const directPath = path.join(toolsRoot, executableName());
+  const root = toolsRoot();
+  const directPath = path.join(root, executableName());
   if (await fileExists(directPath)) {
     return directPath;
   }
 
   try {
-    const entries = await fs.readdir(toolsRoot, { recursive: true, withFileTypes: true });
+    const entries = await fs.readdir(root, { recursive: true, withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isFile() || !isConverterExecutable(entry.name)) {
         continue;
       }
 
-      const parentPath = "parentPath" in entry ? entry.parentPath : toolsRoot;
+      const parentPath = "parentPath" in entry ? entry.parentPath : root;
       return path.join(parentPath as string, entry.name);
     }
   } catch {
@@ -55,20 +62,21 @@ async function findManagedConverter() {
 }
 
 async function downloadManagedConverter() {
-  await fs.mkdir(toolsRoot, { recursive: true });
+  const root = toolsRoot();
+  await fs.mkdir(root, { recursive: true });
   const release = await getJson<GitHubRelease>(converterRepoApi);
   const asset = selectReleaseAsset(release);
   if (!asset) {
     throw new Error(`No SpineSkeletonDataConverter release asset found for ${process.platform}/${process.arch}.`);
   }
 
-  const downloadsDir = path.join(toolsRoot, "downloads");
+  const downloadsDir = path.join(root, "downloads");
   await fs.mkdir(downloadsDir, { recursive: true });
   const archivePath = path.join(downloadsDir, asset.name);
   await downloadFile(asset.browser_download_url, archivePath);
 
   if (asset.name.toLowerCase().endsWith(".zip")) {
-    const extractDir = path.join(toolsRoot, release.tag_name);
+    const extractDir = path.join(root, release.tag_name);
     await fs.mkdir(extractDir, { recursive: true });
     await run("unzip", ["-o", archivePath, "-d", extractDir]);
     const extracted = await findManagedConverter();
@@ -80,7 +88,7 @@ async function downloadManagedConverter() {
   }
 
   if (/\.(tar\.gz|tgz)$/i.test(asset.name)) {
-    const extractDir = path.join(toolsRoot, release.tag_name);
+    const extractDir = path.join(root, release.tag_name);
     await fs.mkdir(extractDir, { recursive: true });
     await run("tar", ["-xzf", archivePath, "-C", extractDir]);
     const extracted = await findManagedConverter();
@@ -95,14 +103,15 @@ async function downloadManagedConverter() {
     return buildManagedConverter(release);
   }
 
-  const outputPath = path.join(toolsRoot, executableName());
+  const outputPath = path.join(root, executableName());
   await fs.copyFile(archivePath, outputPath);
   await chmodExecutable(outputPath);
   return outputPath;
 }
 
 async function buildManagedConverter(release: GitHubRelease) {
-  const sourceDir = path.join(toolsRoot, "git-source", release.tag_name, "SpineSkeletonDataConverter");
+  const root = toolsRoot();
+  const sourceDir = path.join(root, "git-source", release.tag_name, "SpineSkeletonDataConverter");
   if (!await fileExists(path.join(sourceDir, "CMakeLists.txt"))) {
     await fs.rm(path.dirname(sourceDir), { recursive: true, force: true });
     await fs.mkdir(path.dirname(sourceDir), { recursive: true });
@@ -119,7 +128,7 @@ async function buildManagedConverter(release: GitHubRelease) {
   }
   await patchConverterSource(sourceDir);
 
-  const buildDir = path.join(toolsRoot, "build", release.tag_name);
+  const buildDir = path.join(root, "build", release.tag_name);
   await fs.rm(buildDir, { recursive: true, force: true });
   await fs.mkdir(buildDir, { recursive: true });
   try {
@@ -134,7 +143,7 @@ async function buildManagedConverter(release: GitHubRelease) {
     throw new Error("Built SpineSkeletonDataConverter, but no executable was found.");
   }
 
-  const managedPath = path.join(toolsRoot, executableName());
+  const managedPath = path.join(root, executableName());
   await fs.copyFile(built, managedPath);
   await chmodExecutable(managedPath);
   return managedPath;
@@ -199,6 +208,10 @@ function isConverterExecutable(fileName: string) {
   }
 
   return fileName === "SpineSkeletonDataConverter";
+}
+
+function toolsRoot() {
+  return path.join(managerDataRootDir(), "tools");
 }
 
 async function assertExecutableExists(filePath: string) {

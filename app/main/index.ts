@@ -1,11 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, Notification } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification } from "electron";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scanMods } from "../../core/mod-indexer.js";
 import { createPatchPlan } from "../../core/patch-plan.js";
-import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, readPatchHistory, restoreAllPatches } from "../../core/patch-runner.js";
+import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, readPatchHistory, readPreviousPatchedMods, restoreAllPatches } from "../../core/patch-runner.js";
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
 import { detectGameVersion } from "../../core/game-version.js";
+import { isPackagedRuntime, managerDataRootDir, resourcePath } from "../../core/runtime-paths.js";
 import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,15 +28,44 @@ async function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.cjs"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      devTools: isDev
     }
   });
+
+  setupProductionWindowGuards(window);
 
   if (isDev) {
     await window.loadURL("http://127.0.0.1:5173");
   } else {
     await window.loadFile(path.join(__dirname, "../../renderer/index.html"));
   }
+}
+
+function setupProductionWindowGuards(window: BrowserWindow) {
+  if (isDev) {
+    return;
+  }
+
+  Menu.setApplicationMenu(null);
+
+  window.webContents.on("devtools-opened", () => {
+    window.webContents.closeDevTools();
+  });
+
+  window.webContents.on("before-input-event", (event, input) => {
+    const key = input.key.toLowerCase();
+    const isDevToolsShortcut =
+      key === "f12" ||
+      (input.meta && input.alt && key === "i") ||
+      (input.control && input.shift && key === "i") ||
+      (input.control && input.shift && key === "j") ||
+      (input.control && input.shift && key === "c");
+
+    if (isDevToolsShortcut) {
+      event.preventDefault();
+    }
+  });
 }
 
 ipcMain.handle("dialog:select-directory", async () => {
@@ -46,10 +77,15 @@ ipcMain.handle("dialog:select-directory", async () => {
 });
 
 ipcMain.handle("app:default-paths", async () => ({
-  modsDir: path.resolve("mods"),
+  modsDir: defaultModsDir(),
   sharedDir: "",
-  dotnetPath: path.resolve("manager-data/tools/dotnet/dotnet")
+  dotnetPath: defaultBackendPath()
 }));
+ipcMain.handle("app:read-settings", async () => readSavedSettings());
+ipcMain.handle("app:write-settings", async (_event, settings: unknown) => {
+  await writeSavedSettings(settings);
+  return true;
+});
 ipcMain.handle("app:info", async (): Promise<AppInfo> => ({
   name: appDisplayName,
   subtitle: appSubtitle,
@@ -101,6 +137,7 @@ ipcMain.handle("patch:check-data-for-mods", async (_event, args: { plans: PatchP
   checkPatchDataForMods(args.plans, args.modNames)
 );
 ipcMain.handle("patch:history", async () => readPatchHistory());
+ipcMain.handle("patch:previous-patched-mods", async () => readPreviousPatchedMods());
 
 function summarizePatchResult(result: ApplyPatchResult) {
   const changedLines = [
@@ -145,6 +182,36 @@ function notifyPatchFinished(title: string, body: string) {
     title: `${appDisplayName} - ${title}`,
     body
   }).show();
+}
+
+function defaultModsDir() {
+  return isPackagedRuntime()
+    ? path.join(app.getPath("documents"), "BD-SpineX Mods")
+    : path.resolve("mods");
+}
+
+function defaultBackendPath() {
+  return isPackagedRuntime()
+    ? resourcePath("backend", "uabea-patcher", "UabeaPatchPrototype")
+    : path.resolve("manager-data/tools/dotnet/dotnet");
+}
+
+function settingsPath() {
+  return path.join(managerDataRootDir(), "settings.json");
+}
+
+async function readSavedSettings() {
+  try {
+    return JSON.parse(await fs.readFile(settingsPath(), "utf8")) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+async function writeSavedSettings(settings: unknown) {
+  const filePath = settingsPath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
 }
 
 app.whenReady().then(createWindow);

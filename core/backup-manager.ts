@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-
-const backupRoot = path.resolve("manager-data/backups");
+import { managerDataDir } from "./runtime-paths.js";
 
 export async function backupOriginal(bundlePath: string, bundleId: string): Promise<void> {
   const dir = getBackupDir(bundleId);
@@ -68,7 +67,7 @@ export async function hasBackup(bundleId: string): Promise<boolean> {
 }
 
 function getBackupDir(bundleId: string) {
-  return path.join(backupRoot, bundleId);
+  return path.join(managerDataDir(), "backups", bundleId);
 }
 
 function sanitizePathPart(value: string) {
