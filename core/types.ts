@@ -6,6 +6,11 @@ export type BundleAsset = {
   pathId: number;
   width?: number;
   height?: number;
+  textureFormat?: number;
+  textureFormatName?: string;
+  streamDataSize?: number;
+  streamDataPath?: string;
+  imageDataSize?: number;
 };
 
 export type SharedBundle = {
@@ -32,6 +37,11 @@ export type SharedAssetNameIndexEntry = {
   pathId: number;
   width?: number;
   height?: number;
+  textureFormat?: number;
+  textureFormatName?: string;
+  streamDataSize?: number;
+  streamDataPath?: string;
+  imageDataSize?: number;
 };
 
 export type SharedFileEntry = {
@@ -60,6 +70,7 @@ export type GameVersionInfo = {
 };
 
 export type SharedScanOptions = {
+  pythonPath?: string;
   scanBackend?: SharedScanBackend;
   dotnetPath?: string;
   uabeaScannerProjectPath?: string;
@@ -70,7 +81,7 @@ export type SharedScanOptions = {
   forceRescan?: boolean;
 };
 
-export type SharedScanBackend = "uabea" | "rust-native";
+export type SharedScanBackend = "uabea" | "rust-native" | "unitypy";
 
 export type SharedScanProgress = {
   phase: "discovering" | "found" | "scanning" | "scanned" | "done" | "stopped";
@@ -131,6 +142,13 @@ export type PatchTarget = {
   assetName: string;
   type: AssetType;
   pathId: number;
+  width?: number;
+  height?: number;
+  textureFormat?: number;
+  textureFormatName?: string;
+  streamDataSize?: number;
+  streamDataPath?: string;
+  imageDataSize?: number;
 };
 
 export type PatchMissingTarget = {
@@ -201,6 +219,7 @@ export type PatchDataCheckResult = {
 };
 
 export type ApplyPatchOptions = {
+  pythonPath?: string;
   patchBackend?: PatchBackend;
   dotnetPath?: string;
   uabeaPatcherProjectPath?: string;
@@ -209,7 +228,7 @@ export type ApplyPatchOptions = {
   decryptKey?: string;
 };
 
-export type PatchBackend = "uabea" | "rust-native";
+export type PatchBackend = "auto" | "uabea" | "rust-native" | "unitypy";
 
 export type PatchStateChange = {
   modName: string;

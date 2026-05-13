@@ -20,6 +20,7 @@ type PatchBackendResult = {
   ok?: boolean;
   changed?: unknown[];
   error?: string;
+  backend?: PatchBackend;
   timings?: unknown;
 };
 
@@ -81,6 +82,7 @@ export async function applyReadyPatches(
           skels: planPatchFiles.skels,
           pngs: planPatchFiles.pngs,
           insertPngs: planPatchFiles.insertPngs,
+          textureTargets: plan.targets.textures,
           assetBackupDir: getAssetBackupDir(firstPlan.bundleId, plan.modName)
         });
         bundleEntries.push(entryBase);
@@ -105,13 +107,15 @@ export async function applyReadyPatches(
           jobs,
           manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
           patchBackend,
+          pythonPath: options.pythonPath,
           dotnetPath: options.dotnetPath,
           uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
           unityVersion: options.unityVersion,
           decryptKey: options.decryptKey
         });
         const parsed = result as PatchBackendResult;
-        emitPatchTimings(onProgress, patchBackend, parsed.timings, progressCurrent, progressTotal, "patching", firstPlan);
+        const resolvedBackend = parsed.backend ?? patchBackend;
+        emitPatchTimings(onProgress, resolvedBackend, parsed.timings, progressCurrent, progressTotal, "patching", firstPlan);
         if (!parsed.ok) {
           bundleOk = false;
           entries.push(...bundleEntries.map((entry) => ({
@@ -123,7 +127,7 @@ export async function applyReadyPatches(
         } else {
           await replacePatchWork(firstPlan.bundleId, outputPath);
           progressCurrent += bundlePlans.length;
-          emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Finished patching ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+          emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Finished patching ${bundlePlans.length} mod(s) in ${firstPlan.bundleId} using ${formatPatchBackend(resolvedBackend)}.`, firstPlan, resolvedBackend);
           bundleEntries.splice(0, bundleEntries.length, ...bundleEntries.map((entry) => ({
             ...entry,
             status: "patched" as const,
@@ -283,7 +287,7 @@ export async function dryRunPatchStateChanges(
 export async function restoreModPatches(
   plans: PatchPlanEntry[],
   modNames: string[],
-  options: Pick<ApplyPatchOptions, "patchBackend" | "dotnetPath" | "uabeaPatcherProjectPath" | "unityVersion" | "decryptKey">,
+  options: Pick<ApplyPatchOptions, "patchBackend" | "pythonPath" | "dotnetPath" | "uabeaPatcherProjectPath" | "unityVersion" | "decryptKey">,
   onProgress?: (progress: PatchProgress) => void
 ): Promise<ApplyPatchResult> {
   const history = await readPatchHistory();
@@ -326,7 +330,8 @@ export async function restoreModPatches(
           modName: plan.modName,
           atlases: restoreFiles.atlases,
           skels: restoreFiles.skels,
-          pngs: restoreFiles.pngs
+          pngs: restoreFiles.pngs,
+          textureTargets: plan.targets.textures
         });
         bundleEntries.push(entryBase);
       } catch (error) {
@@ -350,13 +355,15 @@ export async function restoreModPatches(
           jobs,
           manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
           patchBackend,
+          pythonPath: options.pythonPath,
           dotnetPath: options.dotnetPath,
           uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
           unityVersion: options.unityVersion,
           decryptKey: options.decryptKey
         });
         const parsed = result as PatchBackendResult;
-        emitPatchTimings(onProgress, patchBackend, parsed.timings, progressCurrent, progressTotal, "restoring", firstPlan);
+        const resolvedBackend = parsed.backend ?? patchBackend;
+        emitPatchTimings(onProgress, resolvedBackend, parsed.timings, progressCurrent, progressTotal, "restoring", firstPlan);
         if (!parsed.ok) {
           bundleOk = false;
           entries.push(...bundleEntries.map((entry) => ({
@@ -368,7 +375,7 @@ export async function restoreModPatches(
         } else {
           await replacePatchWork(firstPlan.bundleId, outputPath);
           progressCurrent += bundlePlans.length;
-          emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Finished restoring ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+          emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Finished restoring ${bundlePlans.length} mod(s) in ${firstPlan.bundleId} using ${formatPatchBackend(resolvedBackend)}.`, firstPlan, resolvedBackend);
           bundleEntries.splice(0, bundleEntries.length, ...bundleEntries.map((entry) => ({
             ...entry,
             status: "restored" as const,
@@ -942,11 +949,23 @@ function isPatchTimingEntry(value: unknown): value is NonNullable<PatchProgress[
 }
 
 function normalizePatchBackend(backend: ApplyPatchOptions["patchBackend"]): PatchBackend {
-  return backend === "rust-native" ? "rust-native" : "uabea";
+  return backend === "rust-native" || backend === "unitypy" || backend === "auto" ? backend : "uabea";
 }
 
 function formatPatchBackend(backend: PatchBackend) {
-  return backend === "rust-native" ? "Rust native" : "UABEA / AssetsTools.NET";
+  if (backend === "auto") {
+    return "Auto";
+  }
+
+  if (backend === "rust-native") {
+    return "Rust native";
+  }
+
+  if (backend === "unitypy") {
+    return "UnityPy";
+  }
+
+  return "UABEA / AssetsTools.NET";
 }
 
 function formatMs(ms: number) {
