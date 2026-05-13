@@ -42,7 +42,9 @@ async function assertRequiredReleaseInputs() {
     "manager-data/shared-file-index.json",
     "manager-data/tools/SpineSkeletonDataConverter",
     "dist-native/uabea-patcher/UabeaPatchPrototype",
-    "dist-native/uabea-cli/uabea_cli"
+    "dist-native/uabea-cli/uabea_cli",
+    "dist-native/unitypy-backend/unitypy_patch_bundle",
+    "dist-native/unitypy-backend/unitypy_scan_bundle"
   ];
 
   for (const relativePath of requiredFiles) {
