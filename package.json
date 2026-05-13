@@ -43,6 +43,15 @@
       {
         "from": "dist-native/uabea-cli",
         "to": "backend/uabea-cli"
+      },
+      {
+        "from": "python",
+        "to": "python",
+        "filter": [
+          "**/*",
+          "!**/__pycache__/**",
+          "!**/*.pyc"
+        ]
       }
     ],
     "directories": {

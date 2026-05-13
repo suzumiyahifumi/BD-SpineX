@@ -238,7 +238,12 @@ static class UabeaPatchPrototype
                     "Texture2D",
                     assetInfo.PathId,
                     baseField["m_Width"].AsInt,
-                    baseField["m_Height"].AsInt));
+                    baseField["m_Height"].AsInt,
+                    baseField["m_TextureFormat"].AsInt,
+                    TextureFormatName(baseField["m_TextureFormat"].AsInt),
+                    ReadStreamDataSize(baseField),
+                    ReadStreamDataPath(baseField),
+                    ReadImageDataSize(baseField)));
             }
             catch
             {
@@ -604,6 +609,55 @@ static class UabeaPatchPrototype
                 TextureFormat.RG16;
     }
 
+    private static string TextureFormatName(int textureFormat)
+    {
+        return Enum.IsDefined(typeof(TextureFormat), textureFormat)
+            ? ((TextureFormat)textureFormat).ToString()
+            : textureFormat.ToString();
+    }
+
+    private static uint? ReadStreamDataSize(AssetTypeValueField baseField)
+    {
+        var streamData = baseField["m_StreamData"];
+        if (streamData.IsDummy)
+        {
+            return null;
+        }
+
+        var size = streamData["size"];
+        return size.IsDummy ? null : size.AsUInt;
+    }
+
+    private static string? ReadStreamDataPath(AssetTypeValueField baseField)
+    {
+        var streamData = baseField["m_StreamData"];
+        if (streamData.IsDummy)
+        {
+            return null;
+        }
+
+        var path = streamData["path"];
+        return path.IsDummy ? null : path.AsString;
+    }
+
+    private static int? ReadImageDataSize(AssetTypeValueField baseField)
+    {
+        var imageData = baseField["image data"];
+        if (imageData.IsDummy)
+        {
+            return null;
+        }
+
+        try
+        {
+            return imageData.AsByteArray.Length;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static void BackupTextAsset(Replacement replacement, AssetTypeValueField baseField, string assetName)
     {
         var backupPath = replacement.AssetBackupPath(assetName);
@@ -797,7 +851,12 @@ sealed record ScannedAsset(
     string Type,
     long PathId,
     int? Width = null,
-    int? Height = null);
+    int? Height = null,
+    int? TextureFormat = null,
+    string? TextureFormatName = null,
+    uint? StreamDataSize = null,
+    string? StreamDataPath = null,
+    int? ImageDataSize = null);
 
 sealed record ScanResult(
     bool Ok,
