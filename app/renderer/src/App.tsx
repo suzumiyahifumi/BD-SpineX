@@ -55,12 +55,12 @@ type ModPowerState = {
 };
 
 const emptySettings: Settings = {
-  settingsVersion: 2,
+  settingsVersion: 3,
   sharedDir: "",
   modsDir: "",
   converterPath: "",
   scanBackend: "uabea",
-  patchBackend: "uabea",
+  patchBackend: "auto",
   dotnetPath: "manager-data/tools/dotnet/dotnet",
   unityVersion: "2021.3.33f1",
   decryptKey: "",
@@ -582,12 +582,13 @@ export function App() {
             <SelectField
               label="Patch Backend"
               helpTitle="Patch Backend"
-              helpText="UABEA is the stable patch backend. Rust native is experimental and should only be used when testing the native patcher workflow."
+              helpText="UABEA is the stable patch backend. UnityPy and Rust native are experimental options for backend comparison and troubleshooting."
               value={settings.patchBackend}
               onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
               options={[
+                { value: "auto", label: "Auto" },
                 { value: "uabea", label: "UABEA / AssetsTools.NET" },
-                { value: "rust-native", label: "Rust native patcher" }
+                { value: "unitypy", label: "UnityPy" }
               ]}
             />
             <SelectField
@@ -598,7 +599,7 @@ export function App() {
               onChange={(value) => updateSetting("scanBackend", value as SharedScanBackend)}
               options={[
                 { value: "uabea", label: "UABEA / AssetsTools.NET" },
-                { value: "rust-native", label: "Rust native parser" }
+                { value: "unitypy", label: "UnityPy" }
               ]}
             />
             <PathField
@@ -1298,6 +1299,8 @@ function isStoredSettings(value: unknown): value is Partial<Settings> {
 function normalizeManagedToolSettings(settings: Settings, fallback: Settings): Settings {
   return {
     ...settings,
+    patchBackend: normalizeSelectablePatchBackend(settings.patchBackend),
+    scanBackend: normalizeSelectableScanBackend(settings.scanBackend),
     dotnetPath: fallback.dotnetPath
   };
 }
@@ -1310,8 +1313,16 @@ function migrateStoredSettings(stored: Partial<Settings>): Partial<Settings> {
   return {
     ...stored,
     settingsVersion: emptySettings.settingsVersion,
-    patchBackend: "uabea"
+    patchBackend: "auto"
   };
+}
+
+function normalizeSelectablePatchBackend(backend: PatchBackend): PatchBackend {
+  return backend === "uabea" || backend === "unitypy" || backend === "auto" ? backend : "auto";
+}
+
+function normalizeSelectableScanBackend(backend: SharedScanBackend): SharedScanBackend {
+  return backend === "unitypy" ? "unitypy" : "uabea";
 }
 
 function loadModPowerState(): ModPowerState {
@@ -1964,7 +1975,19 @@ function formatPatchAction(phase: PatchProgress["phase"]) {
 }
 
 function formatPatchBackend(backend: PatchBackend) {
-  return backend === "rust-native" ? "Rust" : "UABEA";
+  if (backend === "auto") {
+    return "Auto";
+  }
+
+  if (backend === "rust-native") {
+    return "Rust";
+  }
+
+  if (backend === "unitypy") {
+    return "UnityPy";
+  }
+
+  return "UABEA";
 }
 
 function formatDuration(ms: number) {

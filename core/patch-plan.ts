@@ -328,6 +328,13 @@ function toTarget(asset: BundleAsset) {
   return {
     assetName: asset.name,
     type: asset.type,
-    pathId: asset.pathId
+    pathId: asset.pathId,
+    width: asset.width,
+    height: asset.height,
+    textureFormat: asset.textureFormat,
+    textureFormatName: asset.textureFormatName,
+    streamDataSize: asset.streamDataSize,
+    streamDataPath: asset.streamDataPath,
+    imageDataSize: asset.imageDataSize
   };
 }
