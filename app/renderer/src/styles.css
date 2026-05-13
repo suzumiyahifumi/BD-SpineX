@@ -277,6 +277,29 @@ input[type="checkbox"] {
   line-height: 1.45;
 }
 
+.helpContentStack {
+  display: grid;
+  gap: 8px;
+}
+
+.helpLinkButton {
+  justify-self: start;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: #256f63;
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.helpLinkButton:hover {
+  color: #174f47;
+}
+
 .helpCloseButton {
   justify-self: start;
   min-height: 26px;
