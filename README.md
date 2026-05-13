@@ -1,4 +1,12 @@
-# BD-SpineX
+<p align="center">
+  <img src="build/icon.png" alt="BD-SpineX icon" width="128" height="128">
+</p>
+
+<h1 align="center">BD-SpineX</h1>
+
+<p align="center">
+  A macOS Spine mod manager for the PlayCover version of BrownDust II.
+</p>
 
 [![GitHub Release](https://img.shields.io/github/v/release/suzumiyahifumi/BD-SpineX?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 [![Downloads](https://img.shields.io/github/downloads/suzumiyahifumi/BD-SpineX/total?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
