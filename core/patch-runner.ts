@@ -949,12 +949,12 @@ function isPatchTimingEntry(value: unknown): value is NonNullable<PatchProgress[
 }
 
 function normalizePatchBackend(backend: ApplyPatchOptions["patchBackend"]): PatchBackend {
-  return backend === "rust-native" || backend === "unitypy" || backend === "auto" ? backend : "uabea";
+  return backend === "rust-native" || backend === "unitypy" || backend === "auto" || backend === "uabea-astc" ? backend : "uabea";
 }
 
 function formatPatchBackend(backend: PatchBackend) {
   if (backend === "auto") {
-    return "Auto";
+    return "Force ASTC Mode";
   }
 
   if (backend === "rust-native") {
@@ -963,6 +963,10 @@ function formatPatchBackend(backend: PatchBackend) {
 
   if (backend === "unitypy") {
     return "UnityPy";
+  }
+
+  if (backend === "uabea-astc") {
+    return "UABEA / AssetsTools.NET ASTC";
   }
 
   return "UABEA / AssetsTools.NET";

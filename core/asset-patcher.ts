@@ -62,7 +62,7 @@ export async function patchBundleBatch(args: PatchBundleBatchArgs): Promise<unkn
     }
   }
 
-  return withResolvedBackend(await patchBundleBatchWithUabea(args), patchBackend);
+  return withResolvedBackend(await patchBundleBatchWithUabea(args, patchBackend === "uabea-astc"), patchBackend);
 }
 
 async function patchBundleBatchWithUnityPy(args: PatchBundleBatchArgs): Promise<unknown> {
@@ -91,7 +91,7 @@ async function patchBundleBatchWithUnityPy(args: PatchBundleBatchArgs): Promise<
   return JSON.parse(stdout);
 }
 
-async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs): Promise<unknown> {
+async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs, useAstcEncoder = false): Promise<unknown> {
   const command = uabeaCommand();
   const projectPath = args.uabeaPatcherProjectPath?.trim() || defaultUabeaProjectPath();
   const directUabea = usesDirectUabeaExecutable();
@@ -101,6 +101,13 @@ async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs): Promise<un
     "--job-manifest", args.manifestPath,
     "--compression", "lz4"
   ];
+  const astcEncoderPath = useAstcEncoder ? astcEncoderExecutablePath() : undefined;
+  if (useAstcEncoder && !astcEncoderPath) {
+    throw new Error("ASTC patch mode requires the bundled astc_encode backend. Run npm run build:backends before using Force ASTC Mode.");
+  }
+  if (astcEncoderPath) {
+    backendArgs.push("--astc-encoder", astcEncoderPath);
+  }
   const commandArgs = uabeaBaseArgs(directUabea
     ? backendArgs
     : [
@@ -134,48 +141,11 @@ function defaultDotnetPath() {
 }
 
 function resolvePatchBackend(args: PatchBundleBatchArgs): ExecutablePatchBackend {
-  if (args.patchBackend === "uabea" || args.patchBackend === "unitypy" || args.patchBackend === "rust-native") {
+  if (args.patchBackend === "uabea" || args.patchBackend === "unitypy" || args.patchBackend === "rust-native" || args.patchBackend === "uabea-astc") {
     return args.patchBackend;
   }
 
-  return shouldUseUnityPy(args.jobs) ? "unitypy" : "uabea";
-}
-
-function shouldUseUnityPy(jobs: PatchBundleJob[]) {
-  const pngCount = jobs.reduce((sum, job) => sum + job.pngs.length, 0);
-  const insertCount = jobs.reduce((sum, job) => sum + (job.insertPngs?.length ?? 0), 0);
-  if (insertCount > 0 || pngCount === 0) {
-    return false;
-  }
-
-  const textureTargets = jobs.flatMap((job) => job.textureTargets ?? []);
-  if (textureTargets.some(isRiskyTextureTarget)) {
-    return true;
-  }
-
-  const largeTextureCount = textureTargets.filter((target) =>
-    typeof target.width === "number" &&
-    typeof target.height === "number" &&
-    target.width * target.height >= 2048 * 2048
-  ).length;
-
-  return pngCount >= 4 && largeTextureCount >= 2;
-}
-
-function isRiskyTextureTarget(target: PatchTarget) {
-  if ((target.streamDataSize ?? 0) > 0 || Boolean(target.streamDataPath?.trim())) {
-    return true;
-  }
-
-  const format = target.textureFormatName?.toLowerCase() ?? "";
-  return [
-    "astc",
-    "etc",
-    "pvrtc",
-    "crunched",
-    "dxt",
-    "bc"
-  ].some((keyword) => format.includes(keyword));
+  return "uabea-astc";
 }
 
 function withResolvedBackend(result: unknown, backend: ExecutablePatchBackend) {
@@ -202,6 +172,14 @@ function unityPyPatchExecutablePath() {
   const executablePath = isPackagedRuntime()
     ? resourcePath("backend", "unitypy", "unitypy_patch_bundle")
     : path.resolve("dist-native/unitypy-backend/unitypy_patch_bundle");
+
+  return existsSync(executablePath) ? executablePath : undefined;
+}
+
+function astcEncoderExecutablePath() {
+  const executablePath = isPackagedRuntime()
+    ? resourcePath("backend", "unitypy", "astc_encode")
+    : path.resolve("dist-native/unitypy-backend/astc_encode");
 
   return existsSync(executablePath) ? executablePath : undefined;
 }
