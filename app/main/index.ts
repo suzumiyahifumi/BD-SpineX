@@ -92,7 +92,8 @@ ipcMain.handle("app:info", async (): Promise<AppInfo> => ({
   name: appDisplayName,
   subtitle: appSubtitle,
   version: app.getVersion(),
-  supportedGameVersion: supportedGameVersion()
+  supportedGameVersion: supportedGameVersion(),
+  development: isDev
 }));
 ipcMain.handle("game:detect-version", async (_event, args?: { sharedDir?: string }) => detectGameVersion(args?.sharedDir));
 

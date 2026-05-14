@@ -16,10 +16,10 @@ function readGameVersion() {
   const argVersion = process.argv.find((arg) => arg.startsWith("--game-version="))?.split("=")[1];
   const version = argVersion ?? process.env.BD_SPINEX_GAME_VERSION;
   if (!version || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
-    throw new Error("Set BD_SPINEX_GAME_VERSION=major.minor.patch or pass --game-version=major.minor.patch.");
+    throw new Error("Set BD_SPINEX_GAME_VERSION=major.minor.patch[-suffix] or pass --game-version=major.minor.patch[-suffix].");
   }
 
-  return version;
+  return supportedGameVersion(version);
 }
 
 function readReleaseVersion(gameVersion) {
@@ -29,12 +29,15 @@ function readReleaseVersion(gameVersion) {
     throw new Error("Set BD_SPINEX_RELEASE_VERSION=major.minor.patch[-suffix] or pass --release-version=major.minor.patch[-suffix].");
   }
 
-  const supportedGameVersion = version.trim().replace(/^v/i, "").split(/[+-]/)[0];
-  if (supportedGameVersion !== gameVersion) {
+  if (supportedGameVersion(version) !== gameVersion) {
     throw new Error(`Release version ${version} must target game version ${gameVersion}.`);
   }
 
   return version;
+}
+
+function supportedGameVersion(version) {
+  return version.trim().replace(/^v/i, "").split(/[+-]/)[0];
 }
 
 async function updatePackageVersions(version) {
@@ -60,7 +63,8 @@ async function assertRequiredReleaseInputs() {
     "dist-native/uabea-patcher/UabeaPatchPrototype",
     "dist-native/uabea-cli/uabea_cli",
     "dist-native/unitypy-backend/unitypy_patch_bundle",
-    "dist-native/unitypy-backend/unitypy_scan_bundle"
+    "dist-native/unitypy-backend/unitypy_scan_bundle",
+    "dist-native/unitypy-backend/astc_encode"
   ];
 
   for (const relativePath of requiredFiles) {
