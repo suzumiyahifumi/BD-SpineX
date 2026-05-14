@@ -29,7 +29,7 @@ BD-SpineX is built for players who want a simpler BrownDust II mod workflow on m
 The release version is tied to the supported BrownDust II game version. Hotfix builds may add a suffix such as `-b2` while still supporting the same game version.
 
 ```text
-BD-SpineX 2.25.29-b2 -> BrownDust II 2.25.29
+BD-SpineX 2.25.19-b3 -> BrownDust II 2.25.19
 ```
 
 If your installed game version does not match the supported BrownDust II version, mod actions are locked until you use a matching release.

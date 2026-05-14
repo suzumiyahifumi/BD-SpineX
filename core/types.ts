@@ -62,6 +62,7 @@ export type AppInfo = {
   subtitle: string;
   version: string;
   supportedGameVersion: string;
+  development: boolean;
 };
 
 export type GameVersionInfo = {
@@ -229,7 +230,7 @@ export type ApplyPatchOptions = {
   decryptKey?: string;
 };
 
-export type PatchBackend = "auto" | "uabea" | "rust-native" | "unitypy";
+export type PatchBackend = "auto" | "uabea" | "uabea-astc" | "rust-native" | "unitypy";
 
 export type PatchStateChange = {
   modName: string;
