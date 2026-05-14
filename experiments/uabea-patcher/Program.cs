@@ -107,7 +107,7 @@ static class UabeaPatchPrototype
 
         var patchTimer = Stopwatch.StartNew();
         PatchTextAssets(manager, assetsFileInstance, assetsFile, replacements.Text, changed);
-        PatchTextures(manager, assetsFileInstance, assetsFile, replacements.Textures, changed);
+        PatchTextures(manager, assetsFileInstance, assetsFile, replacements.Textures, changed, args.AstcEncoderPath);
         var insertedTextures = InsertTextures(manager, assetsFileInstance, assetsFile, replacements.InsertTextures, changed);
         InsertMaterialsForTextures(manager, assetsFileInstance, assetsFile, insertedTextures, changed);
         timings.Add(TimingEntry.From("patch_assets", patchTimer));
@@ -287,7 +287,8 @@ static class UabeaPatchPrototype
         AssetsFileInstance assetsFileInstance,
         AssetsFile assetsFile,
         Dictionary<string, Replacement> replacements,
-        List<ChangedAsset> changed)
+        List<ChangedAsset> changed,
+        string? astcEncoderPath)
     {
         foreach (var assetInfo in assetsFile.GetAssetsOfType(AssetClassID.Texture2D))
         {
@@ -302,11 +303,19 @@ static class UabeaPatchPrototype
             var texture = TextureFile.ReadTextureFile(baseField);
             try
             {
-                if (!CanEncodeNativeFormat(texture.m_TextureFormat))
+                if (IsAstcFormat(texture.m_TextureFormat) && !string.IsNullOrWhiteSpace(astcEncoderPath))
+                {
+                    EncodeAstcTexture(texture, replacement, astcEncoderPath);
+                }
+                else if (!CanEncodeNativeFormat(texture.m_TextureFormat))
                 {
                     texture.m_TextureFormat = (int)TextureFormat.RGBA32;
+                    texture.EncodeTextureImage(replacement.Path, replacement.EncodeQuality);
                 }
-                texture.EncodeTextureImage(replacement.Path, replacement.EncodeQuality);
+                else
+                {
+                    texture.EncodeTextureImage(replacement.Path, replacement.EncodeQuality);
+                }
                 texture.WriteTo(baseField);
             }
             catch (Exception error)
@@ -607,6 +616,144 @@ static class UabeaPatchPrototype
                 TextureFormat.RGFloat or
                 TextureFormat.RGBAFloat or
                 TextureFormat.RG16;
+    }
+
+    private static bool IsAstcFormat(int textureFormat)
+    {
+        return Enum.IsDefined(typeof(TextureFormat), textureFormat) &&
+            (TextureFormat)textureFormat is
+                TextureFormat.ASTC_RGB_4x4 or
+                TextureFormat.ASTC_RGB_5x5 or
+                TextureFormat.ASTC_RGB_6x6 or
+                TextureFormat.ASTC_RGB_8x8 or
+                TextureFormat.ASTC_RGB_10x10 or
+                TextureFormat.ASTC_RGB_12x12 or
+                TextureFormat.ASTC_RGBA_4x4 or
+                TextureFormat.ASTC_RGBA_5x5 or
+                TextureFormat.ASTC_RGBA_6x6 or
+                TextureFormat.ASTC_RGBA_8x8 or
+                TextureFormat.ASTC_RGBA_10x10 or
+                TextureFormat.ASTC_RGBA_12x12;
+    }
+
+    private static void EncodeAstcTexture(TextureFile texture, Replacement replacement, string astcEncoderPath)
+    {
+        if (!File.Exists(astcEncoderPath))
+        {
+            throw new FileNotFoundException($"ASTC encoder not found: {astcEncoderPath}");
+        }
+
+        var format = (TextureFormat)texture.m_TextureFormat;
+        var tempPath = Path.Combine(Path.GetTempPath(), $"bd-spinex-astc-{Guid.NewGuid():N}.bin");
+        try
+        {
+            var profile = texture.m_ColorSpace == 0 ? "ldr" : "ldr-srgb";
+            var result = RunAstcEncoder(
+                astcEncoderPath,
+                replacement.Path,
+                tempPath,
+                format.ToString(),
+                Math.Max(texture.m_MipCount, 1),
+                replacement.EncodeQuality,
+                profile);
+
+            var encodedData = File.ReadAllBytes(tempPath);
+            texture.m_TextureFormat = (int)format;
+            texture.m_Width = result.Width;
+            texture.m_Height = result.Height;
+            texture.pictureData = encodedData;
+            texture.m_CompleteImageSize = encodedData.Length;
+            texture.m_StreamData = new TextureFile.StreamingInfo { offset = 0, size = 0, path = "" };
+            texture.m_MipCount = Math.Max(result.MipCount, 1);
+            texture.m_MipMap = texture.m_MipCount > 1;
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch
+            {
+                // Best-effort cleanup only.
+            }
+        }
+    }
+
+    private static AstcEncodeResult RunAstcEncoder(
+        string encoderPath,
+        string inputPath,
+        string outputPath,
+        string format,
+        int mipCount,
+        int quality,
+        string profile)
+    {
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = encoderPath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            }
+        };
+        process.StartInfo.ArgumentList.Add("--input");
+        process.StartInfo.ArgumentList.Add(inputPath);
+        process.StartInfo.ArgumentList.Add("--output");
+        process.StartInfo.ArgumentList.Add(outputPath);
+        process.StartInfo.ArgumentList.Add("--format");
+        process.StartInfo.ArgumentList.Add(format);
+        process.StartInfo.ArgumentList.Add("--mip-count");
+        process.StartInfo.ArgumentList.Add(mipCount.ToString());
+        process.StartInfo.ArgumentList.Add("--quality");
+        process.StartInfo.ArgumentList.Add(AstcQuality(quality).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        process.StartInfo.ArgumentList.Add("--profile");
+        process.StartInfo.ArgumentList.Add(profile);
+
+        process.Start();
+        var stdout = process.StandardOutput.ReadToEnd();
+        var stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        AstcEncodeResult? result = null;
+        try
+        {
+            result = JsonSerializer.Deserialize<AstcEncodeResult>(stdout, JsonOptions.CaseInsensitive);
+        }
+        catch
+        {
+            // The error below includes stdout/stderr for diagnosis.
+        }
+
+        if (process.ExitCode != 0 || result is null || !result.Ok)
+        {
+            var message = result?.Error ?? stderr.Trim();
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                message = stdout.Trim();
+            }
+
+            throw new InvalidOperationException($"ASTC encode failed for {inputPath} ({format}): {message}");
+        }
+
+        return result;
+    }
+
+    private static double AstcQuality(int encodeQuality)
+    {
+        return encodeQuality switch
+        {
+            <= 1 => 0,
+            2 => 10,
+            3 => 10,
+            4 => 60,
+            _ => 98
+        };
     }
 
     private static string TextureFormatName(int textureFormat)
@@ -945,6 +1092,14 @@ sealed record InspectReference(
     long PathId,
     string? TargetName);
 
+sealed record AstcEncodeResult(
+    bool Ok,
+    string? Error,
+    int Width,
+    int Height,
+    int MipCount,
+    int Bytes);
+
 sealed class ReplacementIndex
 {
     public Dictionary<string, Replacement> Text { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -1055,6 +1210,7 @@ sealed class CliArgs
     public string JobManifest { get; private init; } = "";
     public string Compression { get; private init; } = "lz4";
     public string? Target { get; private init; }
+    public string? AstcEncoderPath { get; private init; }
     public bool ShowHelp { get; private init; }
 
     public static CliArgs Parse(string[] args)
@@ -1088,7 +1244,8 @@ sealed class CliArgs
             Output = values.TryGetValue("output", out var output) ? output : "",
             JobManifest = values.TryGetValue("job-manifest", out var jobManifest) ? jobManifest : "",
             Compression = values.TryGetValue("compression", out var compression) ? compression : "lz4",
-            Target = values.TryGetValue("target", out var target) ? target : null
+            Target = values.TryGetValue("target", out var target) ? target : null,
+            AstcEncoderPath = values.TryGetValue("astc-encoder", out var astcEncoderPath) ? astcEncoderPath : null
         };
 
         if (parsed.Mode is not ("patch" or "scan" or "inspect"))
@@ -1112,7 +1269,7 @@ sealed class CliArgs
     public static void PrintUsage()
     {
         Console.WriteLine("UabeaPatchPrototype --mode scan --input __data");
-        Console.WriteLine("UabeaPatchPrototype --input __data --output patched.__data --job-manifest __data.patch-jobs.json [--compression lz4|none]");
+        Console.WriteLine("UabeaPatchPrototype --input __data --output patched.__data --job-manifest __data.patch-jobs.json [--compression lz4|none] [--astc-encoder astc_encode]");
     }
 
     private static string Required(Dictionary<string, string> values, string key)

@@ -48,6 +48,7 @@ await chmodExecutable(packagedRustCli);
 
 await buildUnityPyExecutable("unitypy_patch_bundle", path.join(root, "python", "patch_bundle.py"));
 await buildUnityPyExecutable("unitypy_scan_bundle", path.join(root, "python", "scan_bundle.py"));
+await buildUnityPyExecutable("astc_encode", path.join(root, "python", "astc_encode.py"));
 
 async function buildUnityPyExecutable(name, entryPoint) {
   await run(python, [

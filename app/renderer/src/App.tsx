@@ -71,7 +71,7 @@ const legacySettingsStorageKey = "bd2-spine-mod-manager:settings";
 const modPowerStorageKey = "bd-spinex:mod-power";
 const legacyModPowerStorageKey = "bd2-spine-mod-manager:mod-power";
 const defaultModPowerState: ModPowerState = { enabled: true, restoreModNames: [] };
-const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0" };
+const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0", development: false };
 
 export function App() {
   const [appInfo, setAppInfo] = useState<AppInfo>(defaultAppInfo);
@@ -582,12 +582,12 @@ export function App() {
             <SelectField
               label="Patch Backend"
               helpTitle="Patch Backend"
-              helpText="UABEA is the stable patch backend. UnityPy and Rust native are experimental options for backend comparison and troubleshooting."
+              helpText="Force ASTC Mode uses UABEA with the ASTC helper for every patch run. Original UABEA keeps the classic AssetsTools path. UnityPy is available for troubleshooting."
               value={settings.patchBackend}
               onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
               options={[
-                { value: "auto", label: "Auto" },
-                { value: "uabea", label: "UABEA / AssetsTools.NET" },
+                { value: "auto", label: "Force ASTC Mode" },
+                { value: "uabea", label: "Original UABEA" },
                 { value: "unitypy", label: "UnityPy" }
               ]}
             />
@@ -989,7 +989,7 @@ export function App() {
               </div>
             </div>
             <button
-              disabled={busy || versionLocked || settingsLocked || (modPower.enabled && activeModNames.length > 0 && !plans.length) || (!modPower.enabled && restorablePowerModNames.length > 0 && !plans.length)}
+              disabled={busy || versionLocked || settingsLocked || (modPower.enabled && activeModNames.length > 0 && !plans.length)}
               onClick={() => runActionTask(toggleModPower)}
               type="button"
             >
@@ -1112,13 +1112,17 @@ function formatVersionTitle(appInfo: AppInfo, gameVersionInfo: GameVersionInfo |
 }
 
 function isGameVersionMismatch(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
+  if (appInfo.development) {
+    return false;
+  }
+
   const gameVersion = normalizeVersionForCompare(gameVersionInfo?.version);
   const supportedGameVersion = normalizeVersionForCompare(appInfo.supportedGameVersion || appInfo.version);
   return Boolean(gameVersion && supportedGameVersion && gameVersion !== supportedGameVersion);
 }
 
 function normalizeVersionForCompare(version?: string) {
-  return version?.trim().replace(/^v/i, "");
+  return version?.trim().replace(/^v/i, "").split(/[+-]/)[0];
 }
 
 function formatModsLockMessage(lock: {
@@ -1980,7 +1984,7 @@ function formatPatchAction(phase: PatchProgress["phase"]) {
 
 function formatPatchBackend(backend: PatchBackend) {
   if (backend === "auto") {
-    return "Auto";
+    return "Force ASTC";
   }
 
   if (backend === "rust-native") {
@@ -1989,6 +1993,10 @@ function formatPatchBackend(backend: PatchBackend) {
 
   if (backend === "unitypy") {
     return "UnityPy";
+  }
+
+  if (backend === "uabea-astc") {
+    return "UABEA ASTC";
   }
 
   return "UABEA";
