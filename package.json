@@ -1,6 +1,6 @@
 {
   "name": "bd-spinex",
-  "version": "2.25.19-b3",
+  "version": "2.26.12",
   "private": true,
   "description": "BrownDust II mod management and installation for Mac PlayCover.",
   "license": "GPL-3.0-only",
@@ -25,12 +25,12 @@
     ],
     "extraResources": [
       {
-        "from": "manager-data/shared-index.json",
-        "to": "manager-data/shared-index.json"
-      },
-      {
-        "from": "manager-data/shared-file-index.json",
-        "to": "manager-data/shared-file-index.json"
+        "from": "manager-data/versions",
+        "to": "manager-data/versions",
+        "filter": [
+          "*/shared-index.json",
+          "*/shared-file-index.json"
+        ]
       },
       {
         "from": "manager-data/tools/SpineSkeletonDataConverter",

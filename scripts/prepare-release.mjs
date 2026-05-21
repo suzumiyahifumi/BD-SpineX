@@ -8,6 +8,7 @@ const releaseVersion = readReleaseVersion(gameVersion);
 
 await updatePackageVersions(releaseVersion);
 await assertRequiredReleaseInputs();
+await assertVersionedIndexes();
 await assertNoPrivatePaths();
 
 console.log(`Prepared BD-SpineX release ${releaseVersion} for BrownDust II ${gameVersion}.`);
@@ -57,8 +58,8 @@ async function updatePackageVersions(version) {
 
 async function assertRequiredReleaseInputs() {
   const requiredFiles = [
-    "manager-data/shared-index.json",
-    "manager-data/shared-file-index.json",
+    `manager-data/versions/${gameVersion}/shared-index.json`,
+    `manager-data/versions/${gameVersion}/shared-file-index.json`,
     "manager-data/tools/SpineSkeletonDataConverter",
     "dist-native/uabea-patcher/UabeaPatchPrototype",
     "dist-native/uabea-cli/uabea_cli",
@@ -80,14 +81,35 @@ async function assertRequiredReleaseInputs() {
   }
 }
 
+async function assertVersionedIndexes() {
+  const sharedIndex = await readJson(path.join(root, `manager-data/versions/${gameVersion}/shared-index.json`));
+  const fileIndex = await readJson(path.join(root, `manager-data/versions/${gameVersion}/shared-file-index.json`));
+  const bundles = Array.isArray(sharedIndex.bundles) ? sharedIndex.bundles : [];
+  const files = Array.isArray(fileIndex.files) ? fileIndex.files : [];
+
+  if (sharedIndex.gameVersion !== gameVersion || fileIndex.gameVersion !== gameVersion) {
+    throw new Error(`Versioned indexes must include gameVersion ${gameVersion}.`);
+  }
+
+  if (sharedIndex.indexVersion < 2 || fileIndex.indexVersion < 2) {
+    throw new Error("Versioned indexes must use indexVersion 2 or newer.");
+  }
+
+  const missingBundleSha = bundles.filter((bundle) => !isSha256(bundle.sha256)).length;
+  const missingFileSha = files.filter((file) => !isSha256(file.sha256)).length;
+  if (missingBundleSha > 0 || missingFileSha > 0) {
+    throw new Error(`Versioned indexes must include SHA-256 for every __data (${missingBundleSha} shared-index missing, ${missingFileSha} file-index missing).`);
+  }
+}
+
 async function assertNoPrivatePaths() {
   const scanRoots = [
     "app",
     "core",
     "experiments/uabea-patcher",
     "experiments/rust-uabea-cli/src",
-    "manager-data/shared-index.json",
-    "manager-data/shared-file-index.json",
+    `manager-data/versions/${gameVersion}/shared-index.json`,
+    `manager-data/versions/${gameVersion}/shared-file-index.json`,
     "package.json"
   ];
   const privatePatterns = [
@@ -131,4 +153,12 @@ async function scanPath(filePath, privatePatterns, leaks) {
 
 async function writeJson(filePath, data) {
   await fs.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+}
+
+async function readJson(filePath) {
+  return JSON.parse(await fs.readFile(filePath, "utf8"));
+}
+
+function isSha256(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
 }
