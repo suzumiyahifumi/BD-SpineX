@@ -146,6 +146,10 @@ manager-data/versions/**
 manager-data/backups/**
 manager-data/converted/**
 !manager-data/.gitkeep
+!manager-data/versions/
+!manager-data/versions/*/
+!manager-data/versions/*/shared-index.json
+!manager-data/versions/*/shared-file-index.json
 !manager-data/backups/
 !manager-data/backups/.gitkeep
 !manager-data/converted/

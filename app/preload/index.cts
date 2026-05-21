@@ -42,6 +42,8 @@ const api = {
     ipcRenderer.invoke("patch:copy-backups-for-mods", { plans, modNames, source }) as Promise<ApplyPatchResult>,
   checkPatchDataForMods: (plans: PatchPlanEntry[], modNames: string[]) =>
     ipcRenderer.invoke("patch:check-data-for-mods", { plans, modNames }) as Promise<PatchDataCheckResult>,
+  ensureOriginalBackupsForMods: (plans: PatchPlanEntry[], modsIndex: ModsIndex, modNames: string[], options: ApplyPatchOptions) =>
+    ipcRenderer.invoke("patch:ensure-original-backups-for-mods", { plans, modsIndex, modNames, options }) as Promise<PatchDataCheckResult>,
   readPatchHistory: () => ipcRenderer.invoke("patch:history") as Promise<PatchHistory>,
   readPreviousPatchedMods: () => ipcRenderer.invoke("patch:previous-patched-mods") as Promise<PreviousPatchedMods>
 };
