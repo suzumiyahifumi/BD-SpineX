@@ -65,8 +65,7 @@
       "category": "public.app-category.utilities",
       "icon": "build/icon.icns",
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
       "identity": null
     }
