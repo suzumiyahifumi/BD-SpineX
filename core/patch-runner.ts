@@ -64,7 +64,10 @@ export async function applyReadyPatches(
     }
 
     const dataCheck = await checkPatchDataForBundle(bundlePlans);
-    const invalidDataChecks = dataCheck.filter((entry) => entry.status === "missing" || entry.status === "changed");
+    const invalidDataChecks = dataCheck.filter((entry) =>
+      entry.status === "missing" ||
+      (entry.status === "changed" && !repairModNames.has(entry.modName))
+    );
     if (invalidDataChecks.length > 0) {
       entries.push(...invalidDataChecks.map((entry) => createChangedPatchRunEntry(entry)));
       progressCurrent += invalidDataChecks.length;
@@ -1196,7 +1199,7 @@ async function checkPatchDataForBundle(plans: PatchPlanEntry[]): Promise<PatchDa
     }));
   }
 
-  const status = await checkPatchDataState(firstPlan.bundlePath, firstPlan.bundleId);
+  const status = await checkPatchDataState(firstPlan.bundlePath, firstPlan.bundleId, firstPlan.bundleSha256);
   return plans.map((plan) => ({
     modName: plan.modName,
     name: plan.name,
@@ -1206,7 +1209,7 @@ async function checkPatchDataForBundle(plans: PatchPlanEntry[]): Promise<PatchDa
   }));
 }
 
-async function checkPatchDataState(bundlePath: string, bundleId: string): Promise<Pick<PatchDataCheckEntry, "status" | "message">> {
+async function checkPatchDataState(bundlePath: string, bundleId: string, expectedCleanSha256?: string): Promise<Pick<PatchDataCheckEntry, "status" | "message">> {
   if (!await fileExists(bundlePath)) {
     return {
       status: "missing",
@@ -1227,6 +1230,15 @@ async function checkPatchDataState(bundlePath: string, bundleId: string): Promis
   }
 
   const currentHash = await hashFile(bundlePath);
+  if (expectedCleanSha256 && currentHash === expectedCleanSha256) {
+    await replaceOriginalBackup(bundleId, bundlePath);
+    await fs.copyFile(bundlePath, patchedPath);
+    return {
+      status: "ok",
+      message: "Current __data matches the versioned clean SHA-256. Refreshed backup A/B."
+    };
+  }
+
   const matchesOriginal = hasOriginal && currentHash === await hashFile(originalPath);
   const matchesPatched = hasPatched && currentHash === await hashFile(patchedPath);
 
