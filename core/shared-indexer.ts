@@ -3,8 +3,10 @@ import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { isPackagedRuntime, resourcePath, seedManagerDataDir, managerDataDir } from "./runtime-paths.js";
+import { isPackagedRuntime, resourcePath, seedManagerDataDir, managerDataDir, managerDataVersion } from "./runtime-paths.js";
 import type { SharedBundle, SharedFileEntry, SharedFileIndex, SharedIndex, SharedScanOptions, SharedScanProgress } from "./types.js";
+
+const sharedIndexSchemaVersion = 2;
 
 export async function scanShared(
   sharedDir: string,
@@ -19,7 +21,7 @@ export async function scanShared(
     : await findSharedBundleCandidates(sharedDir);
 
   if (!cachedFileIndex) {
-    const fileIndex = createSharedFileIndex(sharedDir, candidates);
+    const fileIndex = createSharedFileIndex(sharedDir, await ensureCandidateHashes(candidates));
     await writeJson(sharedFileIndexPath(), fileIndex);
   }
 
@@ -83,6 +85,7 @@ export async function scanShared(
       infoPath: candidate.infoPath,
       hasInfo: Boolean(candidate.infoPath),
       sizeBytes: candidate.sizeBytes,
+      sha256: candidate.sha256,
       assets: []
     };
 
@@ -157,6 +160,7 @@ type SharedBundleCandidate = {
   infoPath?: string;
   sizeBytes: number;
   modifiedAt: string;
+  sha256?: string;
 };
 
 async function findSharedBundleCandidates(sharedDir: string): Promise<SharedBundleCandidate[]> {
@@ -239,14 +243,24 @@ function sortCandidatesBySize(candidates: SharedBundleCandidate[]) {
   return [...candidates].sort((a, b) => b.sizeBytes - a.sizeBytes);
 }
 
+async function ensureCandidateHashes(candidates: SharedBundleCandidate[]) {
+  return Promise.all(candidates.map(async (candidate) => ({
+    ...candidate,
+    sha256: candidate.sha256 ?? await hashFile(candidate.dataPath)
+  })));
+}
+
 function createSharedFileIndex(sharedDir: string, candidates: SharedBundleCandidate[]): SharedFileIndex {
   return {
+    indexVersion: sharedIndexSchemaVersion,
+    gameVersion: managerDataVersion(),
     generatedAt: new Date().toISOString(),
     sharedRootKey: sharedDirCacheKey(sharedDir),
     files: candidates.map((candidate) => ({
       bundleId: candidate.bundleId,
       sizeBytes: candidate.sizeBytes,
       modifiedAt: candidate.modifiedAt,
+      sha256: candidate.sha256,
       hasInfo: Boolean(candidate.infoPath)
     }))
   };
@@ -304,6 +318,7 @@ async function readExistingSharedFileIndex(sharedDir: string): Promise<SharedFil
                 bundleId: file.bundleId,
                 sizeBytes: file.sizeBytes,
                 modifiedAt: file.modifiedAt,
+                sha256: file.sha256,
                 hasInfo: Boolean(legacyFile.infoPath)
               };
             })
@@ -328,13 +343,15 @@ function candidatesFromFileIndex(index: SharedFileIndex, sharedDir?: string): Sh
       dataPath: dataPathForBundleId(sharedDir ?? "", file.bundleId),
       infoPath: file.hasInfo ? infoPathForBundleId(sharedDir ?? "", file.bundleId) : undefined,
       sizeBytes: file.sizeBytes,
-      modifiedAt: file.modifiedAt
+      modifiedAt: file.modifiedAt,
+      sha256: file.sha256
     }];
   }));
 }
 
 function mergeSharedIndexes(...indexes: SharedIndex[]): SharedIndex {
   const bundles = new Map<string, SharedBundle>();
+  const gameVersion = indexes.find((index) => index.gameVersion)?.gameVersion ?? managerDataVersion();
 
   for (const index of indexes) {
     for (const bundle of index.bundles) {
@@ -342,15 +359,24 @@ function mergeSharedIndexes(...indexes: SharedIndex[]): SharedIndex {
     }
   }
 
-  return withAssetNameIndex({ bundles: [...bundles.values()] });
+  return withAssetNameIndex({
+    indexVersion: sharedIndexSchemaVersion,
+    gameVersion,
+    generatedAt: new Date().toISOString(),
+    bundles: [...bundles.values()]
+  });
 }
 
 function toPortableSharedIndex(index: SharedIndex): SharedIndex {
   return withAssetNameIndex({
+    indexVersion: index.indexVersion ?? sharedIndexSchemaVersion,
+    gameVersion: index.gameVersion ?? managerDataVersion(),
+    generatedAt: index.generatedAt ?? new Date().toISOString(),
     bundles: index.bundles.map((bundle) => ({
       bundleId: bundle.bundleId,
       hasInfo: bundle.hasInfo ?? Boolean(bundle.infoPath),
       sizeBytes: bundle.sizeBytes,
+      sha256: bundle.sha256,
       assets: bundle.assets,
       scanError: bundle.scanError
     }))
@@ -480,6 +506,13 @@ function sharedDirCacheKey(sharedDir: string) {
   return crypto
     .createHash("sha256")
     .update(path.resolve(sharedDir))
+    .digest("hex");
+}
+
+async function hashFile(filePath: string) {
+  return crypto
+    .createHash("sha256")
+    .update(await fs.readFile(filePath))
     .digest("hex");
 }
 
@@ -716,20 +749,28 @@ function sharedFileIndexPath() {
   return path.join(managerDataDir(), "shared-file-index.json");
 }
 
-function seedSharedIndexPath() {
+function seedVersionedSharedIndexPath() {
+  return path.join(seedManagerDataDir(), "versions", managerDataVersion(), "shared-index.json");
+}
+
+function seedVersionedSharedFileIndexPath() {
+  return path.join(seedManagerDataDir(), "versions", managerDataVersion(), "shared-file-index.json");
+}
+
+function seedLegacySharedIndexPath() {
   return path.join(seedManagerDataDir(), "shared-index.json");
 }
 
-function seedSharedFileIndexPath() {
+function seedLegacySharedFileIndexPath() {
   return path.join(seedManagerDataDir(), "shared-file-index.json");
 }
 
 function sharedIndexReadPaths() {
-  return uniquePaths([sharedIndexPath(), seedSharedIndexPath()]);
+  return uniquePaths([sharedIndexPath(), seedVersionedSharedIndexPath(), seedLegacySharedIndexPath()]);
 }
 
 function sharedFileIndexReadPaths() {
-  return uniquePaths([sharedFileIndexPath(), seedSharedFileIndexPath()]);
+  return uniquePaths([sharedFileIndexPath(), seedVersionedSharedFileIndexPath(), seedLegacySharedFileIndexPath()]);
 }
 
 function uniquePaths(paths: string[]) {

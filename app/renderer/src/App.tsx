@@ -54,6 +54,12 @@ type ModPowerState = {
   restoreModNames: string[];
 };
 
+type VersionUpdatePrompt = PreviousPatchedMods & {
+  phase: "prompt" | "checking" | "applying";
+  message: string;
+  detail?: string;
+};
+
 const emptySettings: Settings = {
   settingsVersion: 3,
   sharedDir: "",
@@ -96,7 +102,7 @@ export function App() {
   const [modPower, setModPower] = useState<ModPowerState>(() => loadModPowerState());
   const [modFilter, setModFilter] = useState("");
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
-  const [previousHistoryPrompt, setPreviousHistoryPrompt] = useState<PreviousPatchedMods | null>(null);
+  const [previousHistoryPrompt, setPreviousHistoryPrompt] = useState<VersionUpdatePrompt | null>(null);
   const [previousHistoryChecked, setPreviousHistoryChecked] = useState(false);
 
   const readyTargetCount = useMemo(() => plans.filter((plan) => plan.status === "ready").length, [plans]);
@@ -325,7 +331,7 @@ export function App() {
     }
   }
 
-  async function checkPreviousPatchedMods(index: ModsIndex, baseStates: Record<string, boolean>, currentHistory: PatchHistory) {
+  async function checkPreviousPatchedMods(index: ModsIndex, currentHistory: PatchHistory) {
     if (previousHistoryChecked) {
       return;
     }
@@ -342,15 +348,23 @@ export function App() {
       return;
     }
 
-    setDesiredPatchStates({
-      ...baseStates,
-      ...Object.fromEntries(matchedModNames.map((modName) => [modName, true]))
-    });
+    const clearedModPowerOff = !modPower.enabled;
+    if (clearedModPowerOff) {
+      setModPower({ enabled: true, restoreModNames: [] });
+    }
+
     setPreviousHistoryPrompt({
       modNames: matchedModNames,
-      sourceVersions: previous.sourceVersions
+      sourceVersions: previous.sourceVersions,
+      phase: "prompt",
+      message: clearedModPowerOff
+        ? "Mod Power Off has been cleared. Detected version update. Run patch check?"
+        : "Detected version update. Run patch check?",
+      detail: `${matchedModNames.length} previously patched mod(s) can be checked against this game version.`
     });
-    log(`Found previous patched mod history: ${matchedModNames.length} mod(s) selected for review.`);
+    log(clearedModPowerOff
+      ? `Mod Power Off cleared without file changes. Detected version update: ${matchedModNames.length} previously patched mod(s) selected for patch check.`
+      : `Detected version update: ${matchedModNames.length} previously patched mod(s) selected for patch check.`);
   }
 
   async function inheritPreviousPatchedMods() {
@@ -359,8 +373,16 @@ export function App() {
       return;
     }
 
-    setPreviousHistoryPrompt(null);
-    await runActionTask(async () => {
+    setBusy(true);
+    setModsActionLocked(true);
+    try {
+      setPreviousHistoryPrompt({
+        ...prompt,
+        phase: "checking",
+        message: "Checking previously patched mods against the current game version...",
+        detail: "Scanning Mods and Shared files before any patch is applied."
+      });
+      log("Version update check: scanning Mods and preparing current-version targets.");
       const currentModsIndex = settings.modsDir
         ? await window.bd2.scanMods(settings.modsDir)
         : modsIndex;
@@ -371,6 +393,11 @@ export function App() {
         throw new Error("No mod target names found. Scan Mods before inheriting previous installations.");
       }
 
+      setPreviousHistoryPrompt((current) => current ? {
+        ...current,
+        message: "Scanning current game Shared files...",
+        detail: "BD-SpineX is resolving new bundle ids for the previously patched mods."
+      } : current);
       setSharedIndex({ bundles: [] });
       setPlans([]);
       setSharedProgress({ phase: "discovering", current: 0, total: 0 });
@@ -387,11 +414,64 @@ export function App() {
       const planIndex = await window.bd2.createPatchPlan(index, currentModsIndex);
       setPlans(planIndex.plans);
       const modNames = prompt.modNames.filter((modName) => currentModsIndex.mods.some((mod) => mod.modName === modName));
-      const changes = modNames.map((modName) => ({ modName, enabled: true }));
-      if (changes.length === 0) {
+      if (modNames.length === 0) {
         throw new Error("No previous patched mods are available in the current Mods Folder.");
       }
 
+      const plansByModName = new Map(planIndex.plans.map((plan) => [plan.modName, plan]));
+      const readyModNames = modNames.filter((modName) => plansByModName.get(modName)?.status === "ready");
+      const unavailableModNames = modNames.filter((modName) => !readyModNames.includes(modName));
+      if (unavailableModNames.length > 0) {
+        log(`Version update check: ${unavailableModNames.length} mod(s) are not ready in the new index.`);
+        for (const modName of unavailableModNames.slice(0, 8)) {
+          const plan = plansByModName.get(modName);
+          log(`${modName}: ${plan?.status ?? "missing patch plan"}`);
+        }
+      }
+
+      if (readyModNames.length === 0) {
+        log("Version update check stopped: no previously patched mods are ready for this game version.");
+        return;
+      }
+
+      const currentHistory = await window.bd2.readPatchHistory();
+      setPatchHistory(currentHistory);
+      setDesiredPatchStates({
+        ...getActualPatchStates(currentModsIndex, currentHistory),
+        ...Object.fromEntries(readyModNames.map((modName) => [modName, true]))
+      });
+
+      setPreviousHistoryPrompt((current) => current ? {
+        ...current,
+        message: "Checking clean __data backups...",
+        detail: "If this game version has no backup A yet, the current clean __data is saved before patching."
+      } : current);
+      const backupCheck = await window.bd2.ensureOriginalBackupsForMods(planIndex.plans, currentModsIndex, readyModNames, {
+        ...createApplyPatchOptions(settings)
+      });
+      const ok = backupCheck.entries.filter((entry) => entry.status === "ok").length;
+      const changed = backupCheck.entries.filter((entry) => entry.status === "changed").length;
+      const missing = backupCheck.entries.filter((entry) => entry.status === "missing").length;
+      const noBackup = backupCheck.entries.filter((entry) => entry.status === "no_backup").length;
+      const checkedBundles = new Set(backupCheck.entries.map((entry) => entry.bundleId).filter(Boolean)).size;
+      log(`Version update check: ${ok} clean backup check(s), ${changed} changed, ${missing} missing, ${noBackup} still without backup across ${checkedBundles} __data bundle(s).`);
+
+      const invalidData = backupCheck.entries.filter((entry) => entry.status === "changed" || entry.status === "missing" || entry.status === "no_backup");
+      if (invalidData.length > 0) {
+        for (const entry of invalidData.slice(0, 8)) {
+          log(`${entry.modName} ${entry.bundleId}: ${entry.message}`);
+        }
+        log("Version update check stopped before patching because clean backup A could not be guaranteed.");
+        return;
+      }
+
+      setPreviousHistoryPrompt((current) => current ? {
+        ...current,
+        phase: "applying",
+        message: "Reinstalling previously patched mods...",
+        detail: "Clean backup A is ready. BD-SpineX is now applying the original update flow."
+      } : current);
+      const changes = readyModNames.map((modName) => ({ modName, enabled: true }));
       const result = await window.bd2.applyPatchStateChanges(planIndex.plans, currentModsIndex, changes, {
         ...createApplyPatchOptions(settings)
       });
@@ -400,13 +480,14 @@ export function App() {
       const patched = result.entries.filter((entry) => entry.status === "patched").length;
       const failed = result.entries.filter((entry) => entry.status === "failed").length;
       const skipped = result.entries.filter((entry) => entry.status === "skipped").length;
-      log(`Inherited previous mod installation: ${patched} patched, ${failed} failed, ${skipped} skipped.`);
-    });
-  }
-
-  function declinePreviousPatchedMods() {
-    setPreviousHistoryPrompt(null);
-    log("Previous mod installation selection kept for review.");
+      log(`Version update reinstall finished: ${patched} patched, ${failed} failed, ${skipped} skipped.`);
+    } catch (error) {
+      log(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPreviousHistoryPrompt(null);
+      setModsActionLocked(false);
+      setBusy(false);
+    }
   }
 
   async function scanModsWorkflow(activeSettings: Settings) {
@@ -423,7 +504,7 @@ export function App() {
     const actualStates = getActualPatchStates(index, history);
     setDesiredPatchStates(actualStates);
     log(`Scanned Mods: ${index.mods.length} mod folder(s), ${index.mods.filter((mod) => mod.status === "ready").length} ready.`);
-    await checkPreviousPatchedMods(index, actualStates, history);
+    await checkPreviousPatchedMods(index, history);
 
     if (!activeSettings.sharedDir) {
       setSharedIndex({ bundles: [] });
@@ -819,7 +900,7 @@ export function App() {
             </table>
             {modsLocked && (
               <div className="modsLockOverlay" aria-hidden="true">
-                <span>{formatModsLockMessage({ modsActionLocked, modPowerEnabled: modPower.enabled, versionLocked, missingSharedDir, missingModsDir, previousHistoryLocked })}</span>
+                <span>{formatModsLockMessage({ modsActionLocked, modPowerEnabled: modPower.enabled, versionLocked, missingSharedDir, missingModsDir, previousHistoryLocked, previousHistoryMessage: previousHistoryPrompt?.message })}</span>
               </div>
             )}
           </div>
@@ -1005,15 +1086,16 @@ export function App() {
           {previousHistoryPrompt && !versionLocked && !settingsLocked && (
             <div className="inheritHistoryPanel">
               <div>
-                <div className="inheritHistoryTitle">Inherit installed mods automatically?</div>
+                <div className="inheritHistoryTitle">{previousHistoryPrompt.message}</div>
                 <div className="inheritHistoryText">
-                  {previousHistoryPrompt.modNames.length} previously patched mod(s) were selected from old history.
+                  {previousHistoryPrompt.detail ?? `${previousHistoryPrompt.modNames.length} previously patched mod(s) were selected from old history.`}
                 </div>
               </div>
-              <div className="inheritHistoryActions">
-                <button disabled={busy} type="button" onClick={inheritPreviousPatchedMods}>Confirm</button>
-                <button disabled={busy} type="button" onClick={declinePreviousPatchedMods}>Not now</button>
-              </div>
+              {previousHistoryPrompt.phase === "prompt" && (
+                <div className="inheritHistoryActions">
+                  <button disabled={busy} type="button" onClick={inheritPreviousPatchedMods}>Run Patch Check</button>
+                </div>
+              )}
             </div>
           )}
           {!modPower.enabled && (
@@ -1132,6 +1214,7 @@ function formatModsLockMessage(lock: {
   missingSharedDir: boolean;
   missingModsDir: boolean;
   previousHistoryLocked: boolean;
+  previousHistoryMessage?: string;
 }) {
   if (lock.versionLocked) {
     return "Update BD-SpineX version";
@@ -1143,7 +1226,7 @@ function formatModsLockMessage(lock: {
   }
 
   if (lock.previousHistoryLocked) {
-    return "Inherit installed mods automatically?";
+    return lock.previousHistoryMessage ?? "Detected version update. Run patch check?";
   }
 
   if (lock.modsActionLocked) {

@@ -14,6 +14,13 @@ export async function backupOriginal(bundlePath: string, bundleId: string): Prom
   }
 }
 
+export async function replaceOriginalBackup(bundleId: string, sourcePath: string): Promise<void> {
+  const dir = getBackupDir(bundleId);
+  const original = path.join(dir, "__data.original");
+  await fs.mkdir(dir, { recursive: true });
+  await fs.copyFile(sourcePath, original);
+}
+
 export async function preparePatchWork(bundlePath: string, bundleId: string): Promise<string> {
   await backupOriginal(bundlePath, bundleId);
   const dir = getBackupDir(bundleId);

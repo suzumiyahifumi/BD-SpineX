@@ -26,8 +26,8 @@ The macOS app icon is read from `build/icon.icns`. Keep `build/icon.png` as the 
 
 Only these `manager-data` files are bundled:
 
-- `manager-data/shared-index.json`
-- `manager-data/shared-file-index.json`
+- `manager-data/versions/<supported-game-version>/shared-index.json`
+- `manager-data/versions/<supported-game-version>/shared-file-index.json`
 
 Runtime data such as patch history, converted files, user-scanned indexes, and backups is written to a versioned Electron `userData` folder, not into the app bundle:
 
@@ -35,7 +35,7 @@ Runtime data such as patch history, converted files, user-scanned indexes, and b
 manager-data/versions/<supported-game-version>/
 ```
 
-For hotfix builds, suffixes such as `-b2` are stripped for runtime data, so `2.25.29-b2` stores data under `manager-data/versions/2.25.29/`. This prevents a new game/index version from reusing stale history or backup files from older `__data` bundle hashes while allowing same-game hotfixes to keep using the same history.
+For hotfix builds, suffixes such as `-b2` are stripped for runtime data, so `2.25.29-b2` stores data under `manager-data/versions/2.25.29/`. This prevents a new game/index version from reusing stale history, indexes, or backup files from older `__data` bundle hashes while allowing same-game hotfixes to keep using the same history.
 
 ## Checks
 

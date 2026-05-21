@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import crypto from "node:crypto";
+import os from "node:os";
 import path from "node:path";
-import { applyModded, getAssetBackupDir, getOriginalBackupPath, getPatchTempPath, getPatchWorkPath, preparePatchWork, replacePatchWork, restoreOriginal } from "./backup-manager.js";
+import { applyModded, backupOriginal, getAssetBackupDir, getOriginalBackupPath, getPatchTempPath, getPatchWorkPath, preparePatchWork, replaceOriginalBackup, replacePatchWork, restoreOriginal } from "./backup-manager.js";
 import { patchBundleBatch, type PatchBundleJob } from "./asset-patcher.js";
 import { managerDataDir, managerDataRootDir, managerDataVersion } from "./runtime-paths.js";
 import { convertJsonToSkel } from "./spine-converter.js";
@@ -22,6 +23,12 @@ type PatchBackendResult = {
   error?: string;
   backend?: PatchBackend;
   timings?: unknown;
+};
+
+type CleanPatchFiles = {
+  atlases: string[];
+  skels: string[];
+  pngs: string[];
 };
 
 export async function applyReadyPatches(
@@ -463,6 +470,69 @@ export async function checkPatchDataForMods(plans: PatchPlanEntry[], modNames: s
   };
 }
 
+export async function ensureOriginalBackupsForMods(
+  plans: PatchPlanEntry[],
+  modsIndex: ModsIndex,
+  modNames: string[],
+  options: ApplyPatchOptions,
+  onProgress?: (progress: PatchProgress) => void
+): Promise<PatchDataCheckResult> {
+  const targetMods = new Set(modNames);
+  const targetPlans = plans.filter((plan) => targetMods.has(plan.modName) && plan.bundleId && plan.bundlePath);
+  const entries: PatchDataCheckEntry[] = [];
+  const patchBackend = normalizePatchBackend(options.patchBackend);
+  let progressCurrent = 0;
+  const progressTotal = Math.max(groupBy(targetPlans, (plan) => plan.bundleId ?? "").size, 1);
+  emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, "Checking clean backup A for version update.", undefined, patchBackend);
+
+  for (const bundlePlans of groupBy(targetPlans, (plan) => plan.bundleId ?? "").values()) {
+    const firstPlan = bundlePlans[0];
+    if (!firstPlan.bundleId || !firstPlan.bundlePath) {
+      continue;
+    }
+
+    const before = await checkPatchDataForBundle(bundlePlans);
+    const noBackupYet = before.every((entry) => entry.status === "no_backup");
+    if (!noBackupYet) {
+      entries.push(...before);
+      progressCurrent += 1;
+      continue;
+    }
+
+    try {
+      emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Verifying clean target assets for ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+      const result = await createCleanOriginalBackupFromPreviousAssets(bundlePlans, modsIndex, options, patchBackend, onProgress, progressCurrent, progressTotal);
+      entries.push(...bundlePlans.map((plan) => ({
+        modName: plan.modName,
+        name: plan.name,
+        bundleId: plan.bundleId ?? "",
+        bundlePath: plan.bundlePath ?? "",
+        status: "ok" as const,
+        message: result.repaired
+          ? `Created backup A from a repaired clean temporary __data (${result.repairedAssets} restored asset(s)).`
+          : "Created backup A after target assets matched previous clean backups."
+      })));
+    } catch (error) {
+      entries.push(...bundlePlans.map((plan) => ({
+        modName: plan.modName,
+        name: plan.name,
+        bundleId: plan.bundleId ?? "",
+        bundlePath: plan.bundlePath ?? "",
+        status: "changed" as const,
+        message: error instanceof Error ? error.message : String(error)
+      })));
+    }
+
+    progressCurrent += 1;
+  }
+
+  emitPatchProgress(onProgress, entries.some((entry) => entry.status === "changed" || entry.status === "missing") ? "failed" : "done", progressCurrent, progressTotal, "Clean backup A check finished.", undefined, patchBackend);
+  return {
+    ok: entries.every((entry) => entry.status === "ok"),
+    entries
+  };
+}
+
 export async function copyPatchBackupsForMods(
   plans: PatchPlanEntry[],
   modNames: string[],
@@ -518,6 +588,126 @@ export async function copyPatchBackupsForMods(
   };
 }
 
+async function createCleanOriginalBackupFromPreviousAssets(
+  bundlePlans: PatchPlanEntry[],
+  modsIndex: ModsIndex,
+  options: ApplyPatchOptions,
+  patchBackend: PatchBackend,
+  onProgress: ((progress: PatchProgress) => void) | undefined,
+  progressCurrent: number,
+  progressTotal: number
+) {
+  const firstPlan = bundlePlans[0];
+  if (!firstPlan.bundleId || !firstPlan.bundlePath) {
+    throw new Error("Patch plan has no __data path. Re-scan Shared before running the version update check.");
+  }
+
+  if (firstPlan.bundleSha256) {
+    const currentHash = await hashFile(firstPlan.bundlePath);
+    if (currentHash === firstPlan.bundleSha256) {
+      await backupOriginal(firstPlan.bundlePath, firstPlan.bundleId);
+      return { repaired: false, repairedAssets: 0 };
+    }
+  }
+
+  const modByName = new Map(modsIndex.mods.map((mod) => [mod.modName, mod]));
+  const cleanJobs: PatchBundleJob[] = [];
+  const cleanSourcesByAsset = new Map<string, string>();
+  const modSourcesByAsset = new Map<string, string>();
+
+  for (const plan of bundlePlans) {
+    const mod = modByName.get(plan.modName);
+    if (!mod) {
+      throw new Error(`Mod entry not found for ${plan.modName}.`);
+    }
+
+    const cleanFiles = await getPreviousCleanPatchFiles(plan);
+    if (cleanFiles.atlases.length === 0 && cleanFiles.skels.length === 0 && cleanFiles.pngs.length === 0) {
+      throw new Error(`No previous clean asset backup found for ${plan.modName}. A clean backup A cannot be guaranteed.`);
+    }
+
+    const modFiles = await preparePatchFilesCached(mod, new Map(), options, onProgress, plan, progressCurrent, progressTotal);
+    const planModFiles = filterPatchFilesForPlan(modFiles, plan);
+    registerPatchFileSources(cleanSourcesByAsset, cleanFiles);
+    registerPatchFileSources(modSourcesByAsset, planModFiles);
+    cleanJobs.push({
+      modName: plan.modName,
+      atlases: cleanFiles.atlases,
+      skels: cleanFiles.skels,
+      pngs: cleanFiles.pngs,
+      insertPngs: [],
+      textureTargets: plan.targets.textures,
+      assetBackupDir: ""
+    });
+  }
+
+  const labDir = await fs.mkdtemp(path.join(os.tmpdir(), "bd-spinex-upgrade-"));
+  const inspectInput = path.join(labDir, "__data.inspect.input");
+  const inspectOutput = path.join(labDir, "__data.inspect.output");
+  const inspectAssetDir = path.join(labDir, "current-assets");
+  const inspectManifest = path.join(labDir, "__data.inspect-jobs.json");
+  await fs.copyFile(firstPlan.bundlePath, inspectInput);
+  await fs.writeFile(inspectManifest, `${JSON.stringify({ jobs: cleanJobs.map((job) => ({ ...job, assetBackupDir: inspectAssetDir })) }, null, 2)}\n`, "utf8");
+
+  emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Extracting current target assets for ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+  const inspectResult = await patchBundleBatch({
+    input: inspectInput,
+    output: inspectOutput,
+    jobs: cleanJobs.map((job) => ({ ...job, assetBackupDir: inspectAssetDir })),
+    manifestPath: inspectManifest,
+    patchBackend,
+    pythonPath: options.pythonPath,
+    dotnetPath: options.dotnetPath,
+    uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
+    unityVersion: options.unityVersion,
+    decryptKey: options.decryptKey
+  }) as PatchBackendResult;
+
+  if (!inspectResult.ok) {
+    throw new Error(inspectResult.error ?? "Failed to inspect current __data target assets.");
+  }
+
+  const dirtyAssets = await findDirtyAssets(inspectAssetDir, cleanSourcesByAsset, modSourcesByAsset);
+  const unknownAssets = dirtyAssets.filter((asset) => asset.reason === "unknown");
+  if (unknownAssets.length > 0) {
+    throw new Error(`Current __data has ${unknownAssets.length} target asset(s) that differ from both the mod file and previous clean backup. A clean backup A cannot be guaranteed.`);
+  }
+
+  const patchedAssets = dirtyAssets.filter((asset) => asset.reason === "matches_mod");
+  if (patchedAssets.length === 0) {
+    await backupOriginal(firstPlan.bundlePath, firstPlan.bundleId);
+    return { repaired: false, repairedAssets: 0 };
+  }
+
+  const repairJobs = createRepairJobs(cleanJobs, new Set(patchedAssets.map((asset) => asset.file)));
+  const repairInput = path.join(labDir, "__data.repair.input");
+  const repairOutput = path.join(labDir, "__data.repair.output");
+  const repairManifest = path.join(labDir, "__data.repair-jobs.json");
+  await fs.copyFile(firstPlan.bundlePath, repairInput);
+  await fs.writeFile(repairManifest, `${JSON.stringify({ jobs: repairJobs }, null, 2)}\n`, "utf8");
+
+  emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Repairing ${patchedAssets.length} patched target asset(s) before creating backup A.`, firstPlan, patchBackend);
+  const repairResult = await patchBundleBatch({
+    input: repairInput,
+    output: repairOutput,
+    jobs: repairJobs,
+    manifestPath: repairManifest,
+    patchBackend,
+    pythonPath: options.pythonPath,
+    dotnetPath: options.dotnetPath,
+    uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
+    unityVersion: options.unityVersion,
+    decryptKey: options.decryptKey
+  }) as PatchBackendResult;
+
+  if (!repairResult.ok) {
+    throw new Error(repairResult.error ?? "Failed to repair patched target assets before creating backup A.");
+  }
+
+  await replaceOriginalBackup(firstPlan.bundleId, repairOutput);
+  return { repaired: true, repairedAssets: patchedAssets.length };
+}
+
 export async function readPatchHistory(): Promise<PatchHistory> {
   try {
     return JSON.parse(await fs.readFile(patchHistoryPath(), "utf8")) as PatchHistory;
@@ -571,6 +761,111 @@ async function preparePatchFilesCached(
   const prepared = await preparePatchFiles(mod, options, onProgress, plan, progressCurrent, progressTotal);
   cache.set(mod.modName, prepared);
   return prepared;
+}
+
+async function getPreviousCleanPatchFiles(plan: PatchPlanEntry): Promise<CleanPatchFiles> {
+  return {
+    atlases: (await Promise.all((plan.targets.atlases ?? []).map((target) =>
+      findPreviousAssetBackup(plan.modName, target.assetName)
+    ))).filter((file): file is string => Boolean(file)),
+    skels: (await Promise.all((plan.targets.skels ?? []).map((target) =>
+      findPreviousAssetBackup(plan.modName, target.assetName)
+    ))).filter((file): file is string => Boolean(file)),
+    pngs: (await Promise.all((plan.targets.textures ?? []).map((target) =>
+      findPreviousAssetBackup(plan.modName, `${target.assetName}.png`)
+    ))).filter((file): file is string => Boolean(file))
+  };
+}
+
+async function findPreviousAssetBackup(modName: string, fileName: string): Promise<string | undefined> {
+  const roots = [managerDataRootDir()];
+  const versionsRoot = path.join(managerDataRootDir(), "versions");
+  const stack = [...roots, versionsRoot];
+  const marker = `${path.sep}asset-backups${path.sep}${sanitizePathPart(modName)}${path.sep}${fileName}`;
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) {
+      continue;
+    }
+
+    const entries = await fs.readdir(current, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (entryPath.includes(`${path.sep}versions${path.sep}${managerDataVersion()}${path.sep}`)) {
+          continue;
+        }
+        stack.push(entryPath);
+        continue;
+      }
+
+      if (entry.isFile() && entryPath.endsWith(marker)) {
+        return entryPath;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function registerPatchFileSources(target: Map<string, string>, files: CleanPatchFiles | PreparedPatchFiles) {
+  for (const filePath of [...files.atlases, ...files.skels, ...files.pngs]) {
+    target.set(path.basename(filePath).toLowerCase(), filePath);
+  }
+}
+
+async function findDirtyAssets(
+  assetDir: string,
+  cleanSourcesByAsset: Map<string, string>,
+  modSourcesByAsset: Map<string, string>
+) {
+  const dirtyAssets: Array<{ file: string; reason: "matches_mod" | "unknown" }> = [];
+  const entries = await fs.readdir(assetDir, { withFileTypes: true }).catch(() => []);
+
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    const file = entry.name;
+    const key = file.toLowerCase();
+    const currentPath = path.join(assetDir, file);
+    const cleanPath = cleanSourcesByAsset.get(key);
+    if (!cleanPath) {
+      continue;
+    }
+
+    const currentHash = await hashFile(currentPath);
+    if (currentHash === await hashFile(cleanPath)) {
+      continue;
+    }
+
+    const modPath = modSourcesByAsset.get(key);
+    if (modPath && currentHash === await hashFile(modPath)) {
+      dirtyAssets.push({ file, reason: "matches_mod" });
+      continue;
+    }
+
+    if (path.extname(file).toLowerCase() === ".png") {
+      continue;
+    }
+
+    dirtyAssets.push({ file, reason: "unknown" });
+  }
+
+  return dirtyAssets;
+}
+
+function createRepairJobs(cleanJobs: PatchBundleJob[], dirtyFiles: Set<string>): PatchBundleJob[] {
+  return cleanJobs.map((job) => ({
+    ...job,
+    atlases: job.atlases.filter((file) => dirtyFiles.has(path.basename(file))),
+    skels: job.skels.filter((file) => dirtyFiles.has(path.basename(file))),
+    pngs: job.pngs.filter((file) => dirtyFiles.has(path.basename(file))),
+    insertPngs: [],
+    assetBackupDir: undefined
+  })).filter((job) => job.atlases.length > 0 || job.skels.length > 0 || job.pngs.length > 0);
 }
 
 async function preparePatchFiles(
