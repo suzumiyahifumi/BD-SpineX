@@ -91,6 +91,7 @@ static class UabeaPatchPrototype
         var totalTimer = Stopwatch.StartNew();
         var timings = new List<TimingEntry>();
         var changed = new List<ChangedAsset>();
+        var originalTextureFormats = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var jobs = ReadJobs(args.JobManifest);
         var replacements = ReplacementIndex.FromJobs(jobs);
 
@@ -107,7 +108,7 @@ static class UabeaPatchPrototype
 
         var patchTimer = Stopwatch.StartNew();
         PatchTextAssets(manager, assetsFileInstance, assetsFile, replacements.Text, changed);
-        PatchTextures(manager, assetsFileInstance, assetsFile, replacements.Textures, changed, args.AstcEncoderPath);
+        PatchTextures(manager, assetsFileInstance, assetsFile, replacements.Textures, changed, args.AstcEncoderPath, args.SafeMode, originalTextureFormats);
         var insertedTextures = InsertTextures(manager, assetsFileInstance, assetsFile, replacements.InsertTextures, changed);
         InsertMaterialsForTextures(manager, assetsFileInstance, assetsFile, insertedTextures, changed);
         timings.Add(TimingEntry.From("patch_assets", patchTimer));
@@ -122,6 +123,13 @@ static class UabeaPatchPrototype
         bundle.BlockAndDirInfo.DirectoryInfos[assetsFileIndex].SetNewData(assetsFile);
         WriteBundle(bundle, args.Output, args.Compression);
         timings.Add(TimingEntry.From("write_bundle", writeTimer));
+
+        if (args.SafeMode)
+        {
+            var verifyTimer = Stopwatch.StartNew();
+            ValidateSafePatch(args.Output, changed, originalTextureFormats);
+            timings.Add(TimingEntry.From("verify_safe_patch", verifyTimer));
+        }
 
         manager.UnloadAll();
         timings.Add(TimingEntry.From("total", totalTimer));
@@ -288,7 +296,9 @@ static class UabeaPatchPrototype
         AssetsFile assetsFile,
         Dictionary<string, Replacement> replacements,
         List<ChangedAsset> changed,
-        string? astcEncoderPath)
+        string? astcEncoderPath,
+        bool safeMode,
+        Dictionary<string, int> originalTextureFormats)
     {
         foreach (var assetInfo in assetsFile.GetAssetsOfType(AssetClassID.Texture2D))
         {
@@ -301,11 +311,23 @@ static class UabeaPatchPrototype
 
             BackupTexture(replacement, assetsFileInstance, baseField, assetName);
             var texture = TextureFile.ReadTextureFile(baseField);
+            originalTextureFormats[assetName] = texture.m_TextureFormat;
             try
             {
                 if (IsAstcFormat(texture.m_TextureFormat) && !string.IsNullOrWhiteSpace(astcEncoderPath))
                 {
                     EncodeAstcTexture(texture, replacement, astcEncoderPath);
+                }
+                else if (safeMode && IsAstcFormat(texture.m_TextureFormat))
+                {
+                    throw new InvalidOperationException("Safe mode requires an ASTC encoder for ASTC Texture2D targets.");
+                }
+                else if (safeMode && !CanEncodeNativeFormat(texture.m_TextureFormat))
+                {
+                    var format = Enum.IsDefined(typeof(TextureFormat), texture.m_TextureFormat)
+                        ? ((TextureFormat)texture.m_TextureFormat).ToString()
+                        : texture.m_TextureFormat.ToString();
+                    throw new InvalidOperationException($"Safe mode cannot encode Texture2D format {format} without changing the original texture format.");
                 }
                 else if (!CanEncodeNativeFormat(texture.m_TextureFormat))
                 {
@@ -681,6 +703,78 @@ static class UabeaPatchPrototype
                 // Best-effort cleanup only.
             }
         }
+    }
+
+    private static void ValidateSafePatch(string outputPath, List<ChangedAsset> changed, Dictionary<string, int> originalTextureFormats)
+    {
+        var manager = new AssetsManager();
+        var bundleInstance = manager.LoadBundleFile(outputPath, true);
+        var assetsFileInstance = manager.LoadAssetsFileFromBundle(bundleInstance, 0, false);
+        var assetsFile = assetsFileInstance.file;
+
+        try
+        {
+            foreach (var asset in changed)
+            {
+                if (asset.Type.Equals("TextAsset", StringComparison.OrdinalIgnoreCase))
+                {
+                    var baseField = FindAssetBaseField(manager, assetsFileInstance, assetsFile, AssetClassID.TextAsset, asset.Name)
+                        ?? throw new InvalidOperationException($"Safe verification failed: TextAsset {asset.Name} was not found after writing.");
+                    var expectedSize = File.Exists(asset.Source) ? new FileInfo(asset.Source).Length : -1;
+                    var actualSize = baseField["m_Script"].AsByteArray.Length;
+                    if (expectedSize >= 0 && actualSize != expectedSize)
+                    {
+                        throw new InvalidOperationException($"Safe verification failed: TextAsset {asset.Name} size mismatch after writing.");
+                    }
+                }
+                else if (asset.Type.Equals("Texture2D", StringComparison.OrdinalIgnoreCase))
+                {
+                    var baseField = FindAssetBaseField(manager, assetsFileInstance, assetsFile, AssetClassID.Texture2D, asset.Name)
+                        ?? throw new InvalidOperationException($"Safe verification failed: Texture2D {asset.Name} was not found after writing.");
+                    var texture = TextureFile.ReadTextureFile(baseField);
+
+                    if (originalTextureFormats.TryGetValue(asset.Name, out var originalFormat) && texture.m_TextureFormat != originalFormat)
+                    {
+                        throw new InvalidOperationException($"Safe verification failed: Texture2D {asset.Name} format changed from {TextureFormatName(originalFormat)} to {TextureFormatName(texture.m_TextureFormat)}.");
+                    }
+
+                    if (baseField["m_Width"].AsInt <= 0 || baseField["m_Height"].AsInt <= 0)
+                    {
+                        throw new InvalidOperationException($"Safe verification failed: Texture2D {asset.Name} has invalid dimensions after writing.");
+                    }
+
+                    var imageDataSize = ReadImageDataSize(baseField);
+                    var streamDataSize = ReadStreamDataSize(baseField);
+                    if ((imageDataSize ?? 0) <= 0 && (streamDataSize ?? 0) <= 0)
+                    {
+                        throw new InvalidOperationException($"Safe verification failed: Texture2D {asset.Name} has no image data after writing.");
+                    }
+                }
+            }
+        }
+        finally
+        {
+            manager.UnloadAll();
+        }
+    }
+
+    private static AssetTypeValueField? FindAssetBaseField(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        AssetClassID classId,
+        string assetName)
+    {
+        foreach (var assetInfo in assetsFile.GetAssetsOfType(classId))
+        {
+            var baseField = manager.GetBaseField(assetsFileInstance, assetInfo);
+            if (baseField["m_Name"].AsString.Equals(assetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return baseField;
+            }
+        }
+
+        return null;
     }
 
     private static AstcEncodeResult RunAstcEncoder(
@@ -1211,6 +1305,7 @@ sealed class CliArgs
     public string Compression { get; private init; } = "lz4";
     public string? Target { get; private init; }
     public string? AstcEncoderPath { get; private init; }
+    public bool SafeMode { get; private init; }
     public bool ShowHelp { get; private init; }
 
     public static CliArgs Parse(string[] args)
@@ -1245,7 +1340,8 @@ sealed class CliArgs
             JobManifest = values.TryGetValue("job-manifest", out var jobManifest) ? jobManifest : "",
             Compression = values.TryGetValue("compression", out var compression) ? compression : "lz4",
             Target = values.TryGetValue("target", out var target) ? target : null,
-            AstcEncoderPath = values.TryGetValue("astc-encoder", out var astcEncoderPath) ? astcEncoderPath : null
+            AstcEncoderPath = values.TryGetValue("astc-encoder", out var astcEncoderPath) ? astcEncoderPath : null,
+            SafeMode = values.TryGetValue("safe", out var safe) && bool.TryParse(safe, out var parsedSafe) && parsedSafe
         };
 
         if (parsed.Mode is not ("patch" or "scan" or "inspect"))
@@ -1269,7 +1365,7 @@ sealed class CliArgs
     public static void PrintUsage()
     {
         Console.WriteLine("UabeaPatchPrototype --mode scan --input __data");
-        Console.WriteLine("UabeaPatchPrototype --input __data --output patched.__data --job-manifest __data.patch-jobs.json [--compression lz4|none] [--astc-encoder astc_encode]");
+        Console.WriteLine("UabeaPatchPrototype --input __data --output patched.__data --job-manifest __data.patch-jobs.json [--compression lz4|none] [--astc-encoder astc_encode] [--safe true]");
     }
 
     private static string Required(Dictionary<string, string> values, string key)

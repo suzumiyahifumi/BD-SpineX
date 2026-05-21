@@ -239,7 +239,7 @@ export type ApplyPatchOptions = {
   repairModNames?: string[];
 };
 
-export type PatchBackend = "auto" | "auto-backend" | "uabea" | "uabea-astc" | "rust-native" | "unitypy";
+export type PatchBackend = "auto" | "auto-backend" | "uabea" | "uabea-astc" | "uabea-safe" | "rust-native" | "unitypy";
 
 export type PatchStateChange = {
   modName: string;
