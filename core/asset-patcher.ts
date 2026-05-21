@@ -27,7 +27,7 @@ export type PatchBundleJob = {
   textureTargets?: PatchTarget[];
 };
 
-type ExecutablePatchBackend = Exclude<PatchBackend, "auto">;
+type ExecutablePatchBackend = Exclude<PatchBackend, "auto" | "auto-backend">;
 
 export type PatchBundleBatchArgs = Omit<PatchBundleArgs, "modName" | "atlases" | "skels" | "pngs" | "assetBackupDir"> & {
   jobs: PatchBundleJob[];
