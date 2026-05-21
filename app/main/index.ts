@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scanMods } from "../../core/mod-indexer.js";
 import { createPatchPlan } from "../../core/patch-plan.js";
-import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, readPatchHistory, readPreviousPatchedMods, restoreAllPatches } from "../../core/patch-runner.js";
+import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, ensureOriginalBackupsForMods, readPatchHistory, readPreviousPatchedMods, restoreAllPatches } from "../../core/patch-runner.js";
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
 import { detectGameVersion } from "../../core/game-version.js";
 import { isPackagedRuntime, managerDataRootDir, resourcePath, supportedGameVersion } from "../../core/runtime-paths.js";
@@ -139,6 +139,11 @@ ipcMain.handle("patch:copy-backups-for-mods", async (_event, args: { plans: Patc
 });
 ipcMain.handle("patch:check-data-for-mods", async (_event, args: { plans: PatchPlanEntry[]; modNames: string[] }) =>
   checkPatchDataForMods(args.plans, args.modNames)
+);
+ipcMain.handle("patch:ensure-original-backups-for-mods", async (event, args: { plans: PatchPlanEntry[]; modsIndex: unknown; modNames: string[]; options: ApplyPatchOptions }) =>
+  ensureOriginalBackupsForMods(args.plans, args.modsIndex as ModsIndex, args.modNames, args.options, (progress) => {
+    event.sender.send("patch:progress", progress);
+  })
 );
 ipcMain.handle("patch:history", async () => readPatchHistory());
 ipcMain.handle("patch:previous-patched-mods", async () => readPreviousPatchedMods());

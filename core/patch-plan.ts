@@ -68,6 +68,7 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
           name: mod.name,
           bundleId: match.bundle.bundleId,
           bundlePath: match.bundle.dataPath,
+          bundleSha256: match.bundle.sha256,
           status: "ready",
           targets: match.targets,
           missingTargets: []
@@ -81,6 +82,7 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
           name: mod.name,
           bundleId: match.bundle.bundleId,
           bundlePath: match.bundle.dataPath,
+          bundleSha256: match.bundle.sha256,
           status: "ready",
           targets: match.targets,
           missingTargets: []
@@ -102,6 +104,7 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
         name: mod.name,
         bundleId: match.bundle.bundleId,
         bundlePath: match.bundle.dataPath,
+        bundleSha256: match.bundle.sha256,
         status,
         targets: match.targets,
         missingTargets: match.missingTargets

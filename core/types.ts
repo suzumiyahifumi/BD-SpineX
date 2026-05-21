@@ -19,11 +19,15 @@ export type SharedBundle = {
   infoPath?: string;
   hasInfo?: boolean;
   sizeBytes?: number;
+  sha256?: string;
   assets: BundleAsset[];
   scanError?: string;
 };
 
 export type SharedIndex = {
+  indexVersion?: number;
+  gameVersion?: string;
+  generatedAt?: string;
   bundles: SharedBundle[];
   assetsByName?: SharedAssetNameIndex;
 };
@@ -48,10 +52,13 @@ export type SharedFileEntry = {
   bundleId: string;
   sizeBytes: number;
   modifiedAt: string;
+  sha256?: string;
   hasInfo?: boolean;
 };
 
 export type SharedFileIndex = {
+  indexVersion?: number;
+  gameVersion?: string;
   generatedAt: string;
   sharedRootKey: string;
   files: SharedFileEntry[];
@@ -164,6 +171,7 @@ export type PatchPlanEntry = {
   name: string;
   bundleId?: string;
   bundlePath?: string;
+  bundleSha256?: string;
   status: PatchPlanStatus;
   targets: {
     atlas?: PatchTarget;
