@@ -883,6 +883,23 @@ tr.pendingPatchChange.pendingPatchRepair td {
   margin-top: 14px;
 }
 
+.historyTableFrame {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid #e3e8ef;
+  border-radius: 6px;
+}
+
+.historyTableFrame th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.historyTableFrame tr:last-child td {
+  border-bottom: 0;
+}
+
 .historyBundleRow td {
   border-top: 1px solid #dbe4ee;
   background: #f8fafc;
@@ -902,7 +919,32 @@ tr.pendingPatchChange.pendingPatchRepair td {
   min-width: 0;
 }
 
+.historyTreeToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+}
+
+.historyTreeToggle:hover {
+  color: #15584f;
+}
+
 .historyTreeCell span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historyTreeToggle span:last-child {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

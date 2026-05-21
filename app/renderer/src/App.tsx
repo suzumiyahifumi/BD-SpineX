@@ -121,6 +121,7 @@ export function App() {
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
   const [previousHistoryPrompt, setPreviousHistoryPrompt] = useState<VersionUpdatePrompt | null>(null);
   const [previousHistoryChecked, setPreviousHistoryChecked] = useState(false);
+  const [collapsedPatchBundles, setCollapsedPatchBundles] = useState<Record<string, boolean>>({});
 
   const readyTargetCount = useMemo(() => plans.filter((plan) => plan.status === "ready").length, [plans]);
   const readyModCount = useMemo(() => countReadyMods(plans), [plans]);
@@ -147,6 +148,9 @@ export function App() {
   const versionLocked = isGameVersionMismatch(appInfo, gameVersionInfo);
   const previousHistoryLocked = Boolean(previousHistoryPrompt);
   const modsLocked = modsActionLocked || !modPower.enabled || versionLocked || settingsLocked || previousHistoryLocked;
+  const togglePatchStatusBundle = (bundleId: string) => {
+    setCollapsedPatchBundles((current) => ({ ...current, [bundleId]: !current[bundleId] }));
+  };
   const sharedAssets = useMemo(() => {
     return sharedIndex.bundles.flatMap((bundle) =>
       bundle.assets.map((asset) => ({
@@ -446,28 +450,45 @@ export function App() {
 
       setPreviousHistoryPrompt((current) => current ? {
         ...current,
-        message: "Scanning current game Shared files...",
-        detail: "BD-SpineX is resolving new bundle ids for the previously patched mods."
+        message: "Loading bundled game index...",
+        detail: "BD-SpineX is resolving current-version bundle ids from the packaged index first."
       } : current);
-      setSharedIndex({ bundles: [] });
-      setPlans([]);
-      setSharedProgress({ phase: "discovering", current: 0, total: 0 });
-      const index = await window.bd2.scanShared(settings.sharedDir, {
-        scanBackend: settings.scanBackend,
-        dotnetPath: settings.dotnetPath,
-        unityVersion: settings.unityVersion,
-        decryptKey: settings.decryptKey,
-        forceRescan: true,
-        targetNames
-      });
-      setSharedIndex(index);
+      log("Version update check: loading bundled current-version Shared index.");
+      let index = await window.bd2.readSharedIndex(settings.sharedDir);
+      let planIndex = await window.bd2.createPatchPlan(index, currentModsIndex);
 
-      const planIndex = await window.bd2.createPatchPlan(index, currentModsIndex);
-      setPlans(planIndex.plans);
-      const modNames = prompt.modNames.filter((modName) => currentModsIndex.mods.some((mod) => mod.modName === modName));
-      if (modNames.length === 0) {
+      const promptModNames = prompt.modNames.filter((modName) => currentModsIndex.mods.some((mod) => mod.modName === modName));
+      if (promptModNames.length === 0) {
         throw new Error("No previous patched mods are available in the current Mods Folder.");
       }
+
+      const bundledPlansByModName = new Map(planIndex.plans.map((plan) => [plan.modName, plan]));
+      const bundledReadyModNames = promptModNames.filter((modName) => bundledPlansByModName.get(modName)?.status === "ready");
+      if (bundledReadyModNames.length === 0 || bundledReadyModNames.length < promptModNames.length) {
+        const missingCount = promptModNames.length - bundledReadyModNames.length;
+        log(`Version update check: bundled index resolved ${bundledReadyModNames.length}/${promptModNames.length} previous mod(s); scanning Shared for ${missingCount} unresolved mod(s).`);
+        setPreviousHistoryPrompt((current) => current ? {
+          ...current,
+          message: "Scanning current game Shared files...",
+          detail: "The packaged index did not resolve every previously patched mod, so BD-SpineX is falling back to a targeted scan."
+        } : current);
+        setSharedIndex({ bundles: [] });
+        setPlans([]);
+        setSharedProgress({ phase: "discovering", current: 0, total: 0 });
+        index = await window.bd2.scanShared(settings.sharedDir, {
+          scanBackend: settings.scanBackend,
+          dotnetPath: settings.dotnetPath,
+          unityVersion: settings.unityVersion,
+          decryptKey: settings.decryptKey,
+          forceRescan: false,
+          targetNames
+        });
+        planIndex = await window.bd2.createPatchPlan(index, currentModsIndex);
+      }
+      setSharedIndex(index);
+
+      setPlans(planIndex.plans);
+      const modNames = promptModNames;
 
       const plansByModName = new Map(planIndex.plans.map((plan) => [plan.modName, plan]));
       const readyModNames = modNames.filter((modName) => plansByModName.get(modName)?.status === "ready");
@@ -954,7 +975,8 @@ export function App() {
               ) : visibleMods.map((mod) => {
                 const pendingTone = pendingChangeTones[mod.modName];
                 const repairEnabled = Boolean(repairPatchStates[mod.modName]);
-                const repairAvailable = actualPatchStates[mod.modName] && plansByModName.get(mod.modName)?.status === "ready";
+                const displayStatus = getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName));
+                const repairAvailable = (actualPatchStates[mod.modName] || displayStatus === "changed") && plansByModName.get(mod.modName)?.status === "ready";
                 const repairDisabled = modsLocked || !repairAvailable;
                 return (
                   <tr key={mod.dir} className={pendingTone ? `pendingPatchChange ${formatPendingChangeToneClass(pendingTone)}` : ""}>
@@ -974,7 +996,7 @@ export function App() {
                         disabled={repairDisabled}
                         title={repairAvailable
                           ? repairEnabled ? "Remove from repair mode" : "Stage repair mode"
-                          : "Repair mode is available only for patched mods"}
+                          : "Repair mode is available only for patched or changed mods"}
                         type="button"
                         onClick={() => toggleRepairPatchState(mod.modName)}
                       >
@@ -1238,48 +1260,58 @@ export function App() {
 
       <section className="panel tablePanel historyPanel">
         <div className="panelTitle">Patch Status</div>
-        <table>
-          <thead>
-            <tr>
-              <th>__data / Mod</th>
-              <th>Status</th>
-              <th>Mods</th>
-              <th>Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            {patchStatusGroups.length === 0 ? (
+        <div className="historyTableFrame">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={4} className="empty">No patch operations recorded yet.</td>
+                <th>__data / Mod</th>
+                <th>Status</th>
+                <th>Mods</th>
+                <th>Updated</th>
               </tr>
-            ) : patchStatusGroups.flatMap((group) => [
-              <tr key={group.bundleId} className="historyBundleRow">
-                <td title={group.bundlePath}>
-                  <div className="historyTreeCell">
-                    <span className="treeMarker">▾</span>
-                    <span>{group.bundleId}</span>
-                  </div>
-                </td>
-                <td><span className={`badge ${group.status}`}>{formatPatchStatusLabel(group.status)}</span></td>
-                <td>{group.patchedModCount} patched / {group.entries.length} total</td>
-                <td>{formatDateTime(group.updatedAt)}</td>
-              </tr>,
-              ...group.entries.map((entry) => (
-                <tr key={`${group.bundleId}:${entry.id}`} className="historyModRow">
-                  <td title={entry.message}>
-                    <div className="historyTreeCell child">
-                      <span className="treeBranch">└</span>
-                      <span>{entry.modName}</span>
-                    </div>
-                  </td>
-                  <td><span className={`badge ${entry.status}`}>{formatPatchStatusLabel(entry.status)}</span></td>
-                  <td>{entry.name}</td>
-                  <td>{formatDateTime(entry.updatedAt)}</td>
+            </thead>
+            <tbody>
+              {patchStatusGroups.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="empty">No patch operations recorded yet.</td>
                 </tr>
-              ))
-            ])}
-          </tbody>
-        </table>
+              ) : patchStatusGroups.flatMap((group) => {
+                const collapsed = Boolean(collapsedPatchBundles[group.bundleId]);
+                return [
+                  <tr key={group.bundleId} className="historyBundleRow">
+                    <td title={group.bundlePath}>
+                      <button
+                        type="button"
+                        className="historyTreeToggle"
+                        aria-expanded={!collapsed}
+                        onClick={() => togglePatchStatusBundle(group.bundleId)}
+                      >
+                        <span className="treeMarker">{collapsed ? "▸" : "▾"}</span>
+                        <span>{group.bundleId}</span>
+                      </button>
+                    </td>
+                    <td><span className={`badge ${group.status}`}>{formatPatchStatusLabel(group.status)}</span></td>
+                    <td>{group.patchedModCount} patched / {group.entries.length} total</td>
+                    <td>{formatDateTime(group.updatedAt)}</td>
+                  </tr>,
+                  ...(collapsed ? [] : group.entries.map((entry) => (
+                    <tr key={`${group.bundleId}:${entry.id}`} className="historyModRow">
+                      <td title={entry.message}>
+                        <div className="historyTreeCell child">
+                          <span className="treeBranch">└</span>
+                          <span>{entry.modName}</span>
+                        </div>
+                      </td>
+                      <td><span className={`badge ${entry.status}`}>{formatPatchStatusLabel(entry.status)}</span></td>
+                      <td>{entry.name}</td>
+                      <td>{formatDateTime(entry.updatedAt)}</td>
+                    </tr>
+                  )))
+                ];
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="panel logPanel">
