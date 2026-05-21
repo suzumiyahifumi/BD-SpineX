@@ -29,7 +29,7 @@ BD-SpineX is built for players who want a simpler BrownDust II mod workflow on m
 The release version is tied to the supported BrownDust II game version. Hotfix builds may add a suffix such as `-b2` while still supporting the same game version.
 
 ```text
-BD-SpineX 2.25.19-b3 -> BrownDust II 2.25.19
+BD-SpineX 2.26.12 -> BrownDust II 2.26.12
 ```
 
 If your installed game version does not match the supported BrownDust II version, mod actions are locked until you use a matching release.
@@ -41,7 +41,10 @@ If your installed game version does not match the supported BrownDust II version
 - ✅ Mod status table with selectable apply/restore workflow
 - 🧩 Spine `.atlas`, `.skel`, `.json`, and `.png` patch support
 - 🔄 Automatic supported Spine JSON conversion when needed
+- 🧭 Bundled game-version indexes used first for faster update checks
 - 🛟 Incremental backups and restore support
+- 🌳 `__data`-based Patch Status with collapsible mod details
+- 🛠️ Repair mode for patched or changed entries
 - 🗂️ Versioned history, backups, converted files, and user-scanned indexes
 - ⚡ Mod Power for turning active mods off and restoring saved selections later
 - 📦 Bundled backend tools, so release users do not need .NET, Rust, or build tools
@@ -60,14 +63,15 @@ If your installed game version does not match the supported BrownDust II version
 
 ## 🛠️ How to Use
 
-1. Download the macOS build from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
+1. Download the macOS DMG from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
 2. Open BD-SpineX.
 3. Select your PlayCover BrownDust II `Shared` folder.
 4. Select the folder where you store your mods.
 5. Click `Scan Mods`.
-6. Click `Scan Shared for Mods`.
-7. Select the mods you want to install.
-8. Click `Apply Changes`.
+6. Select the mods you want to install.
+7. Click `Apply Changes`.
+
+💡 BD-SpineX releases include the matching game index. Use `Scan Shared for Mods` only when you want to refresh or troubleshoot local index data.
 
 💡 After changing mod selections, apply changes again so the game files match your current enabled list.
 
@@ -105,7 +109,7 @@ Each mod folder should contain matching Spine files:
 
 Use the BD-SpineX release that matches your BrownDust II game version. A suffix such as `-b2` marks a BD-SpineX hotfix for the same game version and does not create a separate game-data history version.
 
-When the game updates, install the matching BD-SpineX release and rescan your `Shared` folder. BD-SpineX keeps history and backups separated by version so old bundle hashes are not reused on a newer game build.
+When the game updates, install the matching BD-SpineX release. BD-SpineX uses the bundled current-version index first, then falls back to a targeted Shared scan only if needed. History and backups are separated by version so old bundle hashes are not reused on a newer game build.
 
 If BD-SpineX finds patched mods from an older version, it can select them for review and ask whether to inherit the previous install state. Confirming runs a fresh patch against the current version's index.
 
@@ -134,6 +138,14 @@ Packaged release builds include `SpineSkeletonDataConverter`, which is licensed 
 ### 🔒 Why are mod actions locked?
 
 BD-SpineX locks mod actions when required folders are missing or when the app version does not match the detected BrownDust II version.
+
+### 🔎 Do I still need to scan Shared?
+
+Usually no. Release builds include the matching BrownDust II index. `Scan Shared for Mods` is still available for troubleshooting or refreshing local data.
+
+### 🛠️ What does Repair do?
+
+Repair stages an already patched or changed mod for a safer re-patch. It is useful when the game file state no longer matches the expected backup state.
 
 ### 📦 Do I need to install .NET, Rust, or UABEA?
 
