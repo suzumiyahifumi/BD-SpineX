@@ -517,8 +517,19 @@ progress {
   width: 42px;
 }
 
+.modsPanel .repairColumn {
+  width: 58px;
+  padding-left: 6px;
+  padding-right: 6px;
+  text-align: center;
+}
+
+.modsPanel .repairCol {
+  width: 58px;
+}
+
 .modsPanel .folderCol {
-  width: 56%;
+  width: 50%;
 }
 
 .modsPanel .nameCol {
@@ -531,6 +542,22 @@ progress {
 
 .modsPanel .statusCol {
   width: 7%;
+}
+
+.repairButton {
+  min-height: 24px;
+  padding: 2px 7px;
+  border-color: #ddd6fe;
+  background: #ffffff;
+  color: #6d28d9;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.repairButton.active {
+  border-color: #8b5cf6;
+  background: #ede9fe;
+  color: #5b21b6;
 }
 
 .modsPanel .folderCell {
@@ -729,6 +756,10 @@ tr.pendingPatchChange.pendingPatchRemove td {
   background: #fde7e7;
 }
 
+tr.pendingPatchChange.pendingPatchRepair td {
+  background: #f3e8ff;
+}
+
 .empty {
   color: #778397;
   text-align: center;
@@ -781,6 +812,25 @@ tr.pendingPatchChange.pendingPatchRemove td {
   color: #6d28d9;
 }
 
+.backendStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #dbe4ee;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  color: #536275;
+  font-size: 12px;
+}
+
+.backendStatus strong {
+  color: #243044;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .inheritHistoryPanel {
   display: grid;
   gap: 10px;
@@ -831,6 +881,49 @@ tr.pendingPatchChange.pendingPatchRemove td {
 
 .historyPanel {
   margin-top: 14px;
+}
+
+.historyBundleRow td {
+  border-top: 1px solid #dbe4ee;
+  background: #f8fafc;
+  color: #253449;
+  font-weight: 750;
+}
+
+.historyModRow td {
+  background: #ffffff;
+  color: #526175;
+}
+
+.historyTreeCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.historyTreeCell span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historyTreeCell.child {
+  padding-left: 16px;
+}
+
+.treeMarker,
+.treeBranch {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.treeMarker {
+  color: #526175;
+}
+
+.treeBranch {
+  color: #94a3b8;
 }
 
 .summaryGrid {

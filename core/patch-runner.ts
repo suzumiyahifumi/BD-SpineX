@@ -31,6 +31,14 @@ type CleanPatchFiles = {
   pngs: string[];
 };
 
+type PreparedPatchJob = {
+  plan: PatchPlanEntry;
+  job: PatchBundleJob;
+  entry: PatchRunEntry;
+  backend: PatchBackend;
+  repair: boolean;
+};
+
 export async function applyReadyPatches(
   plans: PatchPlanEntry[],
   modsIndex: ModsIndex,
@@ -44,6 +52,7 @@ export async function applyReadyPatches(
   const plansByBundle = groupBy(readyPlans, (plan) => plan.bundleId ?? "");
   const patchFilesByModName = new Map<string, PreparedPatchFiles>();
   const patchBackend = normalizePatchBackend(options.patchBackend);
+  const repairModNames = new Set(options.repairModNames ?? []);
   let progressCurrent = 0;
   const progressTotal = Math.max(readyPlans.length, 1);
   emitPatchProgress(onProgress, "starting", progressCurrent, progressTotal, `Starting patch operation using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
@@ -67,7 +76,7 @@ export async function applyReadyPatches(
     const workPath = await preparePatchWork(firstPlan.bundlePath, firstPlan.bundleId);
     let bundleOk = true;
     const bundleEntries: PatchRunEntry[] = [];
-    const jobs: PatchBundleJob[] = [];
+    const preparedJobs: PreparedPatchJob[] = [];
 
     for (const plan of bundlePlans) {
       const mod = modByName.get(plan.modName);
@@ -83,7 +92,7 @@ export async function applyReadyPatches(
         emitPatchProgress(onProgress, "converting", progressCurrent, progressTotal, `Preparing skeleton file(s) for ${plan.modName}.`, plan, patchBackend);
         const patchFiles = await preparePatchFilesCached(mod, patchFilesByModName, options, onProgress, plan, progressCurrent, progressTotal);
         const planPatchFiles = filterPatchFilesForPlan(patchFiles, plan);
-        jobs.push({
+        const job = {
           modName: plan.modName,
           atlases: planPatchFiles.atlases,
           skels: planPatchFiles.skels,
@@ -91,6 +100,13 @@ export async function applyReadyPatches(
           insertPngs: planPatchFiles.insertPngs,
           textureTargets: plan.targets.textures,
           assetBackupDir: getAssetBackupDir(firstPlan.bundleId, plan.modName)
+        };
+        preparedJobs.push({
+          plan,
+          job,
+          entry: entryBase,
+          backend: resolvePatchBackendForPlan(patchBackend, plan, job, repairModNames),
+          repair: repairModNames.has(plan.modName)
         });
         bundleEntries.push(entryBase);
       } catch (error) {
@@ -105,50 +121,65 @@ export async function applyReadyPatches(
     }
 
     if (bundleOk) {
-      const outputPath = getPatchTempPath(firstPlan.bundleId, 1);
-      try {
-        emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Patching backup B with ${formatPatchBackend(patchBackend)} for ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
-        const result = await patchBundleBatch({
-                              input: workPath,
-          output: outputPath,
-          jobs,
-          manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
-          patchBackend,
-          pythonPath: options.pythonPath,
-          dotnetPath: options.dotnetPath,
-          uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
-          unityVersion: options.unityVersion,
-          decryptKey: options.decryptKey
-        });
-        const parsed = result as PatchBackendResult;
-        const resolvedBackend = parsed.backend ?? patchBackend;
-        emitPatchTimings(onProgress, resolvedBackend, parsed.timings, progressCurrent, progressTotal, "patching", firstPlan);
-        if (!parsed.ok) {
-          bundleOk = false;
-          entries.push(...bundleEntries.map((entry) => ({
-            ...entry,
-            status: "failed" as const,
-            message: parsed.error ?? "Patch script failed.",
-            changed: changedForMod(parsed.changed, entry.modName)
-          })));
-        } else {
+      const patchGroups = groupPreparedPatchJobs(preparedJobs, patchBackend);
+      let inputPath = workPath;
+      for (const [groupIndex, group] of patchGroups.entries()) {
+        const outputPath = getPatchTempPath(firstPlan.bundleId, groupIndex + 1);
+        const groupEntries = group.items.map((item) => item.entry);
+        try {
+          emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Patching backup B with ${formatPatchBackend(group.backend)} for ${group.items.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, group.backend);
+          const groupJobs = group.items.map((item) => item.job);
+          const result = await patchBundleBatch({
+            input: inputPath,
+            output: outputPath,
+            jobs: groupJobs,
+            manifestPath: await writePatchJobManifest(firstPlan.bundleId, groupJobs),
+            patchBackend: group.backend,
+            pythonPath: options.pythonPath,
+            dotnetPath: options.dotnetPath,
+            uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
+            unityVersion: options.unityVersion,
+            decryptKey: options.decryptKey
+          });
+          const parsed = result as PatchBackendResult;
+          const resolvedBackend = parsed.backend ?? group.backend;
+          emitPatchTimings(onProgress, resolvedBackend, parsed.timings, progressCurrent, progressTotal, "patching", firstPlan);
+          if (!parsed.ok) {
+            bundleOk = false;
+            entries.push(...groupEntries.map((entry) => ({
+              ...entry,
+              status: "failed" as const,
+              message: parsed.error ?? "Patch script failed.",
+              changed: changedForMod(parsed.changed, entry.modName)
+            })));
+            pushSkippedPatchEntries(entries, bundleEntries);
+            break;
+          }
+
           await replacePatchWork(firstPlan.bundleId, outputPath);
-          progressCurrent += bundlePlans.length;
-          emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Finished patching ${bundlePlans.length} mod(s) in ${firstPlan.bundleId} using ${formatPatchBackend(resolvedBackend)}.`, firstPlan, resolvedBackend);
-          bundleEntries.splice(0, bundleEntries.length, ...bundleEntries.map((entry) => ({
+          inputPath = getPatchWorkPath(firstPlan.bundleId);
+          progressCurrent += group.items.length;
+          emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Finished patching ${group.items.length} mod(s) in ${firstPlan.bundleId} using ${formatPatchBackend(resolvedBackend)}.`, firstPlan, resolvedBackend);
+          replaceBundleEntries(bundleEntries, groupEntries.map((entry) => ({
             ...entry,
             status: "patched" as const,
-            message: "Patched backup B in one bundle pass.",
+            message: patchBackend === "auto-backend"
+              ? `Patched backup B using auto-selected ${formatPatchBackend(resolvedBackend)} backend.`
+              : group.items.some((item) => item.repair)
+                ? `Repair mode re-patched backup B using ${formatPatchBackend(resolvedBackend)} backend.`
+              : "Patched backup B in one bundle pass.",
             changed: changedForMod(parsed.changed, entry.modName)
           })));
+        } catch (error) {
+          bundleOk = false;
+          entries.push(...groupEntries.map((entry) => ({
+            ...entry,
+            status: "failed" as const,
+            message: error instanceof Error ? error.message : String(error)
+          })));
+          pushSkippedPatchEntries(entries, bundleEntries);
+          break;
         }
-      } catch (error) {
-        bundleOk = false;
-        entries.push(...bundleEntries.map((entry) => ({
-          ...entry,
-          status: "failed" as const,
-          message: error instanceof Error ? error.message : String(error)
-        })));
       }
     }
 
@@ -174,6 +205,63 @@ export async function applyReadyPatches(
   return { ok: entries.every((entry) => entry.status === "patched"), entries, history: nextHistory };
 }
 
+function groupPreparedPatchJobs(preparedJobs: PreparedPatchJob[], selectedBackend: PatchBackend) {
+  if (selectedBackend !== "auto-backend" && preparedJobs.every((item) => item.backend === selectedBackend)) {
+    return [{ backend: selectedBackend, items: preparedJobs }];
+  }
+
+  const groups = new Map<PatchBackend, PreparedPatchJob[]>();
+  for (const item of preparedJobs) {
+    groups.set(item.backend, [...(groups.get(item.backend) ?? []), item]);
+  }
+
+  const preferredOrder: PatchBackend[] = ["uabea", "auto", "unitypy"];
+  return [...groups.entries()]
+    .sort(([a], [b]) => preferredOrder.indexOf(a) - preferredOrder.indexOf(b))
+    .map(([backend, items]) => ({ backend, items }));
+}
+
+function resolvePatchBackendForPlan(selectedBackend: PatchBackend, plan: PatchPlanEntry, job: PatchBundleJob, repairModNames: Set<string>): PatchBackend {
+  if (repairModNames.has(plan.modName)) {
+    return "unitypy";
+  }
+
+  if (selectedBackend !== "auto-backend") {
+    return selectedBackend;
+  }
+
+  if ((job.insertPngs?.length ?? 0) > 0) {
+    return "auto";
+  }
+
+  const textures = plan.targets.textures ?? [];
+  if (textures.some((target) => target.textureFormatName?.toLowerCase().includes("astc"))) {
+    return "auto";
+  }
+
+  if (textures.length > 0) {
+    return "unitypy";
+  }
+
+  return "uabea";
+}
+
+function replaceBundleEntries(bundleEntries: PatchRunEntry[], nextEntries: PatchRunEntry[]) {
+  for (const nextEntry of nextEntries) {
+    const index = bundleEntries.findIndex((entry) => entry.id === nextEntry.id);
+    if (index >= 0) {
+      bundleEntries[index] = nextEntry;
+    }
+  }
+}
+
+function pushSkippedPatchEntries(entries: PatchRunEntry[], bundleEntries: PatchRunEntry[]) {
+  const recordedIds = new Set(entries.map((entry) => entry.id));
+  entries.push(...bundleEntries
+    .filter((entry) => !recordedIds.has(entry.id))
+    .map((entry) => ({ ...entry, status: "skipped" as const, message: "Skipped because another patch for this __data failed." })));
+}
+
 export async function applyPatchStateChanges(
   plans: PatchPlanEntry[],
   modsIndex: ModsIndex,
@@ -185,11 +273,15 @@ export async function applyPatchStateChanges(
   const patchedModNames = getPatchedModNames(history);
   const changedModNames = new Set(changes.map((change) => change.modName));
   const plansForChangedMods = plans.filter((plan) => changedModNames.has(plan.modName));
+  const repairModNames = changes
+    .filter((change) => change.repair && change.enabled)
+    .map((change) => change.modName);
+  const repairModNameSet = new Set(repairModNames);
   const toApply = changes
-    .filter((change) => change.enabled && !patchedModNames.has(change.modName))
+    .filter((change) => change.enabled && (!patchedModNames.has(change.modName) || change.repair))
     .map((change) => change.modName);
   const toRestore = changes
-    .filter((change) => !change.enabled && patchedModNames.has(change.modName))
+    .filter((change) => !change.repair && !change.enabled && patchedModNames.has(change.modName))
     .map((change) => change.modName);
   const entries: PatchRunEntry[] = [];
   const patchBackend = normalizePatchBackend(options.patchBackend);
@@ -199,13 +291,13 @@ export async function applyPatchStateChanges(
     const result = await applyReadyPatches(
       plansForChangedMods.filter((plan) => toApply.includes(plan.modName)),
       modsIndex,
-      options,
+      repairModNames.length > 0 ? { ...options, repairModNames } : options,
       onProgress
     );
     entries.push(...result.entries);
   }
 
-  const patchedApplyModNames = new Set(entries.filter((entry) => entry.status === "patched").map((entry) => entry.modName));
+  const patchedApplyModNames = new Set(entries.filter((entry) => entry.status === "patched" && !repairModNameSet.has(entry.modName)).map((entry) => entry.modName));
   const replacementRestoreModNames = getReplacementRestoreModNames(plansForChangedMods, toRestore, patchedApplyModNames);
   const directRestoreModNames = toRestore.filter((modName) => !replacementRestoreModNames.has(modName));
 
@@ -1244,10 +1336,14 @@ function isPatchTimingEntry(value: unknown): value is NonNullable<PatchProgress[
 }
 
 function normalizePatchBackend(backend: ApplyPatchOptions["patchBackend"]): PatchBackend {
-  return backend === "rust-native" || backend === "unitypy" || backend === "auto" || backend === "uabea-astc" ? backend : "uabea";
+  return backend === "rust-native" || backend === "unitypy" || backend === "auto" || backend === "auto-backend" || backend === "uabea-astc" ? backend : "uabea";
 }
 
 function formatPatchBackend(backend: PatchBackend) {
+  if (backend === "auto-backend") {
+    return "Auto backend";
+  }
+
   if (backend === "auto") {
     return "Force ASTC Mode";
   }

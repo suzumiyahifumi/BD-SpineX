@@ -236,13 +236,15 @@ export type ApplyPatchOptions = {
   converterPath?: string;
   unityVersion?: string;
   decryptKey?: string;
+  repairModNames?: string[];
 };
 
-export type PatchBackend = "auto" | "uabea" | "uabea-astc" | "rust-native" | "unitypy";
+export type PatchBackend = "auto" | "auto-backend" | "uabea" | "uabea-astc" | "rust-native" | "unitypy";
 
 export type PatchStateChange = {
   modName: string;
   enabled: boolean;
+  repair?: boolean;
 };
 
 export type PatchProgressPhase =

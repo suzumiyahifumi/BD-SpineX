@@ -24,7 +24,7 @@ type ModSort = {
   direction: SortDirection;
 };
 
-type PendingChangeTone = "added" | "removed";
+type PendingChangeTone = "added" | "removed" | "repair";
 
 type PendingChangeRow = PatchStateChange & {
   implicit?: boolean;
@@ -52,6 +52,22 @@ type LogInput = string | {
 type ModPowerState = {
   enabled: boolean;
   restoreModNames: string[];
+};
+
+type PatchStatusBundleGroup = {
+  bundleId: string;
+  bundlePath: string;
+  status: string;
+  updatedAt: string;
+  patchedModCount: number;
+  entries: PatchHistory["entries"];
+};
+
+type PatchBackendFit = {
+  modName: string;
+  bundleId: string;
+  backend: PatchBackend;
+  reason: string;
 };
 
 type VersionUpdatePrompt = PreviousPatchedMods & {
@@ -88,6 +104,7 @@ export function App() {
   const [plans, setPlans] = useState<PatchPlanEntry[]>([]);
   const [patchHistory, setPatchHistory] = useState<PatchHistory>({ updatedAt: "", entries: [] });
   const [desiredPatchStates, setDesiredPatchStates] = useState<Record<string, boolean>>({});
+  const [repairPatchStates, setRepairPatchStates] = useState<Record<string, boolean>>({});
   const [logs, setLogs] = useState<LogEntry[]>(() => [createLogEntry("Ready.")]);
   const [busy, setBusy] = useState(false);
   const [modsActionLocked, setModsActionLocked] = useState(false);
@@ -109,11 +126,13 @@ export function App() {
   const readyModCount = useMemo(() => countReadyMods(plans), [plans]);
   const plansByModName = useMemo(() => new Map(plans.map((plan) => [plan.modName, plan])), [plans]);
   const patchHistoryByModName = useMemo(() => groupPatchHistoryByModName(patchHistory), [patchHistory]);
+  const patchStatusGroups = useMemo(() => getPatchStatusBundleGroups(patchHistory), [patchHistory]);
   const actualPatchStates = useMemo(() => getActualPatchStates(modsIndex, patchHistory), [modsIndex, patchHistory]);
   const patchStateChanges = useMemo(() => getPatchStateChanges(modsIndex, actualPatchStates, desiredPatchStates), [modsIndex, actualPatchStates, desiredPatchStates]);
-  const pendingChangeRows = useMemo(() => getPendingChangeRows(patchStateChanges, actualPatchStates, plansByModName), [patchStateChanges, actualPatchStates, plansByModName]);
-  const effectivePatchStateChanges = useMemo(() => pendingChangeRows.map(({ modName, enabled }) => ({ modName, enabled })), [pendingChangeRows]);
+  const pendingChangeRows = useMemo(() => getPendingChangeRows(patchStateChanges, repairPatchStates, actualPatchStates, plansByModName), [patchStateChanges, repairPatchStates, actualPatchStates, plansByModName]);
+  const effectivePatchStateChanges = useMemo(() => pendingChangeRows.map(({ modName, enabled, repair }) => ({ modName, enabled, repair })), [pendingChangeRows]);
   const pendingChangeTones = useMemo(() => getPendingChangeTones(pendingChangeRows, plansByModName), [pendingChangeRows, plansByModName]);
+  const hasRepairPatchChanges = useMemo(() => Object.values(repairPatchStates).some(Boolean), [repairPatchStates]);
   const activeModNames = useMemo(() => Object.entries(actualPatchStates).filter(([, enabled]) => enabled).map(([modName]) => modName), [actualPatchStates]);
   const restorablePowerModNames = useMemo(() => modPower.restoreModNames.filter((modName) => modsIndex.mods.some((mod) => mod.modName === modName)), [modPower.restoreModNames, modsIndex.mods]);
   const visibleMods = useMemo(() => filterAndSortMods(modsIndex.mods, modFilter, modSort, plansByModName, patchHistoryByModName), [modsIndex.mods, modFilter, modSort, plansByModName, patchHistoryByModName]);
@@ -279,6 +298,7 @@ export function App() {
       const result = await window.bd2.copyPatchBackupsForMods(plans, restoreModNames, "original");
       setPatchHistory(result.history);
       setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
+      setRepairPatchStates({});
       const restored = result.entries.filter((entry) => entry.status === "restored").length;
       const failed = result.entries.filter((entry) => entry.status === "failed").length;
       log(`Mod power off: copied backup A for ${restored} mod(s), ${failed} failed. Saved ${restoreModNames.length} enabled mod(s) for quick restore.`);
@@ -287,6 +307,7 @@ export function App() {
       }
     } else {
       setDesiredPatchStates({});
+      setRepairPatchStates({});
       log("Mod power off: no active mod was found. Mod controls are now locked.");
     }
 
@@ -303,6 +324,7 @@ export function App() {
       const result = await window.bd2.copyPatchBackupsForMods(plans, modNames, "patched");
       setPatchHistory(result.history);
       setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
+      setRepairPatchStates({});
       const patched = result.entries.filter((entry) => entry.status === "patched").length;
       const failed = result.entries.filter((entry) => entry.status === "failed").length;
       log(`Mod power on: copied backup B for ${patched} mod(s), ${failed} failed. Restored saved mod state.`);
@@ -311,6 +333,7 @@ export function App() {
       }
     } else {
       setDesiredPatchStates({});
+      setRepairPatchStates({});
       log("Mod power on: no saved mod needed patching.");
     }
 
@@ -328,6 +351,34 @@ export function App() {
     log(`Active __data check: ${ok} ok, ${noBackup} no backup yet, ${changed} changed, ${missing} missing across ${bundleCount} __data bundle(s).`);
     for (const entry of result.entries.filter((item) => item.status === "changed" || item.status === "missing").slice(0, 8)) {
       log(`${entry.modName} ${entry.bundleId}: ${entry.message}`);
+    }
+  }
+
+  function checkPatchBackendFit() {
+    const targetModNames = new Set(
+      effectivePatchStateChanges
+        .filter((change) => change.enabled && (!actualPatchStates[change.modName] || change.repair))
+        .map((change) => change.modName)
+    );
+    const targetPlans = plans.filter((plan) => targetModNames.has(plan.modName));
+    const readyPlans = targetPlans.filter((plan) => plan.status === "ready");
+    const blockedPlans = targetPlans.filter((plan) => plan.status !== "ready");
+
+    if (!targetPlans.length) {
+      log("Backend fit check: no new patch changes are staged.");
+      return;
+    }
+
+    const fits = readyPlans.map((plan) => getPatchBackendFit(plan, Boolean(repairPatchStates[plan.modName])));
+    const counts = countBackendFits(fits);
+    log(`Backend fit check: ${fits.length} ready target(s), ${blockedPlans.length} blocked target(s). Recommended: ${formatBackendFitCounts(counts)}.`);
+
+    for (const fit of fits.slice(0, 12)) {
+      log(`${fit.modName} ${fit.bundleId}: ${formatPatchBackend(fit.backend)} - ${fit.reason}`);
+    }
+
+    for (const plan of blockedPlans.slice(0, 6)) {
+      log(`${plan.modName} ${plan.bundleId ?? "unknown __data"}: cannot recommend backend because plan status is ${plan.status}.`);
     }
   }
 
@@ -477,6 +528,7 @@ export function App() {
       });
       setPatchHistory(result.history);
       setDesiredPatchStates(getActualPatchStates(currentModsIndex, result.history));
+      setRepairPatchStates({});
       const patched = result.entries.filter((entry) => entry.status === "patched").length;
       const failed = result.entries.filter((entry) => entry.status === "failed").length;
       const skipped = result.entries.filter((entry) => entry.status === "skipped").length;
@@ -503,6 +555,7 @@ export function App() {
     setPatchHistory(history);
     const actualStates = getActualPatchStates(index, history);
     setDesiredPatchStates(actualStates);
+    setRepairPatchStates({});
     log(`Scanned Mods: ${index.mods.length} mod folder(s), ${index.mods.filter((mod) => mod.status === "ready").length} ready.`);
     await checkPreviousPatchedMods(index, history);
 
@@ -562,6 +615,14 @@ export function App() {
   }
 
   function updateDesiredPatchState(modName: string, enabled: boolean) {
+    if (!enabled) {
+      setRepairPatchStates((current) => {
+        const next = { ...current };
+        delete next[modName];
+        return next;
+      });
+    }
+
     setDesiredPatchStates((current) => ({
       ...current,
       [modName]: enabled
@@ -570,6 +631,7 @@ export function App() {
 
   function resetPatchStateChanges() {
     setDesiredPatchStates({});
+    setRepairPatchStates({});
     log("Reset staged module changes.");
   }
 
@@ -587,6 +649,22 @@ export function App() {
     setDesiredPatchStates((current) => ({
       ...current,
       ...nextStates
+    }));
+    if (!enabled) {
+      setRepairPatchStates((current) => {
+        const next = { ...current };
+        for (const mod of selectableVisibleMods) {
+          delete next[mod.modName];
+        }
+        return next;
+      });
+    }
+  }
+
+  function toggleRepairPatchState(modName: string) {
+    setRepairPatchStates((current) => ({
+      ...current,
+      [modName]: !current[modName]
     }));
   }
 
@@ -653,6 +731,19 @@ export function App() {
           onBrowse={() => selectDirectory("modsDir")}
           invalid={missingModsDir}
         />
+        <SelectField
+          label="Patch Backend"
+          helpTitle="Patch Backend"
+          helpText="Auto Backend checks each staged mod before patching and chooses the safest backend for that target. Force ASTC Mode uses UABEA with the ASTC helper for every patch run. Original UABEA keeps the classic AssetsTools path. UnityPy is available for troubleshooting."
+          value={settings.patchBackend}
+          onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
+          options={[
+            { value: "auto-backend", label: "Auto Backend" },
+            { value: "auto", label: "Force ASTC Mode" },
+            { value: "uabea", label: "Original UABEA" },
+            { value: "unitypy", label: "UnityPy" }
+          ]}
+        />
         <div className="settingsActions">
           <button className="advancedToggle" type="button" onClick={() => setShowAdvancedSettings((current) => !current)}>
             {showAdvancedSettings ? "+ Hide Advanced Settings" : "+ Advanced Settings"}
@@ -660,18 +751,6 @@ export function App() {
         </div>
         {showAdvancedSettings && (
           <div className="advancedSettingsGrid">
-            <SelectField
-              label="Patch Backend"
-              helpTitle="Patch Backend"
-              helpText="Force ASTC Mode uses UABEA with the ASTC helper for every patch run. Original UABEA keeps the classic AssetsTools path. UnityPy is available for troubleshooting."
-              value={settings.patchBackend}
-              onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
-              options={[
-                { value: "auto", label: "Force ASTC Mode" },
-                { value: "uabea", label: "Original UABEA" },
-                { value: "unitypy", label: "UnityPy" }
-              ]}
-            />
             <SelectField
               label="Shared Scan Backend"
               helpTitle="Shared Scan Backend"
@@ -815,7 +894,7 @@ export function App() {
             </div>
             <div className="modsHeaderControls">
               <button
-                disabled={busy || modsLocked || !patchStateChanges.length}
+                disabled={busy || modsLocked || (!patchStateChanges.length && !hasRepairPatchChanges)}
                 onClick={resetPatchStateChanges}
                 title="Restore checkbox state before Apply Changes"
                 type="button"
@@ -836,6 +915,7 @@ export function App() {
             <table>
             <colgroup>
               <col className="patchCol" />
+              <col className="repairCol" />
               <col className="folderCol" />
               <col className="nameCol" />
               <col className="categoryCol" />
@@ -855,6 +935,7 @@ export function App() {
                     </button>
                   </div>
                 </th>
+                <th>Repair</th>
                 <th>{renderModSortButton("Folder", "folder", modSort, updateModSort)}</th>
                 <th>{renderModSortButton("Name", "name", modSort, updateModSort)}</th>
                 <th>{renderModSortButton("Category", "category", modSort, updateModSort)}</th>
@@ -864,14 +945,17 @@ export function App() {
             <tbody>
               {modsIndex.mods.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="empty">Scan Mods to inspect detected file names.</td>
+                  <td colSpan={6} className="empty">Scan Mods to inspect detected file names.</td>
                 </tr>
               ) : visibleMods.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="empty">No mods match this filter.</td>
+                  <td colSpan={6} className="empty">No mods match this filter.</td>
                 </tr>
               ) : visibleMods.map((mod) => {
                 const pendingTone = pendingChangeTones[mod.modName];
+                const repairEnabled = Boolean(repairPatchStates[mod.modName]);
+                const repairAvailable = actualPatchStates[mod.modName] && plansByModName.get(mod.modName)?.status === "ready";
+                const repairDisabled = modsLocked || !repairAvailable;
                 return (
                   <tr key={mod.dir} className={pendingTone ? `pendingPatchChange ${formatPendingChangeToneClass(pendingTone)}` : ""}>
                     <td className="patchColumn">
@@ -882,6 +966,20 @@ export function App() {
                         type="checkbox"
                         onChange={(event) => updateDesiredPatchState(mod.modName, event.target.checked)}
                       />
+                    </td>
+                    <td className="repairColumn">
+                      <button
+                        aria-pressed={repairEnabled}
+                        className={repairEnabled ? "repairButton active" : "repairButton"}
+                        disabled={repairDisabled}
+                        title={repairAvailable
+                          ? repairEnabled ? "Remove from repair mode" : "Stage repair mode"
+                          : "Repair mode is available only for patched mods"}
+                        type="button"
+                        onClick={() => toggleRepairPatchState(mod.modName)}
+                      >
+                        Fix
+                      </button>
                     </td>
                     <td className="folderCell" title={mod.modName}>{formatModFolderName(mod.modName)}</td>
                     <td title={mod.name}>{mod.name}</td>
@@ -1028,6 +1126,7 @@ export function App() {
             <thead>
               <tr>
                 <th>Mod</th>
+                <th>Mode</th>
                 <th>Current</th>
                 <th>Desired</th>
               </tr>
@@ -1035,11 +1134,12 @@ export function App() {
             <tbody>
               {pendingChangeRows.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="empty">Change a module checkbox to stage patch changes.</td>
+                  <td colSpan={4} className="empty">Change a module checkbox or stage repair mode to patch changes.</td>
                 </tr>
               ) : pendingChangeRows.map((change) => (
                 <tr key={change.modName} className={`pendingPatchChange ${formatPendingChangeToneClass(pendingChangeTones[change.modName])}`}>
                   <td>{change.modName}{change.implicit ? " (auto)" : ""}</td>
+                  <td>{change.repair ? "Repair" : "Patch"}</td>
                   <td>{formatPatchBoolean(actualPatchStates[change.modName])}</td>
                   <td>{formatPatchBoolean(change.enabled)}</td>
                 </tr>
@@ -1101,6 +1201,13 @@ export function App() {
           {!modPower.enabled && (
             <p className="hint">Mod power is off. Module controls are locked until saved mods are restored.</p>
           )}
+          <div className="backendStatus" title="Backend used by Apply Changes">
+            <span>Patch Backend</span>
+            <strong>{formatPatchBackend(settings.patchBackend)}</strong>
+          </div>
+          <button disabled={busy || versionLocked || settingsLocked || !modPower.enabled || !effectivePatchStateChanges.length || !plans.length} onClick={checkPatchBackendFit}>
+            Check Backend Fit
+          </button>
           <button disabled={busy || versionLocked || settingsLocked || !modPower.enabled || !activeModNames.length || !plans.length} onClick={() => runActionTask(checkActivePatchData)}>
             Check Active __data
           </button>
@@ -1110,6 +1217,7 @@ export function App() {
             });
             setPatchHistory(result.history);
             setDesiredPatchStates(getActualPatchStates(modsIndex, result.history));
+            setRepairPatchStates({});
             const patched = result.entries.filter((entry) => entry.status === "patched").length;
             const restored = result.entries.filter((entry) => entry.status === "restored").length;
             const failed = result.entries.filter((entry) => entry.status === "failed").length;
@@ -1133,25 +1241,43 @@ export function App() {
         <table>
           <thead>
             <tr>
-              <th>Mod</th>
-              <th>Bundle</th>
+              <th>__data / Mod</th>
               <th>Status</th>
+              <th>Mods</th>
               <th>Updated</th>
             </tr>
           </thead>
           <tbody>
-            {patchHistory.entries.length === 0 ? (
+            {patchStatusGroups.length === 0 ? (
               <tr>
                 <td colSpan={4} className="empty">No patch operations recorded yet.</td>
               </tr>
-            ) : patchHistory.entries.slice(0, 12).map((entry) => (
-              <tr key={entry.id}>
-                <td title={entry.message}>{entry.modName}</td>
-                <td title={entry.bundlePath}>{entry.bundleId}</td>
-                <td><span className={`badge ${entry.status}`}>{formatPatchStatusLabel(entry.status)}</span></td>
-                <td>{formatDateTime(entry.updatedAt)}</td>
-              </tr>
-            ))}
+            ) : patchStatusGroups.flatMap((group) => [
+              <tr key={group.bundleId} className="historyBundleRow">
+                <td title={group.bundlePath}>
+                  <div className="historyTreeCell">
+                    <span className="treeMarker">▾</span>
+                    <span>{group.bundleId}</span>
+                  </div>
+                </td>
+                <td><span className={`badge ${group.status}`}>{formatPatchStatusLabel(group.status)}</span></td>
+                <td>{group.patchedModCount} patched / {group.entries.length} total</td>
+                <td>{formatDateTime(group.updatedAt)}</td>
+              </tr>,
+              ...group.entries.map((entry) => (
+                <tr key={`${group.bundleId}:${entry.id}`} className="historyModRow">
+                  <td title={entry.message}>
+                    <div className="historyTreeCell child">
+                      <span className="treeBranch">└</span>
+                      <span>{entry.modName}</span>
+                    </div>
+                  </td>
+                  <td><span className={`badge ${entry.status}`}>{formatPatchStatusLabel(entry.status)}</span></td>
+                  <td>{entry.name}</td>
+                  <td>{formatDateTime(entry.updatedAt)}</td>
+                </tr>
+              ))
+            ])}
           </tbody>
         </table>
       </section>
@@ -1344,6 +1470,61 @@ function formatPatchPlanSummary(plans: PatchPlanEntry[]) {
   return `Generated patch plan: ${countReadyMods(plans)} ready mod(s), ${readyTargets} ready __data target(s), ${plans.length} plan item(s).`;
 }
 
+function getPatchBackendFit(plan: PatchPlanEntry, repair = false): PatchBackendFit {
+  if (repair) {
+    return {
+      modName: plan.modName,
+      bundleId: plan.bundleId ?? "unknown __data",
+      backend: "unitypy",
+      reason: "Repair mode forces the safe UnityPy backend regardless of the selected backend."
+    };
+  }
+
+  const textures = plan.targets.textures ?? [];
+  const astcTextures = textures.filter(isAstcTextureTarget);
+
+  if (astcTextures.length > 0) {
+    return {
+      modName: plan.modName,
+      bundleId: plan.bundleId ?? "unknown __data",
+      backend: "auto",
+      reason: `${astcTextures.length} ASTC Texture2D target(s) detected. Force ASTC Mode keeps the iOS texture format.`
+    };
+  }
+
+  if (textures.length > 0) {
+    return {
+      modName: plan.modName,
+      bundleId: plan.bundleId ?? "unknown __data",
+      backend: "unitypy",
+      reason: `${textures.length} Texture2D target(s) detected. UnityPy is the safer texture writer when ASTC is not required.`
+    };
+  }
+
+  return {
+    modName: plan.modName,
+    bundleId: plan.bundleId ?? "unknown __data",
+    backend: "uabea",
+    reason: "TextAsset-only patch. Original UABEA is the fastest suitable backend."
+  };
+}
+
+function isAstcTextureTarget(target: NonNullable<PatchPlanEntry["targets"]["textures"]>[number]) {
+  return target.textureFormatName?.toLowerCase().includes("astc") ?? false;
+}
+
+function countBackendFits(fits: PatchBackendFit[]) {
+  return fits.reduce<Record<string, number>>((counts, fit) => ({
+    ...counts,
+    [fit.backend]: (counts[fit.backend] ?? 0) + 1
+  }), {});
+}
+
+function formatBackendFitCounts(counts: Record<string, number>) {
+  const parts = Object.entries(counts).map(([backend, count]) => `${formatPatchBackend(backend as PatchBackend)} ${count}`);
+  return parts.length ? parts.join(", ") : "none";
+}
+
 async function loadSavedSettings(): Promise<Settings> {
   const defaults = await window.bd2.getDefaultPaths().catch(() => ({ modsDir: "mods", sharedDir: "", dotnetPath: "manager-data/tools/dotnet/dotnet" }));
   const fallback: Settings = {
@@ -1409,7 +1590,7 @@ function migrateStoredSettings(stored: Partial<Settings>): Partial<Settings> {
 }
 
 function normalizeSelectablePatchBackend(backend: PatchBackend): PatchBackend {
-  return backend === "uabea" || backend === "unitypy" || backend === "auto" ? backend : "auto";
+  return backend === "uabea" || backend === "unitypy" || backend === "auto" || backend === "auto-backend" ? backend : "auto";
 }
 
 function normalizeSelectableScanBackend(backend: SharedScanBackend): SharedScanBackend {
@@ -1486,6 +1667,37 @@ function groupPatchHistoryByModName(history: PatchHistory) {
   return groups;
 }
 
+function getPatchStatusBundleGroups(history: PatchHistory): PatchStatusBundleGroup[] {
+  const groups = new Map<string, PatchHistory["entries"]>();
+
+  for (const entry of history.entries) {
+    if (!entry.bundleId) {
+      continue;
+    }
+
+    groups.set(entry.bundleId, [...(groups.get(entry.bundleId) ?? []), entry]);
+  }
+
+  return [...groups.entries()]
+    .filter(([, entries]) => entries.some((entry) => entry.status === "patched"))
+    .map(([bundleId, entries]) => {
+      const latestEntries = getLatestHistoryEntriesById(entries).sort((a, b) =>
+        a.modName.localeCompare(b.modName) || b.updatedAt.localeCompare(a.updatedAt)
+      );
+      const newestEntry = [...latestEntries].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+
+      return {
+        bundleId,
+        bundlePath: newestEntry?.bundlePath ?? "",
+        status: getHistoryDisplayStatus(entries) ?? "ready",
+        updatedAt: newestEntry?.updatedAt ?? "",
+        patchedModCount: latestEntries.filter((entry) => entry.status === "patched").length,
+        entries: latestEntries
+      };
+    })
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.bundleId.localeCompare(b.bundleId));
+}
+
 function getActualPatchStates(modsIndex: ModsIndex, history: PatchHistory) {
   const historyByModName = groupPatchHistoryByModName(history);
   const states: Record<string, boolean> = {};
@@ -1519,11 +1731,29 @@ function getPatchStateChanges(modsIndex: ModsIndex, actualStates: Record<string,
     }));
 }
 
-function getPendingChangeRows(changes: PatchStateChange[], actualStates: Record<string, boolean>, plansByModName: Map<string, PatchPlanEntry>): PendingChangeRow[] {
-  const rows: PendingChangeRow[] = [...changes];
+function getPendingChangeRows(
+  changes: PatchStateChange[],
+  repairStates: Record<string, boolean>,
+  actualStates: Record<string, boolean>,
+  plansByModName: Map<string, PatchPlanEntry>
+): PendingChangeRow[] {
+  const repairModNames = new Set(Object.entries(repairStates).filter(([, enabled]) => enabled).map(([modName]) => modName));
+  const rows: PendingChangeRow[] = changes.map((change) =>
+    repairModNames.has(change.modName)
+      ? { ...change, enabled: true, repair: true }
+      : change
+  );
   const rowModNames = new Set(rows.map((change) => change.modName));
+
+  for (const modName of repairModNames) {
+    if (!rowModNames.has(modName) && plansByModName.get(modName)?.status === "ready") {
+      rows.push({ modName, enabled: true, repair: true });
+      rowModNames.add(modName);
+    }
+  }
+
   const addedTargetKeys = new Set(
-    changes
+    rows
       .filter((change) => change.enabled)
       .flatMap((change) => {
         const plan = plansByModName.get(change.modName);
@@ -1559,12 +1789,16 @@ function getPendingChangeTones(changes: PendingChangeRow[], plansByModName: Map<
   const removeChanges = changes.filter((change) => !change.enabled);
   const tones: Record<string, PendingChangeTone> = {};
 
+  for (const repairChange of changes.filter((change) => change.repair)) {
+    tones[repairChange.modName] = "repair";
+  }
+
   for (const addChange of addChanges) {
-    tones[addChange.modName] = "added";
+    tones[addChange.modName] = tones[addChange.modName] ?? "added";
   }
 
   for (const removeChange of removeChanges) {
-    tones[removeChange.modName] = "removed";
+    tones[removeChange.modName] = tones[removeChange.modName] ?? "removed";
   }
 
   for (const addChange of addChanges) {
@@ -1581,8 +1815,8 @@ function getPendingChangeTones(changes: PendingChangeRow[], plansByModName: Map<
       }
 
       if (getPlanAssetKeys(removePlan).some((key) => addKeys.has(key))) {
-        tones[addChange.modName] = "added";
-        tones[removeChange.modName] = "removed";
+        tones[addChange.modName] = tones[addChange.modName] ?? "added";
+        tones[removeChange.modName] = tones[removeChange.modName] ?? "removed";
       }
     }
   }
@@ -1622,6 +1856,10 @@ function formatPendingChangeToneClass(tone?: PendingChangeTone) {
 
   if (tone === "removed") {
     return "pendingPatchRemove";
+  }
+
+  if (tone === "repair") {
+    return "pendingPatchRepair";
   }
 
   return "";
@@ -2066,6 +2304,10 @@ function formatPatchAction(phase: PatchProgress["phase"]) {
 }
 
 function formatPatchBackend(backend: PatchBackend) {
+  if (backend === "auto-backend") {
+    return "Auto Backend";
+  }
+
   if (backend === "auto") {
     return "Force ASTC";
   }
