@@ -755,11 +755,12 @@ export function App() {
         <SelectField
           label="Patch Backend"
           helpTitle="Patch Backend"
-          helpText="Auto Backend checks each staged mod before patching and chooses the safest backend for that target. Force ASTC Mode uses UABEA with the ASTC helper for every patch run. Original UABEA keeps the classic AssetsTools path. UnityPy is available for troubleshooting."
+          helpText="Auto Backend checks each staged mod before patching and chooses the safest backend for that target. UABEA Safe uses the C# AssetsTools path with conservative texture rules and post-write verification. Force ASTC Mode uses UABEA with the ASTC helper for every patch run. Original UABEA keeps the classic AssetsTools path. UnityPy is available for troubleshooting."
           value={settings.patchBackend}
           onChange={(value) => updateSetting("patchBackend", value as PatchBackend)}
           options={[
             { value: "auto-backend", label: "Auto Backend" },
+            { value: "uabea-safe", label: "UABEA Safe" },
             { value: "auto", label: "Force ASTC Mode" },
             { value: "uabea", label: "Original UABEA" },
             { value: "unitypy", label: "UnityPy" }
@@ -1519,8 +1520,8 @@ function getPatchBackendFit(plan: PatchPlanEntry, repair = false): PatchBackendF
     return {
       modName: plan.modName,
       bundleId: plan.bundleId ?? "unknown __data",
-      backend: "auto",
-      reason: `${astcTextures.length} ASTC Texture2D target(s) detected. Force ASTC Mode keeps the iOS texture format.`
+      backend: "uabea-safe",
+      reason: `${astcTextures.length} ASTC Texture2D target(s) detected. UABEA Safe keeps the iOS texture format and verifies the written bundle.`
     };
   }
 
@@ -1528,8 +1529,8 @@ function getPatchBackendFit(plan: PatchPlanEntry, repair = false): PatchBackendF
     return {
       modName: plan.modName,
       bundleId: plan.bundleId ?? "unknown __data",
-      backend: "unitypy",
-      reason: `${textures.length} Texture2D target(s) detected. UnityPy is the safer texture writer when ASTC is not required.`
+      backend: "uabea-safe",
+      reason: `${textures.length} Texture2D target(s) detected. UABEA Safe uses conservative C# texture patching before falling back to manual troubleshooting.`
     };
   }
 
@@ -1622,7 +1623,7 @@ function migrateStoredSettings(stored: Partial<Settings>): Partial<Settings> {
 }
 
 function normalizeSelectablePatchBackend(backend: PatchBackend): PatchBackend {
-  return backend === "uabea" || backend === "unitypy" || backend === "auto" || backend === "auto-backend" ? backend : "auto";
+  return backend === "uabea" || backend === "uabea-safe" || backend === "unitypy" || backend === "auto" || backend === "auto-backend" ? backend : "auto";
 }
 
 function normalizeSelectableScanBackend(backend: SharedScanBackend): SharedScanBackend {
@@ -2354,6 +2355,10 @@ function formatPatchBackend(backend: PatchBackend) {
 
   if (backend === "uabea-astc") {
     return "UABEA ASTC";
+  }
+
+  if (backend === "uabea-safe") {
+    return "UABEA Safe";
   }
 
   return "UABEA";

@@ -218,7 +218,7 @@ function groupPreparedPatchJobs(preparedJobs: PreparedPatchJob[], selectedBacken
     groups.set(item.backend, [...(groups.get(item.backend) ?? []), item]);
   }
 
-  const preferredOrder: PatchBackend[] = ["uabea", "auto", "unitypy"];
+  const preferredOrder: PatchBackend[] = ["uabea", "uabea-safe", "auto", "unitypy"];
   return [...groups.entries()]
     .sort(([a], [b]) => preferredOrder.indexOf(a) - preferredOrder.indexOf(b))
     .map(([backend, items]) => ({ backend, items }));
@@ -239,11 +239,11 @@ function resolvePatchBackendForPlan(selectedBackend: PatchBackend, plan: PatchPl
 
   const textures = plan.targets.textures ?? [];
   if (textures.some((target) => target.textureFormatName?.toLowerCase().includes("astc"))) {
-    return "auto";
+    return "uabea-safe";
   }
 
   if (textures.length > 0) {
-    return "unitypy";
+    return "uabea-safe";
   }
 
   return "uabea";
@@ -1348,7 +1348,7 @@ function isPatchTimingEntry(value: unknown): value is NonNullable<PatchProgress[
 }
 
 function normalizePatchBackend(backend: ApplyPatchOptions["patchBackend"]): PatchBackend {
-  return backend === "rust-native" || backend === "unitypy" || backend === "auto" || backend === "auto-backend" || backend === "uabea-astc" ? backend : "uabea";
+  return backend === "rust-native" || backend === "unitypy" || backend === "auto" || backend === "auto-backend" || backend === "uabea-astc" || backend === "uabea-safe" ? backend : "uabea";
 }
 
 function formatPatchBackend(backend: PatchBackend) {
@@ -1370,6 +1370,10 @@ function formatPatchBackend(backend: PatchBackend) {
 
   if (backend === "uabea-astc") {
     return "UABEA / AssetsTools.NET ASTC";
+  }
+
+  if (backend === "uabea-safe") {
+    return "UABEA Safe";
   }
 
   return "UABEA / AssetsTools.NET";

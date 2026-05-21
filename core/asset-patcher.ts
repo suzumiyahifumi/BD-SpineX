@@ -62,7 +62,7 @@ export async function patchBundleBatch(args: PatchBundleBatchArgs): Promise<unkn
     }
   }
 
-  return withResolvedBackend(await patchBundleBatchWithUabea(args, patchBackend === "uabea-astc"), patchBackend);
+  return withResolvedBackend(await patchBundleBatchWithUabea(args, patchBackend === "uabea-astc" || patchBackend === "uabea-safe", patchBackend === "uabea-safe"), patchBackend);
 }
 
 async function patchBundleBatchWithUnityPy(args: PatchBundleBatchArgs): Promise<unknown> {
@@ -91,7 +91,7 @@ async function patchBundleBatchWithUnityPy(args: PatchBundleBatchArgs): Promise<
   return JSON.parse(stdout);
 }
 
-async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs, useAstcEncoder = false): Promise<unknown> {
+async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs, useAstcEncoder = false, safeMode = false): Promise<unknown> {
   const command = uabeaCommand();
   const projectPath = args.uabeaPatcherProjectPath?.trim() || defaultUabeaProjectPath();
   const directUabea = usesDirectUabeaExecutable();
@@ -103,10 +103,13 @@ async function patchBundleBatchWithUabea(args: PatchBundleBatchArgs, useAstcEnco
   ];
   const astcEncoderPath = useAstcEncoder ? astcEncoderExecutablePath() : undefined;
   if (useAstcEncoder && !astcEncoderPath) {
-    throw new Error("ASTC patch mode requires the bundled astc_encode backend. Run npm run build:backends before using Force ASTC Mode.");
+    throw new Error("ASTC patch mode requires the bundled astc_encode backend. Run npm run build:backends before using Force ASTC Mode or UABEA Safe.");
   }
   if (astcEncoderPath) {
     backendArgs.push("--astc-encoder", astcEncoderPath);
+  }
+  if (safeMode) {
+    backendArgs.push("--safe", "true");
   }
   const commandArgs = uabeaBaseArgs(directUabea
     ? backendArgs
@@ -141,7 +144,7 @@ function defaultDotnetPath() {
 }
 
 function resolvePatchBackend(args: PatchBundleBatchArgs): ExecutablePatchBackend {
-  if (args.patchBackend === "uabea" || args.patchBackend === "unitypy" || args.patchBackend === "rust-native" || args.patchBackend === "uabea-astc") {
+  if (args.patchBackend === "uabea" || args.patchBackend === "unitypy" || args.patchBackend === "rust-native" || args.patchBackend === "uabea-astc" || args.patchBackend === "uabea-safe") {
     return args.patchBackend;
   }
 
