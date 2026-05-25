@@ -15,6 +15,7 @@ type PreparedPatchFiles = {
   skels: string[];
   pngs: string[];
   insertPngs?: string[];
+  removePngs?: string[];
 };
 
 type PatchBackendResult = {
@@ -226,15 +227,15 @@ function groupPreparedPatchJobs(preparedJobs: PreparedPatchJob[], selectedBacken
 
 function resolvePatchBackendForPlan(selectedBackend: PatchBackend, plan: PatchPlanEntry, job: PatchBundleJob, repairModNames: Set<string>): PatchBackend {
   if (repairModNames.has(plan.modName)) {
-    return "unitypy";
+    return (job.insertPngs?.length ?? 0) > 0 ? "uabea" : "unitypy";
+  }
+
+  if ((job.insertPngs?.length ?? 0) > 0) {
+    return selectedBackend === "unitypy" ? "uabea" : selectedBackend;
   }
 
   if (selectedBackend !== "auto-backend") {
     return selectedBackend;
-  }
-
-  if ((job.insertPngs?.length ?? 0) > 0) {
-    return "auto";
   }
 
   const textures = plan.targets.textures ?? [];
@@ -305,8 +306,9 @@ export async function applyPatchStateChanges(
   const directRestoreModNames = toRestore.filter((modName) => !replacementRestoreModNames.has(modName));
 
   if (directRestoreModNames.length > 0) {
-    const result = await restoreModPatches(
+  const result = await restoreModPatches(
       plansForChangedMods.filter((plan) => directRestoreModNames.includes(plan.modName)),
+      modsIndex,
       directRestoreModNames,
       options,
       onProgress
@@ -388,12 +390,14 @@ export async function dryRunPatchStateChanges(
 
 export async function restoreModPatches(
   plans: PatchPlanEntry[],
+  modsIndex: ModsIndex,
   modNames: string[],
   options: Pick<ApplyPatchOptions, "patchBackend" | "pythonPath" | "dotnetPath" | "uabeaPatcherProjectPath" | "unityVersion" | "decryptKey">,
   onProgress?: (progress: PatchProgress) => void
 ): Promise<ApplyPatchResult> {
   const history = await readPatchHistory();
   const targetMods = new Set(modNames);
+  const modByName = new Map(modsIndex.mods.map((mod) => [mod.modName, mod]));
   const restorablePlans = plans.filter((plan) => targetMods.has(plan.modName) && plan.bundleId && plan.bundlePath);
   const plansByBundle = groupBy(restorablePlans, (plan) => plan.bundleId ?? "");
   const entries: PatchRunEntry[] = [];
@@ -425,14 +429,16 @@ export async function restoreModPatches(
 
     for (const plan of bundlePlans) {
       const entryBase = createPatchRunEntry(plan, "ready");
+      const mod = modByName.get(plan.modName);
 
       try {
-        const restoreFiles = await getRestorePatchFiles(plan);
+        const restoreFiles = await getRestorePatchFiles(plan, mod);
         jobs.push({
           modName: plan.modName,
           atlases: restoreFiles.atlases,
           skels: restoreFiles.skels,
           pngs: restoreFiles.pngs,
+          removePngs: restoreFiles.removePngs,
           textureTargets: plan.targets.textures
         });
         bundleEntries.push(entryBase);
@@ -451,12 +457,15 @@ export async function restoreModPatches(
       const outputPath = getPatchTempPath(firstPlan.bundleId, 1);
       try {
         emitPatchProgress(onProgress, "restoring", progressCurrent, progressTotal, `Restoring with ${formatPatchBackend(patchBackend)} for ${bundlePlans.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, patchBackend);
+        const restoreBackend = jobs.some((job) => (job.removePngs?.length ?? 0) > 0) && patchBackend === "unitypy"
+          ? "uabea"
+          : patchBackend;
         const result = await patchBundleBatch({
                               input: workPath || getPatchWorkPath(firstPlan.bundleId),
           output: outputPath,
           jobs,
           manifestPath: await writePatchJobManifest(firstPlan.bundleId, jobs),
-          patchBackend,
+          patchBackend: restoreBackend,
           pythonPath: options.pythonPath,
           dotnetPath: options.dotnetPath,
           uabeaPatcherProjectPath: options.uabeaPatcherProjectPath,
@@ -464,7 +473,7 @@ export async function restoreModPatches(
           decryptKey: options.decryptKey
         });
         const parsed = result as PatchBackendResult;
-        const resolvedBackend = parsed.backend ?? patchBackend;
+        const resolvedBackend = parsed.backend ?? restoreBackend;
         emitPatchTimings(onProgress, resolvedBackend, parsed.timings, progressCurrent, progressTotal, "restoring", firstPlan);
         if (!parsed.ok) {
           bundleOk = false;
@@ -1053,7 +1062,7 @@ function readAtlasTextSync(filePath: string) {
   return fsSync.readFileSync(filePath, "utf8");
 }
 
-async function getRestorePatchFiles(plan: PatchPlanEntry) {
+async function getRestorePatchFiles(plan: PatchPlanEntry, mod?: ModEntry) {
   if (!plan.bundleId) {
     throw new Error("Patch plan has no bundle id.");
   }
@@ -1062,13 +1071,34 @@ async function getRestorePatchFiles(plan: PatchPlanEntry) {
   const atlases = (plan.targets.atlases ?? []).map((target) => path.join(backupDir, target.assetName));
   const skels = (plan.targets.skels ?? []).map((target) => path.join(backupDir, target.assetName));
   const pngs = (plan.targets.textures ?? []).map((target) => path.join(backupDir, `${target.assetName}.png`));
+  const removePngs = mod ? getRestoreRemovePngs(mod, atlases) : [];
   const files = [...atlases, ...skels, ...pngs];
 
   for (const file of files) {
     await fs.access(file);
   }
 
-  return { atlases, skels, pngs };
+  return { atlases, skels, pngs, removePngs };
+}
+
+function getRestoreRemovePngs(mod: ModEntry, restoreAtlases: string[]) {
+  const restorePages = new Set(getAtlasPageTextureNames(restoreAtlases));
+  if (!restorePages.size) {
+    return [];
+  }
+
+  const modAtlasNames = new Set(mod.files.atlas.map((file) => path.basename(file.path).toLowerCase()));
+  const modAtlases = restoreAtlases
+    .filter((atlas) => modAtlasNames.has(path.basename(atlas).toLowerCase()))
+    .map((atlas) => mod.files.atlas.find((file) => path.basename(file.path).toLowerCase() === path.basename(atlas).toLowerCase())?.path)
+    .filter((file): file is string => Boolean(file));
+  const modPages = getAtlasPageTextureNames(modAtlases);
+  const pngsByBaseName = new Map(mod.files.png.map((file) => [file.baseName.toLowerCase(), file.path]));
+
+  return modPages
+    .filter((name) => !restorePages.has(name))
+    .map((name) => pngsByBaseName.get(name))
+    .filter((file): file is string => Boolean(file));
 }
 
 async function writePatchJobManifest(bundleId: string, jobs: PatchBundleJob[]) {

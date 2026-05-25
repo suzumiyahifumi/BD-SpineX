@@ -126,13 +126,14 @@ export function App() {
   const readyTargetCount = useMemo(() => plans.filter((plan) => plan.status === "ready").length, [plans]);
   const readyModCount = useMemo(() => countReadyMods(plans), [plans]);
   const plansByModName = useMemo(() => new Map(plans.map((plan) => [plan.modName, plan])), [plans]);
+  const allPlansByModName = useMemo(() => groupPatchPlansByModName(plans), [plans]);
   const patchHistoryByModName = useMemo(() => groupPatchHistoryByModName(patchHistory), [patchHistory]);
   const patchStatusGroups = useMemo(() => getPatchStatusBundleGroups(patchHistory), [patchHistory]);
   const actualPatchStates = useMemo(() => getActualPatchStates(modsIndex, patchHistory), [modsIndex, patchHistory]);
   const patchStateChanges = useMemo(() => getPatchStateChanges(modsIndex, actualPatchStates, desiredPatchStates), [modsIndex, actualPatchStates, desiredPatchStates]);
-  const pendingChangeRows = useMemo(() => getPendingChangeRows(patchStateChanges, repairPatchStates, actualPatchStates, plansByModName), [patchStateChanges, repairPatchStates, actualPatchStates, plansByModName]);
+  const pendingChangeRows = useMemo(() => getPendingChangeRows(patchStateChanges, repairPatchStates, actualPatchStates, allPlansByModName), [patchStateChanges, repairPatchStates, actualPatchStates, allPlansByModName]);
   const effectivePatchStateChanges = useMemo(() => pendingChangeRows.map(({ modName, enabled, repair }) => ({ modName, enabled, repair })), [pendingChangeRows]);
-  const pendingChangeTones = useMemo(() => getPendingChangeTones(pendingChangeRows, plansByModName), [pendingChangeRows, plansByModName]);
+  const pendingChangeTones = useMemo(() => getPendingChangeTones(pendingChangeRows, allPlansByModName), [pendingChangeRows, allPlansByModName]);
   const hasRepairPatchChanges = useMemo(() => Object.values(repairPatchStates).some(Boolean), [repairPatchStates]);
   const activeModNames = useMemo(() => Object.entries(actualPatchStates).filter(([, enabled]) => enabled).map(([modName]) => modName), [actualPatchStates]);
   const restorablePowerModNames = useMemo(() => modPower.restoreModNames.filter((modName) => modsIndex.mods.some((mod) => mod.modName === modName)), [modPower.restoreModNames, modsIndex.mods]);
@@ -977,7 +978,7 @@ export function App() {
                 const pendingTone = pendingChangeTones[mod.modName];
                 const repairEnabled = Boolean(repairPatchStates[mod.modName]);
                 const displayStatus = getModDisplayStatus(mod.status, plansByModName.get(mod.modName), patchHistoryByModName.get(mod.modName));
-                const repairAvailable = (actualPatchStates[mod.modName] || displayStatus === "changed") && plansByModName.get(mod.modName)?.status === "ready";
+                const repairAvailable = (actualPatchStates[mod.modName] || displayStatus === "changed" || displayStatus === "failed") && hasReadyPatchPlan(allPlansByModName.get(mod.modName));
                 const repairDisabled = modsLocked || !repairAvailable;
                 return (
                   <tr key={mod.dir} className={pendingTone ? `pendingPatchChange ${formatPendingChangeToneClass(pendingTone)}` : ""}>
@@ -1700,6 +1701,16 @@ function groupPatchHistoryByModName(history: PatchHistory) {
   return groups;
 }
 
+function groupPatchPlansByModName(plans: PatchPlanEntry[]) {
+  const groups = new Map<string, PatchPlanEntry[]>();
+
+  for (const plan of plans) {
+    groups.set(plan.modName, [...(groups.get(plan.modName) ?? []), plan]);
+  }
+
+  return groups;
+}
+
 function getPatchStatusBundleGroups(history: PatchHistory): PatchStatusBundleGroup[] {
   const groups = new Map<string, PatchHistory["entries"]>();
 
@@ -1768,7 +1779,7 @@ function getPendingChangeRows(
   changes: PatchStateChange[],
   repairStates: Record<string, boolean>,
   actualStates: Record<string, boolean>,
-  plansByModName: Map<string, PatchPlanEntry>
+  plansByModName: Map<string, PatchPlanEntry[]>
 ): PendingChangeRow[] {
   const repairModNames = new Set(Object.entries(repairStates).filter(([, enabled]) => enabled).map(([modName]) => modName));
   const rows: PendingChangeRow[] = changes.map((change) =>
@@ -1779,7 +1790,7 @@ function getPendingChangeRows(
   const rowModNames = new Set(rows.map((change) => change.modName));
 
   for (const modName of repairModNames) {
-    if (!rowModNames.has(modName) && plansByModName.get(modName)?.status === "ready") {
+    if (!rowModNames.has(modName) && hasReadyPatchPlan(plansByModName.get(modName))) {
       rows.push({ modName, enabled: true, repair: true });
       rowModNames.add(modName);
     }
@@ -1789,8 +1800,7 @@ function getPendingChangeRows(
     rows
       .filter((change) => change.enabled)
       .flatMap((change) => {
-        const plan = plansByModName.get(change.modName);
-        return plan ? getPlanAssetKeys(plan) : [];
+        return getPlanAssetKeysForMod(plansByModName, change.modName);
       })
   );
 
@@ -1804,11 +1814,11 @@ function getPendingChangeRows(
     }
 
     const plan = plansByModName.get(modName);
-    if (!plan) {
+    if (!plan?.length) {
       continue;
     }
 
-    if (getPlanAssetKeys(plan).some((key) => addedTargetKeys.has(key))) {
+    if (getPlanAssetKeysForMod(plansByModName, modName).some((key) => addedTargetKeys.has(key))) {
       rows.push({ modName, enabled: false, implicit: true });
       rowModNames.add(modName);
     }
@@ -1817,7 +1827,7 @@ function getPendingChangeRows(
   return rows;
 }
 
-function getPendingChangeTones(changes: PendingChangeRow[], plansByModName: Map<string, PatchPlanEntry>): Record<string, PendingChangeTone> {
+function getPendingChangeTones(changes: PendingChangeRow[], plansByModName: Map<string, PatchPlanEntry[]>): Record<string, PendingChangeTone> {
   const addChanges = changes.filter((change) => change.enabled);
   const removeChanges = changes.filter((change) => !change.enabled);
   const tones: Record<string, PendingChangeTone> = {};
@@ -1835,19 +1845,18 @@ function getPendingChangeTones(changes: PendingChangeRow[], plansByModName: Map<
   }
 
   for (const addChange of addChanges) {
-    const addPlan = plansByModName.get(addChange.modName);
-    if (!addPlan) {
+    const addKeys = new Set(getPlanAssetKeysForMod(plansByModName, addChange.modName));
+    if (!addKeys.size) {
       continue;
     }
 
-    const addKeys = new Set(getPlanAssetKeys(addPlan));
     for (const removeChange of removeChanges) {
-      const removePlan = plansByModName.get(removeChange.modName);
-      if (!removePlan) {
+      const removeKeys = getPlanAssetKeysForMod(plansByModName, removeChange.modName);
+      if (!removeKeys.length) {
         continue;
       }
 
-      if (getPlanAssetKeys(removePlan).some((key) => addKeys.has(key))) {
+      if (removeKeys.some((key) => addKeys.has(key))) {
         tones[addChange.modName] = tones[addChange.modName] ?? "added";
         tones[removeChange.modName] = tones[removeChange.modName] ?? "removed";
       }
@@ -1855,6 +1864,14 @@ function getPendingChangeTones(changes: PendingChangeRow[], plansByModName: Map<
   }
 
   return tones;
+}
+
+function hasReadyPatchPlan(plans?: PatchPlanEntry[]) {
+  return plans?.some((plan) => plan.status === "ready") ?? false;
+}
+
+function getPlanAssetKeysForMod(plansByModName: Map<string, PatchPlanEntry[]>, modName: string) {
+  return [...new Set((plansByModName.get(modName) ?? []).flatMap(getPlanAssetKeys))];
 }
 
 function getPlanAssetKeys(plan: PatchPlanEntry) {
