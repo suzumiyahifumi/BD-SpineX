@@ -12,6 +12,7 @@ export type PatchBundleArgs = {
   skels: string[];
   pngs: string[];
   insertPngs?: string[];
+  removePngs?: string[];
   unityVersion?: string;
   decryptKey?: string;
   assetBackupDir?: string;
@@ -23,6 +24,7 @@ export type PatchBundleJob = {
   skels: string[];
   pngs: string[];
   insertPngs?: string[];
+  removePngs?: string[];
   assetBackupDir?: string;
   textureTargets?: PatchTarget[];
 };
@@ -68,6 +70,9 @@ export async function patchBundleBatch(args: PatchBundleBatchArgs): Promise<unkn
 async function patchBundleBatchWithUnityPy(args: PatchBundleBatchArgs): Promise<unknown> {
   if (args.jobs.some((job) => (job.insertPngs?.length ?? 0) > 0)) {
     throw new Error("UnityPy backend does not support inserting new Texture2D assets. Use UABEA for mods that need extra atlas pages.");
+  }
+  if (args.jobs.some((job) => (job.removePngs?.length ?? 0) > 0)) {
+    throw new Error("UnityPy backend does not support removing inserted Texture2D assets. Use UABEA for restore cleanup.");
   }
 
   const executablePath = unityPyPatchExecutablePath();

@@ -111,6 +111,7 @@ static class UabeaPatchPrototype
         PatchTextures(manager, assetsFileInstance, assetsFile, replacements.Textures, changed, args.AstcEncoderPath, args.SafeMode, originalTextureFormats);
         var insertedTextures = InsertTextures(manager, assetsFileInstance, assetsFile, replacements.InsertTextures, changed);
         InsertMaterialsForTextures(manager, assetsFileInstance, assetsFile, insertedTextures, changed);
+        RemoveInsertedTextures(manager, assetsFileInstance, assetsFile, replacements.RemoveTextures, changed);
         timings.Add(TimingEntry.From("patch_assets", patchTimer));
 
         var missing = replacements.FindMissing(changed);
@@ -504,6 +505,63 @@ static class UabeaPatchPrototype
         materialsArray.Children.Add(materialPointer);
     }
 
+    private static void RemoveInsertedTextures(
+        AssetsManager manager,
+        AssetsFileInstance assetsFileInstance,
+        AssetsFile assetsFile,
+        Dictionary<string, Replacement> replacements,
+        List<ChangedAsset> changed)
+    {
+        if (replacements.Count == 0)
+        {
+            return;
+        }
+
+        var assetBundleInfo = assetsFile.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault();
+        var assetBundleField = assetBundleInfo is null ? null : manager.GetBaseField(assetsFileInstance, assetBundleInfo);
+
+        foreach (var (assetName, replacement) in replacements)
+        {
+            var rootName = SpineAtlasRootName(assetName);
+            var materialName = $"{rootName}_{assetName}";
+            var textureInfo = FindNamedAsset(manager, assetsFileInstance, assetsFile, AssetClassID.Texture2D, assetName);
+            var materialInfo = FindNamedAsset(manager, assetsFileInstance, assetsFile, AssetClassID.Material, materialName);
+            var atlasInfo = FindNamedAsset(manager, assetsFileInstance, assetsFile, AssetClassID.MonoBehaviour, $"{rootName}_Atlas");
+
+            if (atlasInfo is not null && materialInfo is not null)
+            {
+                var atlasField = manager.GetBaseField(assetsFileInstance, atlasInfo);
+                RemovePPtrEntries(atlasField["materials"]["Array"], materialInfo.PathId);
+                atlasInfo.SetNewData(atlasField);
+            }
+
+            if (assetBundleField is not null)
+            {
+                if (textureInfo is not null)
+                {
+                    RemoveAssetBundleEntry(assetBundleField, rootName, $"{assetName}.png", textureInfo.PathId);
+                }
+                if (materialInfo is not null)
+                {
+                    RemoveAssetBundleEntry(assetBundleField, rootName, $"{materialName}.mat", materialInfo.PathId);
+                }
+                assetBundleInfo!.SetNewData(assetBundleField);
+            }
+
+            if (materialInfo is not null)
+            {
+                assetsFile.Metadata.RemoveAssetInfo(materialInfo);
+                changed.Add(new ChangedAsset(replacement.ModName, "Material", materialName, "remove_material", replacement.Path, null));
+            }
+
+            if (textureInfo is not null)
+            {
+                assetsFile.Metadata.RemoveAssetInfo(textureInfo);
+                changed.Add(new ChangedAsset(replacement.ModName, "Texture2D", assetName, "remove_texture", replacement.Path, null));
+            }
+        }
+    }
+
     private static AssetFileInfo? FindNamedAsset(
         AssetsManager manager,
         AssetsFileInstance assetsFileInstance,
@@ -545,6 +603,12 @@ static class UabeaPatchPrototype
         AddContainerEntry(assetBundleField, rootName, fileName, pathId);
     }
 
+    private static void RemoveAssetBundleEntry(AssetTypeValueField assetBundleField, string rootName, string fileName, long pathId)
+    {
+        RemovePreloadEntry(assetBundleField, pathId);
+        RemoveContainerEntry(assetBundleField, rootName, fileName, pathId);
+    }
+
     private static void AddPreloadEntry(AssetTypeValueField assetBundleField, long pathId)
     {
         var preloadArray = assetBundleField["m_PreloadTable"]["Array"];
@@ -561,6 +625,11 @@ static class UabeaPatchPrototype
 
         SetPPtr(template, 0, pathId);
         preloadArray.Children.Add(template);
+    }
+
+    private static void RemovePreloadEntry(AssetTypeValueField assetBundleField, long pathId)
+    {
+        RemovePPtrEntries(assetBundleField["m_PreloadTable"]["Array"], pathId);
     }
 
     private static void AddContainerEntry(AssetTypeValueField assetBundleField, string rootName, string fileName, long pathId)
@@ -588,6 +657,30 @@ static class UabeaPatchPrototype
         template["first"].AsString = path;
         SetPPtr(template["second"], 0, pathId);
         containerArray.Children.Add(template);
+    }
+
+    private static void RemoveContainerEntry(AssetTypeValueField assetBundleField, string rootName, string fileName, long pathId)
+    {
+        var containerArray = assetBundleField["m_Container"]["Array"];
+        if (containerArray.IsDummy)
+        {
+            return;
+        }
+
+        var path = $"Assets/AddressableResources/BundleCommon/SkeletonData/{SpineFamilyName(rootName)}/{fileName}";
+        containerArray.Children.RemoveAll(item =>
+            item["first"].AsString.Equals(path, StringComparison.OrdinalIgnoreCase) ||
+            GetPPtrPathId(item["second"]) == pathId);
+    }
+
+    private static void RemovePPtrEntries(AssetTypeValueField arrayField, long pathId)
+    {
+        if (arrayField.IsDummy)
+        {
+            return;
+        }
+
+        arrayField.Children.RemoveAll(item => GetPPtrPathId(item) == pathId);
     }
 
     private static string SpineFamilyName(string rootName)
@@ -1113,6 +1206,7 @@ sealed record PatchJob(
     List<string>? Skels,
     List<string>? Pngs,
     List<string>? InsertPngs,
+    List<string>? RemovePngs,
     string? AssetBackupDir);
 
 sealed record ChangedAsset(
@@ -1199,6 +1293,7 @@ sealed class ReplacementIndex
     public Dictionary<string, Replacement> Text { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, Replacement> Textures { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, Replacement> InsertTextures { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, Replacement> RemoveTextures { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static ReplacementIndex FromJobs(IEnumerable<PatchJob> jobs)
     {
@@ -1223,6 +1318,11 @@ sealed class ReplacementIndex
             foreach (var png in job.InsertPngs ?? [])
             {
                 index.Add(index.InsertTextures, Path.GetFileNameWithoutExtension(png), new Replacement(job.ModName, png, "insert_texture", job.AssetBackupDir));
+            }
+
+            foreach (var png in job.RemovePngs ?? [])
+            {
+                index.Add(index.RemoveTextures, Path.GetFileNameWithoutExtension(png), new Replacement(job.ModName, png, "remove_texture", job.AssetBackupDir));
             }
         }
 

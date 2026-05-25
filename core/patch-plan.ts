@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import type {
   AssetType,
   BundleAsset,
@@ -27,7 +29,7 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
 
       const requiredTargets = getRequiredTargets(mod);
       const candidateBundles = findCandidateBundles(sharedIndex, bundlesById, mod.name, requiredTargets);
-      const matches = candidateBundles
+      const matches = normalizeVariableAtlasPageTextureTargets(mod, candidateBundles
         .map((bundle) => {
           const targets = findTargets(bundle, mod.name, requiredTargets);
           const foundCount = countTargets(targets);
@@ -39,6 +41,7 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
           };
         })
         .filter((match) => match.foundCount > 0)
+        .sort((a, b) => a.missingTargets.length - b.missingTargets.length), requiredTargets)
         .sort((a, b) => a.missingTargets.length - b.missingTargets.length);
 
       if (matches.length === 0) {
@@ -62,6 +65,25 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
         }];
       }
 
+      const insertableMatchesWithComplete = matches.filter((match) =>
+        match.missingTargets.length > 0 &&
+        areInsertableAtlasTextureTargets(mod, match.missingTargets)
+      );
+      if (completeMatches.length > 0 && insertableMatchesWithComplete.length > 0) {
+        return [...completeMatches, ...insertableMatchesWithComplete]
+          .sort((a, b) => a.bundle.bundleId.localeCompare(b.bundle.bundleId))
+          .map((match) => ({
+            modName: mod.modName,
+            name: mod.name,
+            bundleId: match.bundle.bundleId,
+            bundlePath: match.bundle.dataPath,
+            bundleSha256: match.bundle.sha256,
+            status: "ready",
+            targets: match.targets,
+            missingTargets: []
+          }));
+      }
+
       if (completeMatches.length > 0) {
         return completeMatches.map((match) => ({
           modName: mod.modName,
@@ -78,6 +100,33 @@ export function createPatchPlan(sharedIndex: SharedIndex, modsIndex: ModsIndex):
       const splitMatches = findSplitMatches(getRequiredTextTargets(requiredTargets), matches);
       if (splitMatches) {
         return splitMatches.map((match) => ({
+          modName: mod.modName,
+          name: mod.name,
+          bundleId: match.bundle.bundleId,
+          bundlePath: match.bundle.dataPath,
+          bundleSha256: match.bundle.sha256,
+          status: "ready",
+          targets: match.targets,
+          missingTargets: []
+        }));
+      }
+
+      const bestMissingCount = matches[0].missingTargets.length;
+      const insertableMatches = matches.filter((match) =>
+        match.missingTargets.length === bestMissingCount &&
+        areInsertableAtlasTextureTargets(mod, match.missingTargets)
+      );
+      const insertableMatchSignatures = new Set(insertableMatches.map((match) => targetSignature(match.targets)));
+      if (insertableMatchSignatures.size > 1) {
+        return [{
+          modName: mod.modName,
+          name: mod.name,
+          status: "conflict",
+          targets: {}
+        }];
+      }
+      if (insertableMatches.length > 0) {
+        return insertableMatches.map((match) => ({
           modName: mod.modName,
           name: mod.name,
           bundleId: match.bundle.bundleId,
@@ -121,6 +170,57 @@ type CandidateMatch = {
   missingTargets: PatchMissingTarget[];
 };
 
+function normalizeVariableAtlasPageTextureTargets(
+  mod: ModEntry,
+  matches: CandidateMatch[],
+  requiredTargets: RequiredTarget[]
+): CandidateMatch[] {
+  const atlasPageNames = getModAtlasPageTextureNames(mod);
+  if (matches.length < 2 || atlasPageNames.size === 0) {
+    return matches;
+  }
+
+  const texturePresence = new Map<string, number>();
+  for (const match of matches) {
+    const names = new Set((match.targets.textures ?? [])
+      .map((target) => target.assetName.toLowerCase())
+      .filter((name) => atlasPageNames.has(name)));
+    for (const name of names) {
+      texturePresence.set(name, (texturePresence.get(name) ?? 0) + 1);
+    }
+  }
+
+  const variablePageNames = new Set([...texturePresence]
+    .filter(([, count]) => count > 0 && count < matches.length)
+    .map(([name]) => name));
+  if (variablePageNames.size === 0) {
+    return matches;
+  }
+
+  return matches.map((match) => {
+    const targets = removeTextureTargets(match.targets, variablePageNames);
+    return {
+      ...match,
+      targets,
+      foundCount: countTargets(targets),
+      missingTargets: findMissingTargets(requiredTargets, targets)
+    };
+  });
+}
+
+function removeTextureTargets(targets: PatchPlanEntry["targets"], textureNames: Set<string>): PatchPlanEntry["targets"] {
+  const textures = (targets.textures ?? []).filter((target) => !textureNames.has(target.assetName.toLowerCase()));
+  const texture = targets.texture && !textureNames.has(targets.texture.assetName.toLowerCase())
+    ? targets.texture
+    : textures[0];
+
+  return {
+    ...targets,
+    texture,
+    textures
+  };
+}
+
 function findCandidateBundles(
   sharedIndex: SharedIndex,
   bundlesById: Map<string, SharedBundle>,
@@ -160,6 +260,10 @@ function findCandidateBundles(
 }
 
 function getRequiredTargets(mod: ModEntry): RequiredTarget[] {
+  const atlasTextureNames = getModAtlasPageTextureNames(mod);
+  const pngFiles = atlasTextureNames.size > 0
+    ? mod.files.png.filter((file) => atlasTextureNames.has(file.baseName.toLowerCase()))
+    : mod.files.png;
   const targets = [
     ...mod.files.atlas.map((file) => ({
       assetName: file.file,
@@ -176,7 +280,7 @@ function getRequiredTargets(mod: ModEntry): RequiredTarget[] {
       type: "TextAsset" as const,
       sourceFile: file.file
     })),
-    ...mod.files.png.map((file) => ({
+    ...pngFiles.map((file) => ({
       assetName: file.baseName,
       type: "Texture2D" as const,
       sourceFile: file.file
@@ -184,6 +288,48 @@ function getRequiredTargets(mod: ModEntry): RequiredTarget[] {
   ];
 
   return dedupeRequiredTargets(targets);
+}
+
+function areInsertableAtlasTextureTargets(mod: ModEntry, missingTargets: PatchMissingTarget[]) {
+  if (missingTargets.length === 0 || missingTargets.some((target) => target.type !== "Texture2D")) {
+    return false;
+  }
+
+  const atlasTextureNames = getModAtlasPageTextureNames(mod);
+  if (atlasTextureNames.size === 0) {
+    return false;
+  }
+
+  const pngNames = new Set(mod.files.png.map((file) => file.baseName.toLowerCase()));
+  return missingTargets.every((target) => {
+    const name = target.assetName.toLowerCase();
+    return atlasTextureNames.has(name) && pngNames.has(name);
+  });
+}
+
+function getModAtlasPageTextureNames(mod: ModEntry) {
+  const names = new Set<string>();
+
+  for (const atlas of mod.files.atlas) {
+    for (const line of readTextFileSync(atlas.path).split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || line !== trimmed || trimmed.includes(":") || !trimmed.toLowerCase().endsWith(".png")) {
+        continue;
+      }
+
+      names.add(path.basename(trimmed, path.extname(trimmed)).toLowerCase());
+    }
+  }
+
+  return names;
+}
+
+function readTextFileSync(filePath: string) {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch {
+    return "";
+  }
 }
 
 function getRequiredTextTargets(targets: RequiredTarget[]) {
