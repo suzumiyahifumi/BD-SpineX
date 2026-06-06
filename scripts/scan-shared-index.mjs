@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { detectGameVersion } from "../dist/core/game-version.js";
@@ -187,8 +187,13 @@ function createSharedIndex(bundles) {
 
 async function hashFile(filePath) {
   const hash = crypto.createHash("sha256");
-  hash.update(await fs.readFile(filePath));
-  return hash.digest("hex");
+  const stream = createReadStream(filePath);
+
+  return new Promise((resolve, reject) => {
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(hash.digest("hex")));
+  });
 }
 
 async function scanBundleAssetsWithUabea(dataPath) {
