@@ -237,6 +237,7 @@ export type ApplyPatchOptions = {
   unityVersion?: string;
   decryptKey?: string;
   repairModNames?: string[];
+  migrationSourceVersions?: string[];
 };
 
 export type PatchBackend = "auto" | "auto-backend" | "uabea" | "uabea-astc" | "uabea-safe" | "rust-native" | "unitypy";

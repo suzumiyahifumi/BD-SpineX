@@ -271,6 +271,15 @@ export function App() {
     log(`Opened detected Shared Folder: ${opened}`);
   }
 
+  async function openRecordsFolder() {
+    try {
+      const opened = await window.bd2.openRecordsFolder();
+      log(`Opened records folder: ${opened}`);
+    } catch (error) {
+      log(`Failed to open records folder: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   async function runTask(task: () => Promise<void>) {
     setBusy(true);
     try {
@@ -546,7 +555,8 @@ export function App() {
       } : current);
       const changes = readyModNames.map((modName) => ({ modName, enabled: true }));
       const result = await window.bd2.applyPatchStateChanges(planIndex.plans, currentModsIndex, changes, {
-        ...createApplyPatchOptions(settings)
+        ...createApplyPatchOptions(settings),
+        migrationSourceVersions: prompt.sourceVersions
       });
       setPatchHistory(result.history);
       setDesiredPatchStates(getActualPatchStates(currentModsIndex, result.history));
@@ -768,6 +778,9 @@ export function App() {
           ]}
         />
         <div className="settingsActions">
+          <button className="advancedToggle" type="button" onClick={() => void openRecordsFolder()}>
+            Open Records Folder
+          </button>
           <button className="advancedToggle" type="button" onClick={() => setShowAdvancedSettings((current) => !current)}>
             {showAdvancedSettings ? "+ Hide Advanced Settings" : "+ Advanced Settings"}
           </button>

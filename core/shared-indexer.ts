@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -244,10 +244,16 @@ function sortCandidatesBySize(candidates: SharedBundleCandidate[]) {
 }
 
 async function ensureCandidateHashes(candidates: SharedBundleCandidate[]) {
-  return Promise.all(candidates.map(async (candidate) => ({
-    ...candidate,
-    sha256: candidate.sha256 ?? await hashFile(candidate.dataPath)
-  })));
+  const hashed: SharedBundleCandidate[] = [];
+
+  for (const candidate of candidates) {
+    hashed.push({
+      ...candidate,
+      sha256: candidate.sha256 ?? await hashFile(candidate.dataPath)
+    });
+  }
+
+  return hashed;
 }
 
 function createSharedFileIndex(sharedDir: string, candidates: SharedBundleCandidate[]): SharedFileIndex {
@@ -510,10 +516,14 @@ function sharedDirCacheKey(sharedDir: string) {
 }
 
 async function hashFile(filePath: string) {
-  return crypto
-    .createHash("sha256")
-    .update(await fs.readFile(filePath))
-    .digest("hex");
+  const hash = crypto.createHash("sha256");
+  const stream = createReadStream(filePath);
+
+  return new Promise<string>((resolve, reject) => {
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(hash.digest("hex")));
+  });
 }
 
 function normalizeTargetNames(targetNames: string[]) {
