@@ -8,7 +8,7 @@ import { patchBundleBatch, type PatchBundleJob } from "./asset-patcher.js";
 import { managerDataDir, managerDataRootDir, managerDataVersion } from "./runtime-paths.js";
 import { convertJsonToSkel } from "./spine-converter.js";
 import { ensureSpineConverter } from "./tool-manager.js";
-import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchDataCheckEntry, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchStateChange, PreviousPatchedMods } from "./types.js";
+import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchDataCheckEntry, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchRunStatus, PatchStateChange, PreviousPatchedMods } from "./types.js";
 
 type PreparedPatchFiles = {
   atlases: string[];
@@ -38,6 +38,65 @@ type PreparedPatchJob = {
   entry: PatchRunEntry;
   backend: PatchBackend;
   repair: boolean;
+};
+
+type AssetBackupManifestEntry = {
+  assetName: string;
+  assetType: "TextAsset" | "Texture2D";
+  action: AssetBackupAction;
+  backupFile: string;
+  backupSha256: string;
+  sourceFile?: string;
+  source: "current_pre_patch" | "legacy_asset_backup";
+  trustedClean: true | false | "unknown";
+  existedBeforePatch: boolean;
+  updatedAt: string;
+};
+
+type AssetBackupAction = "replace_atlas" | "replace_skel" | "replace_texture";
+
+type AssetBackupManifest = {
+  manifestVersion: 1;
+  gameVersion: string;
+  bundleId: string;
+  modName: string;
+  patchBackend: PatchBackend;
+  updatedAt: string;
+  entries: AssetBackupManifestEntry[];
+};
+
+type AssetBackupLookup = {
+  file: string;
+  assetName: string;
+  assetType: AssetBackupManifestEntry["assetType"];
+  action: AssetBackupAction;
+  source: AssetBackupManifestEntry["source"];
+  trustedClean: AssetBackupManifestEntry["trustedClean"];
+};
+
+type PatchMigrationReport = {
+  reportVersion: 1;
+  fromVersions: string[];
+  toVersion: string;
+  status: "completed" | "partial" | "failed";
+  updatedAt: string;
+  mods: Array<{
+    modName: string;
+    status: PatchRunStatus;
+    bundleId: string;
+    message?: string;
+  }>;
+};
+
+type PatchMigrationCleanupReport = {
+  reportVersion: 1;
+  fromVersions: string[];
+  toVersion: string;
+  status: "completed" | "skipped";
+  reason?: string;
+  updatedAt: string;
+  removedPaths: string[];
+  skippedPaths: string[];
 };
 
 export async function applyReadyPatches(
@@ -130,6 +189,7 @@ export async function applyReadyPatches(
       for (const [groupIndex, group] of patchGroups.entries()) {
         const outputPath = getPatchTempPath(firstPlan.bundleId, groupIndex + 1);
         const groupEntries = group.items.map((item) => item.entry);
+        const backupStateBeforePatch = await snapshotAssetBackupState(group.items);
         try {
           emitPatchProgress(onProgress, "patching", progressCurrent, progressTotal, `Patching backup B with ${formatPatchBackend(group.backend)} for ${group.items.length} mod(s) in ${firstPlan.bundleId}.`, firstPlan, group.backend);
           const groupJobs = group.items.map((item) => item.job);
@@ -160,6 +220,7 @@ export async function applyReadyPatches(
             break;
           }
 
+          await writeAssetBackupManifests(group.items, group.backend, backupStateBeforePatch);
           await replacePatchWork(firstPlan.bundleId, outputPath);
           inputPath = getPatchWorkPath(firstPlan.bundleId);
           progressCurrent += group.items.length;
@@ -329,6 +390,20 @@ export async function applyPatchStateChanges(
   }
 
   const nextHistory = await readPatchHistory();
+  if (options.migrationSourceVersions?.length) {
+    const migrationReport = await writePatchMigrationReport(options.migrationSourceVersions, entries);
+    if (migrationReport.status === "completed") {
+      emitPatchProgress(onProgress, "copying", Math.max(changes.length, 1), Math.max(changes.length, 1), "Cleaning old patch history and backup data after successful version migration.", undefined, patchBackend);
+      await cleanupMigratedPatchRecords(options.migrationSourceVersions);
+    } else {
+      await writePatchMigrationCleanupReport(options.migrationSourceVersions, {
+        status: "skipped",
+        reason: "Migration was not fully completed; old patch records and backups were kept for recovery.",
+        removedPaths: [],
+        skippedPaths: []
+      });
+    }
+  }
   emitPatchProgress(onProgress, entries.some((entry) => entry.status === "failed") ? "failed" : "done", Math.max(changes.length, 1), Math.max(changes.length, 1), `Staged changes finished using ${formatPatchBackend(patchBackend)} backend.`, undefined, patchBackend);
   return { ok: entries.every((entry) => entry.status === "patched" || entry.status === "restored"), entries, history: nextHistory };
 }
@@ -771,26 +846,20 @@ async function createCleanOriginalBackupFromPreviousAssets(
     throw new Error(inspectResult.error ?? "Failed to inspect current __data target assets.");
   }
 
-  const dirtyAssets = await findDirtyAssets(inspectAssetDir, cleanSourcesByAsset, modSourcesByAsset);
-  const unknownAssets = dirtyAssets.filter((asset) => asset.reason === "unknown");
-  if (unknownAssets.length > 0) {
-    throw new Error(`Current __data has ${unknownAssets.length} target asset(s) that differ from both the mod file and previous clean backup. A clean backup A cannot be guaranteed.`);
-  }
-
-  const patchedAssets = dirtyAssets.filter((asset) => asset.reason === "matches_mod");
-  if (patchedAssets.length === 0) {
+  const repairableAssets = await findDirtyAssets(inspectAssetDir, cleanSourcesByAsset, modSourcesByAsset);
+  if (repairableAssets.length === 0) {
     await backupOriginal(firstPlan.bundlePath, firstPlan.bundleId);
     return { repaired: false, repairedAssets: 0 };
   }
 
-  const repairJobs = createRepairJobs(cleanJobs, new Set(patchedAssets.map((asset) => asset.file)));
+  const repairJobs = createRepairJobs(cleanJobs, new Set(repairableAssets.map((asset) => asset.file)));
   const repairInput = path.join(labDir, "__data.repair.input");
   const repairOutput = path.join(labDir, "__data.repair.output");
   const repairManifest = path.join(labDir, "__data.repair-jobs.json");
   await fs.copyFile(firstPlan.bundlePath, repairInput);
   await fs.writeFile(repairManifest, `${JSON.stringify({ jobs: repairJobs }, null, 2)}\n`, "utf8");
 
-  emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Repairing ${patchedAssets.length} patched target asset(s) before creating backup A.`, firstPlan, patchBackend);
+  emitPatchProgress(onProgress, "preparing_backup", progressCurrent, progressTotal, `Repairing ${repairableAssets.length} target asset(s) from user asset backups before creating backup A.`, firstPlan, patchBackend);
   const repairResult = await patchBundleBatch({
     input: repairInput,
     output: repairOutput,
@@ -809,7 +878,7 @@ async function createCleanOriginalBackupFromPreviousAssets(
   }
 
   await replaceOriginalBackup(firstPlan.bundleId, repairOutput);
-  return { repaired: true, repairedAssets: patchedAssets.length };
+  return { repaired: true, repairedAssets: repairableAssets.length };
 }
 
 export async function readPatchHistory(): Promise<PatchHistory> {
@@ -870,22 +939,39 @@ async function preparePatchFilesCached(
 async function getPreviousCleanPatchFiles(plan: PatchPlanEntry): Promise<CleanPatchFiles> {
   return {
     atlases: (await Promise.all((plan.targets.atlases ?? []).map((target) =>
-      findPreviousAssetBackup(plan.modName, target.assetName)
-    ))).filter((file): file is string => Boolean(file)),
+      findPreviousAssetBackup(plan.modName, target.assetName, {
+        assetName: target.assetName,
+        assetType: "TextAsset",
+        action: "replace_atlas"
+      })
+    ))).map((backup) => backup?.file).filter((file): file is string => Boolean(file)),
     skels: (await Promise.all((plan.targets.skels ?? []).map((target) =>
-      findPreviousAssetBackup(plan.modName, target.assetName)
-    ))).filter((file): file is string => Boolean(file)),
+      findPreviousAssetBackup(plan.modName, target.assetName, {
+        assetName: target.assetName,
+        assetType: "TextAsset",
+        action: "replace_skel"
+      })
+    ))).map((backup) => backup?.file).filter((file): file is string => Boolean(file)),
     pngs: (await Promise.all((plan.targets.textures ?? []).map((target) =>
-      findPreviousAssetBackup(plan.modName, `${target.assetName}.png`)
-    ))).filter((file): file is string => Boolean(file))
+      findPreviousAssetBackup(plan.modName, `${target.assetName}.png`, {
+        assetName: target.assetName,
+        assetType: "Texture2D",
+        action: "replace_texture"
+      })
+    ))).map((backup) => backup?.file).filter((file): file is string => Boolean(file))
   };
 }
 
-async function findPreviousAssetBackup(modName: string, fileName: string): Promise<string | undefined> {
+async function findPreviousAssetBackup(
+  modName: string,
+  fileName: string,
+  metadata: Pick<AssetBackupLookup, "assetName" | "assetType" | "action">
+): Promise<AssetBackupLookup | undefined> {
   const roots = [managerDataRootDir()];
   const versionsRoot = path.join(managerDataRootDir(), "versions");
   const stack = [...roots, versionsRoot];
   const marker = `${path.sep}asset-backups${path.sep}${sanitizePathPart(modName)}${path.sep}${fileName}`;
+  const candidates: string[] = [];
 
   while (stack.length > 0) {
     const current = stack.pop();
@@ -905,18 +991,91 @@ async function findPreviousAssetBackup(modName: string, fileName: string): Promi
       }
 
       if (entry.isFile() && entryPath.endsWith(marker)) {
-        return entryPath;
+        candidates.push(entryPath);
       }
     }
   }
 
-  return undefined;
+  const preferred = candidates
+    .filter((file) => !file.includes(`${path.sep}versions${path.sep}${managerDataVersion()}${path.sep}`))
+    .sort((a, b) => scorePreviousAssetBackup(b) - scorePreviousAssetBackup(a))[0] ?? candidates[0];
+  return preferred ? adoptPreviousAssetBackup(modName, preferred, metadata) : undefined;
 }
 
 function registerPatchFileSources(target: Map<string, string>, files: CleanPatchFiles | PreparedPatchFiles) {
   for (const filePath of [...files.atlases, ...files.skels, ...files.pngs]) {
     target.set(path.basename(filePath).toLowerCase(), filePath);
   }
+}
+
+function scorePreviousAssetBackup(filePath: string) {
+  const manifestScore = fsSync.existsSync(path.join(path.dirname(filePath), "asset-backup-manifest.json")) ? 100 : 0;
+  const versionScore = filePath.includes(`${path.sep}versions${path.sep}`) ? 20 : 10;
+  return manifestScore + versionScore;
+}
+
+async function adoptPreviousAssetBackup(
+  modName: string,
+  filePath: string,
+  metadata: Pick<AssetBackupLookup, "assetName" | "assetType" | "action">
+): Promise<AssetBackupLookup> {
+  const backup: AssetBackupLookup = {
+    file: filePath,
+    ...metadata,
+    source: "legacy_asset_backup",
+    trustedClean: "unknown"
+  };
+  await writeLegacyAssetBackupManifest(modName, backup);
+  return backup;
+}
+
+async function writeLegacyAssetBackupManifest(modName: string, backup: AssetBackupLookup) {
+  const manifestPath = path.join(path.dirname(backup.file), "asset-backup-manifest.json");
+  const existing = await readAssetBackupManifestFile(manifestPath);
+  const entry: AssetBackupManifestEntry = {
+    assetName: backup.assetName,
+    assetType: backup.assetType,
+    action: backup.action,
+    backupFile: backup.file,
+    backupSha256: await hashFile(backup.file),
+    source: "legacy_asset_backup",
+    trustedClean: "unknown",
+    existedBeforePatch: true,
+    updatedAt: new Date().toISOString()
+  };
+  const bundleId = bundleIdFromAssetBackupPath(backup.file) ?? "";
+  const manifest: AssetBackupManifest = {
+    manifestVersion: 1,
+    gameVersion: versionFromAssetBackupPath(backup.file) ?? "legacy",
+    bundleId,
+    modName,
+    patchBackend: existing?.patchBackend ?? "auto",
+    updatedAt: new Date().toISOString(),
+    entries: mergeAssetBackupManifestEntries(existing, [entry])
+  };
+  await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+}
+
+async function readAssetBackupManifestFile(manifestPath: string): Promise<AssetBackupManifest | undefined> {
+  try {
+    return JSON.parse(await fs.readFile(manifestPath, "utf8")) as AssetBackupManifest;
+  } catch {
+    return undefined;
+  }
+}
+
+function bundleIdFromAssetBackupPath(filePath: string) {
+  const parts = path.resolve(filePath).split(path.sep);
+  const backupsIndex = parts.lastIndexOf("backups");
+  return backupsIndex >= 0 && parts[backupsIndex + 1] && parts[backupsIndex + 2]
+    ? `${parts[backupsIndex + 1]}/${parts[backupsIndex + 2]}`
+    : undefined;
+}
+
+function versionFromAssetBackupPath(filePath: string) {
+  const parts = path.resolve(filePath).split(path.sep);
+  const versionsIndex = parts.lastIndexOf("versions");
+  return versionsIndex >= 0 ? parts[versionsIndex + 1] : "legacy";
 }
 
 async function findDirtyAssets(
@@ -1105,6 +1264,144 @@ async function writePatchJobManifest(bundleId: string, jobs: PatchBundleJob[]) {
   const manifestPath = path.join(path.dirname(getPatchWorkPath(bundleId)), "__data.patch-jobs.json");
   await fs.writeFile(manifestPath, `${JSON.stringify({ jobs }, null, 2)}\n`, "utf8");
   return manifestPath;
+}
+
+async function snapshotAssetBackupState(items: PreparedPatchJob[]) {
+  const state = new Map<string, boolean>();
+  for (const item of items) {
+    for (const target of getAssetBackupTargets(item)) {
+      if (!state.has(target.backupFile)) {
+        state.set(target.backupFile, await fileExists(target.backupFile));
+      }
+    }
+  }
+  return state;
+}
+
+async function writeAssetBackupManifests(items: PreparedPatchJob[], patchBackend: PatchBackend, backupStateBeforePatch: Map<string, boolean>) {
+  for (const item of items) {
+    const targets = getAssetBackupTargets(item);
+    if (targets.length === 0) {
+      continue;
+    }
+
+    const entries: AssetBackupManifestEntry[] = [];
+    for (const target of targets) {
+      if (!await fileExists(target.backupFile)) {
+        throw new Error(`Missing original asset backup for ${item.plan.modName}: ${path.basename(target.backupFile)}.`);
+      }
+
+      entries.push({
+        assetName: target.assetName,
+        assetType: target.assetType,
+        action: target.action,
+        backupFile: target.backupFile,
+        backupSha256: await hashFile(target.backupFile),
+        sourceFile: target.sourceFile,
+        source: "current_pre_patch",
+        trustedClean: "unknown",
+        existedBeforePatch: backupStateBeforePatch.get(target.backupFile) ?? false,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    const manifest: AssetBackupManifest = {
+      manifestVersion: 1,
+      gameVersion: managerDataVersion(),
+      bundleId: item.plan.bundleId ?? "",
+      modName: item.plan.modName,
+      patchBackend,
+      updatedAt: new Date().toISOString(),
+      entries: mergeAssetBackupManifestEntries(await readAssetBackupManifest(item.plan), entries)
+    };
+    await fs.mkdir(getAssetBackupDir(item.plan.bundleId ?? "", item.plan.modName), { recursive: true });
+    await fs.writeFile(assetBackupManifestPath(item.plan), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  }
+}
+
+function getAssetBackupTargets(item: PreparedPatchJob) {
+  const plan = item.plan;
+  const backupDir = getAssetBackupDir(plan.bundleId ?? "", plan.modName);
+  const targets: Array<AssetBackupManifestEntry & { sourceFile?: string }> = [];
+
+  for (const target of plan.targets.atlases ?? []) {
+    const sourceFile = findSourceFileForAsset(item.job.atlases, target.assetName);
+    if (sourceFile) {
+      targets.push(createAssetBackupTarget(target.assetName, "TextAsset", "replace_atlas", path.join(backupDir, target.assetName), sourceFile));
+    }
+  }
+
+  for (const target of plan.targets.skels ?? []) {
+    const sourceFile = findSourceFileForAsset(item.job.skels, target.assetName);
+    if (sourceFile) {
+      targets.push(createAssetBackupTarget(target.assetName, "TextAsset", "replace_skel", path.join(backupDir, target.assetName), sourceFile));
+    }
+  }
+
+  for (const target of plan.targets.textures ?? []) {
+    const sourceFile = findSourceFileForTexture(item.job.pngs, target.assetName);
+    if (sourceFile) {
+      targets.push(createAssetBackupTarget(target.assetName, "Texture2D", "replace_texture", path.join(backupDir, `${target.assetName}.png`), sourceFile));
+    }
+  }
+
+  return dedupeBy(targets, (target) => `${target.action}:${target.assetName.toLowerCase()}`);
+}
+
+function createAssetBackupTarget(
+  assetName: string,
+  assetType: AssetBackupManifestEntry["assetType"],
+  action: AssetBackupManifestEntry["action"],
+  backupFile: string,
+  sourceFile: string
+): AssetBackupManifestEntry & { sourceFile: string } {
+  return {
+    assetName,
+    assetType,
+    action,
+    backupFile,
+    backupSha256: "",
+    sourceFile,
+    source: "current_pre_patch",
+    trustedClean: "unknown",
+    existedBeforePatch: false,
+    updatedAt: ""
+  };
+}
+
+function findSourceFileForAsset(files: string[] | undefined, assetName: string) {
+  return files?.find((file) => path.basename(file).toLowerCase() === assetName.toLowerCase());
+}
+
+function findSourceFileForTexture(files: string[] | undefined, assetName: string) {
+  return files?.find((file) => path.basename(file, path.extname(file)).toLowerCase() === assetName.toLowerCase());
+}
+
+async function readAssetBackupManifest(plan: PatchPlanEntry): Promise<AssetBackupManifest | undefined> {
+  return readAssetBackupManifestFile(assetBackupManifestPath(plan));
+}
+
+function assetBackupManifestPath(plan: PatchPlanEntry) {
+  return path.join(getAssetBackupDir(plan.bundleId ?? "", plan.modName), "asset-backup-manifest.json");
+}
+
+function mergeAssetBackupManifestEntries(existing: AssetBackupManifest | undefined, entries: AssetBackupManifestEntry[]) {
+  const byKey = new Map<string, AssetBackupManifestEntry>();
+  for (const entry of existing?.entries ?? []) {
+    byKey.set(`${entry.action}:${entry.assetName.toLowerCase()}`, entry);
+  }
+  for (const entry of entries) {
+    byKey.set(`${entry.action}:${entry.assetName.toLowerCase()}`, entry);
+  }
+  return [...byKey.values()].sort((a, b) => a.assetName.localeCompare(b.assetName));
+}
+
+function dedupeBy<T>(items: T[], keyFn: (item: T) => string) {
+  const byKey = new Map<string, T>();
+  for (const item of items) {
+    byKey.set(keyFn(item), item);
+  }
+  return [...byKey.values()];
 }
 
 function changedForMod(changed: unknown[] | undefined, modName: string) {
@@ -1310,10 +1607,14 @@ async function fileExists(filePath: string) {
 }
 
 async function hashFile(filePath: string) {
-  return crypto
-    .createHash("sha256")
-    .update(await fs.readFile(filePath))
-    .digest("hex");
+  const hash = crypto.createHash("sha256");
+  const stream = fsSync.createReadStream(filePath);
+
+  return new Promise<string>((resolve, reject) => {
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(hash.digest("hex")));
+  });
 }
 
 function emitPatchProgress(
@@ -1417,6 +1718,108 @@ async function writePatchHistory(history: PatchHistory) {
   const historyPath = patchHistoryPath();
   await fs.mkdir(path.dirname(historyPath), { recursive: true });
   await fs.writeFile(historyPath, `${JSON.stringify(history, null, 2)}\n`, "utf8");
+}
+
+async function writePatchMigrationReport(sourceVersions: string[], entries: PatchRunEntry[]): Promise<PatchMigrationReport> {
+  const reportPath = path.join(managerDataDir(), "patch-migration-report.json");
+  const failed = entries.length === 0 || entries.some((entry) => entry.status === "failed" || entry.status === "changed" || entry.status === "skipped");
+  const patched = entries.some((entry) => entry.status === "patched");
+  const report: PatchMigrationReport = {
+    reportVersion: 1,
+    fromVersions: [...new Set(sourceVersions)].sort((a, b) => a.localeCompare(b)),
+    toVersion: managerDataVersion(),
+    status: failed ? patched ? "partial" : "failed" : "completed",
+    updatedAt: new Date().toISOString(),
+    mods: entries.map((entry) => ({
+      modName: entry.modName,
+      status: entry.status,
+      bundleId: entry.bundleId,
+      message: entry.message
+    }))
+  };
+  await fs.mkdir(path.dirname(reportPath), { recursive: true });
+  await fs.writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  return report;
+}
+
+async function cleanupMigratedPatchRecords(sourceVersions: string[]) {
+  const removedPaths: string[] = [];
+  const skippedPaths: string[] = [];
+  const root = path.resolve(managerDataRootDir());
+  const currentVersion = managerDataVersion();
+  const uniqueVersions = [...new Set(sourceVersions)].filter(Boolean);
+
+  for (const sourceVersion of uniqueVersions) {
+    const targets = getMigratedPatchRecordCleanupTargets(sourceVersion, currentVersion);
+
+    for (const target of targets) {
+      const resolved = path.resolve(target);
+      if (!isPathInside(resolved, root) || resolved === root || resolved.includes(`${path.sep}versions${path.sep}${currentVersion}${path.sep}`)) {
+        skippedPaths.push(target);
+        continue;
+      }
+
+      if (!await fileExists(resolved)) {
+        continue;
+      }
+
+      await fs.rm(resolved, { recursive: true, force: true });
+      removedPaths.push(target);
+    }
+  }
+
+  await writePatchMigrationCleanupReport(uniqueVersions, {
+    status: "completed",
+    removedPaths,
+    skippedPaths
+  });
+}
+
+function getMigratedPatchRecordCleanupTargets(sourceVersion: string, currentVersion: string) {
+  const root = managerDataRootDir();
+
+  if (sourceVersion === "legacy") {
+    return [
+      path.join(root, "patch-history.json"),
+      path.join(root, "patch-migration-report.json"),
+      path.join(root, "backups"),
+      path.join(root, "converted")
+    ];
+  }
+
+  const versionDir = path.join(root, "versions", sanitizePathPart(sourceVersion));
+  if (sanitizePathPart(sourceVersion) === currentVersion) {
+    return [];
+  }
+
+  return [
+    path.join(versionDir, "patch-history.json"),
+    path.join(versionDir, "patch-migration-report.json"),
+    path.join(versionDir, "patch-migration-cleanup-report.json"),
+    path.join(versionDir, "backups"),
+    path.join(versionDir, "converted")
+  ];
+}
+
+async function writePatchMigrationCleanupReport(
+  sourceVersions: string[],
+  result: Pick<PatchMigrationCleanupReport, "status" | "reason" | "removedPaths" | "skippedPaths">
+) {
+  const reportPath = path.join(managerDataDir(), "patch-migration-cleanup-report.json");
+  const report: PatchMigrationCleanupReport = {
+    reportVersion: 1,
+    fromVersions: [...new Set(sourceVersions)].sort((a, b) => a.localeCompare(b)),
+    toVersion: managerDataVersion(),
+    updatedAt: new Date().toISOString(),
+    ...result
+  };
+  await fs.mkdir(path.dirname(reportPath), { recursive: true });
+  await fs.writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
+
+function isPathInside(child: string, parent: string) {
+  const relative = path.relative(parent, child);
+  return Boolean(relative) && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
 async function findPreviousPatchHistoryPaths(currentHistoryPath: string) {

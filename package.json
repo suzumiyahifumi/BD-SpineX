@@ -1,6 +1,6 @@
 {
   "name": "bd-spinex",
-  "version": "2.26.12-b4",
+  "version": "2.27.19",
   "private": true,
   "description": "BrownDust II mod management and installation for Mac PlayCover.",
   "license": "GPL-3.0-only",
@@ -11,16 +11,17 @@
     "build": "tsc -p tsconfig.main.json && vite build",
     "build:backends": "node scripts/build-backends.mjs",
     "release:prepare": "node scripts/prepare-release.mjs",
-    "dist:mac": "npm run build:backends && npm run release:prepare && npm run build && electron-builder --mac --arm64",
+    "dist:mac": "npm run build:backends && npm run release:prepare && npm run build && COPYFILE_DISABLE=1 electron-builder --mac --arm64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.main.json",
     "start": "electron ."
   },
   "build": {
     "appId": "com.bdspinex.manager",
     "productName": "BD-SpineX",
-    "asar": true,
+    "asar": false,
     "files": [
       "dist/**/*",
+      "!**/._*",
       "package.json"
     ],
     "extraResources": [

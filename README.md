@@ -29,7 +29,7 @@ BD-SpineX is built for players who want a simpler BrownDust II mod workflow on m
 The release version is tied to the supported BrownDust II game version. Hotfix builds may add a suffix such as `-b2` while still supporting the same game version.
 
 ```text
-BD-SpineX 2.26.12 -> BrownDust II 2.26.12
+BD-SpineX 2.27.19 -> BrownDust II 2.27.19
 ```
 
 If your installed game version does not match the supported BrownDust II version, mod actions are locked until you use a matching release.
@@ -43,6 +43,8 @@ If your installed game version does not match the supported BrownDust II version
 - 🔄 Automatic supported Spine JSON conversion when needed
 - 🧭 Bundled game-version indexes used first for faster update checks
 - 🛟 Incremental backups and restore support
+- 🧹 Automatic cleanup of old patch history and backups after successful version migration
+- 📂 One-click Records Folder access for history, backups, and migration reports
 - 🌳 `__data`-based Patch Status with collapsible mod details
 - 🛠️ Repair mode for patched or changed entries
 - 🗂️ Versioned history, backups, converted files, and user-scanned indexes
@@ -113,6 +115,8 @@ When the game updates, install the matching BD-SpineX release. BD-SpineX uses th
 
 If BD-SpineX finds patched mods from an older version, it can select them for review and ask whether to inherit the previous install state. Confirming runs a fresh patch against the current version's index.
 
+After a version migration completes successfully, BD-SpineX removes old patch history and backup data to keep storage usage under control. If migration is partial or failed, old records are kept for recovery. Use `Open Records Folder` in the app to inspect the current version's history, backups, and migration reports.
+
 ---
 
 ## 📝 Notes
@@ -146,6 +150,10 @@ Usually no. Release builds include the matching BrownDust II index. `Scan Shared
 ### 🛠️ What does Repair do?
 
 Repair stages an already patched or changed mod for a safer re-patch. It is useful when the game file state no longer matches the expected backup state.
+
+### 📂 Where are patch records stored?
+
+Use `Open Records Folder` in BD-SpineX. It opens the current version's records folder, including patch history, backups, and migration reports.
 
 ### 📦 Do I need to install .NET, Rust, or UABEA?
 
