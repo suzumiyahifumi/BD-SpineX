@@ -6,6 +6,7 @@ const api = {
   readSettings: () => ipcRenderer.invoke("app:read-settings") as Promise<unknown>,
   writeSettings: (settings: unknown) => ipcRenderer.invoke("app:write-settings", settings) as Promise<boolean>,
   openDetectedSharedFolder: () => ipcRenderer.invoke("app:open-detected-shared-folder") as Promise<string | null>,
+  openRecordsFolder: () => ipcRenderer.invoke("app:open-records-folder") as Promise<string>,
   getAppInfo: () => ipcRenderer.invoke("app:info") as Promise<AppInfo>,
   detectGameVersion: (sharedDir?: string) => ipcRenderer.invoke("game:detect-version", { sharedDir }) as Promise<GameVersionInfo>,
   selectDirectory: () => ipcRenderer.invoke("dialog:select-directory") as Promise<string | null>,

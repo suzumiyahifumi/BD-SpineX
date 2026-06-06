@@ -8,7 +8,7 @@ import { createPatchPlan } from "../../core/patch-plan.js";
 import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyPatchBackupsForMods, dryRunPatchStateChanges, ensureOriginalBackupsForMods, readPatchHistory, readPreviousPatchedMods, restoreAllPatches } from "../../core/patch-runner.js";
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
 import { detectGameVersion } from "../../core/game-version.js";
-import { isPackagedRuntime, managerDataRootDir, resourcePath, supportedGameVersion } from "../../core/runtime-paths.js";
+import { isPackagedRuntime, managerDataDir, managerDataRootDir, resourcePath, supportedGameVersion } from "../../core/runtime-paths.js";
 import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -88,6 +88,7 @@ ipcMain.handle("app:write-settings", async (_event, settings: unknown) => {
   return true;
 });
 ipcMain.handle("app:open-detected-shared-folder", async () => openDetectedSharedFolder());
+ipcMain.handle("app:open-records-folder", async () => openRecordsFolder());
 ipcMain.handle("app:info", async (): Promise<AppInfo> => ({
   name: appDisplayName,
   subtitle: appSubtitle,
@@ -223,6 +224,16 @@ async function openDetectedSharedFolder() {
 
   await shell.openPath(sharedFolder);
   return sharedFolder;
+}
+
+async function openRecordsFolder() {
+  const recordsFolder = managerDataDir();
+  await fs.mkdir(recordsFolder, { recursive: true });
+  const error = await shell.openPath(recordsFolder);
+  if (error) {
+    throw new Error(error);
+  }
+  return recordsFolder;
 }
 
 async function sharedFolderCandidates() {
