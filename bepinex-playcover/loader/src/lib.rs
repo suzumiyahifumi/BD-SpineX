@@ -235,10 +235,16 @@ struct Built {
     skel_ta: usize,      // json: 替換用 TextAsset
     skel_data: usize,    // skel: 已建好的 SkeletonData
 }
-// key → Some(Built) 成功 / None 失敗（不再重試）。
-static BUILT_CACHE: OnceLock<std::sync::Mutex<HashMap<String, Option<Built>>>> = OnceLock::new();
-fn built_cache() -> &'static std::sync::Mutex<HashMap<String, Option<Built>>> {
-    BUILT_CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()))
+// 建構失敗的資產名（不再重試）。
+static FAILED_KEYS: OnceLock<std::sync::Mutex<std::collections::HashSet<String>>> = OnceLock::new();
+fn failed_keys() -> &'static std::sync::Mutex<std::collections::HashSet<String>> {
+    FAILED_KEYS.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
+}
+// 我們建過的 skel_ta / skel_data 指標集合：用來判斷某實例是否「已是我們的替換」，
+// 避免每次 GetSkeletonData 呼叫都重建。不跨實例共用物件（共用會被遊戲 Clear/Dispose 連帶釋放）。
+static OUR_BUILT: OnceLock<std::sync::Mutex<std::collections::HashSet<usize>>> = OnceLock::new();
+fn our_built() -> &'static std::sync::Mutex<std::collections::HashSet<usize>> {
+    OUR_BUILT.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
 }
 
 unsafe fn rfn<T: Copy>(name: &str) -> Option<T> {
@@ -573,25 +579,33 @@ extern "C" fn repl_get_skeleton_data(this: *mut c_void, quiet: bool) -> *mut c_v
             unity_object_name(skel_json)
         } else { None };
 
-        // 比對掛載 mod（去副檔名）。建構依名稱快取一次；套用對「每個實例」都做
-        // （遊戲第二次會用新的 SkeletonDataAsset 實例，必須再套用，否則會變回原始）。
+        // 比對掛載 mod（去副檔名）。每個 SkeletonDataAsset 實例各自建一份替換
+        // （不跨實例共用，否則遊戲 Clear/Dispose 一個實例會連帶釋放共用 atlas → 其他實例 spine 消失）。
         if let Some(n) = name.as_deref() {
             let key = asset_key(n).to_string();
             if let Some(map) = MOD_MAP.get() {
                 if let Some(dir) = map.get(&key).cloned() {
-                    let cached = built_cache().lock().ok().and_then(|m| m.get(&key).copied());
-                    let built = match cached {
-                        Some(b) => b, // 已嘗試過（Some(Built) 或 None=失敗）
-                        None => {
-                            let base = UNITY_BASE.load(Ordering::Acquire);
-                            logline(&format!("[MOD MATCH] build '{}' <- {}", key, dir));
-                            let b = build_objects(this, &key, &dir, base);
-                            if let Ok(mut m) = built_cache().lock() { m.insert(key.clone(), b); }
-                            logline(&format!("[{}] '{}'", if b.is_some() { "BUILT" } else { "BUILD FAILED" }, key));
-                            b
+                    // 此實例是否已是我們的替換？（skeletonJSON 或 skeletonData 在我們建過的集合裡）
+                    let sj = *((this as *const u8).add(OFF_SKELETON_JSON) as *const *mut c_void) as usize;
+                    let sd = *((this as *const u8).add(OFF_SKELETON_DATA) as *const *mut c_void) as usize;
+                    let already = our_built().lock().map(|s| s.contains(&sj) || s.contains(&sd)).unwrap_or(false);
+                    let failed = failed_keys().lock().map(|s| s.contains(&key)).unwrap_or(false);
+                    if !already && !failed {
+                        let base = UNITY_BASE.load(Ordering::Acquire);
+                        logline(&format!("[MOD MATCH] build '{}' (instance {:p}) <- {}", key, this, dir));
+                        match build_objects(this, &key, &dir, base) {
+                            Some(b) => {
+                                apply_to_instance(this, &b);
+                                let p = if b.is_json { b.skel_ta } else { b.skel_data };
+                                if let Ok(mut s) = our_built().lock() { s.insert(p); }
+                                logline(&format!("[REPLACED] '{}' ({})", key, if b.is_json { "json" } else { "skel" }));
+                            }
+                            None => {
+                                if let Ok(mut s) = failed_keys().lock() { s.insert(key.clone()); }
+                                logline(&format!("[BUILD FAILED] '{}'", key));
+                            }
                         }
-                    };
-                    if let Some(b) = built { apply_to_instance(this, &b); }
+                    }
                 }
             }
         }
