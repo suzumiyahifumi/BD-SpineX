@@ -79,19 +79,42 @@ DOTNET_ROLL_FORWARD=LatestMajor ~/.dotnet/dotnet \
 
 ---
 
-## Phase 4 — Spine 執行時替換（核心功能）
+## Phase 4 — Spine 執行時替換（核心功能）— **採用策略 A（換整個 SkeletonDataAsset）**
 
-目標：重現 Windows `SpineReplacer` 行為。
+目標：重現 Windows `SpineReplacer` 行為，且支援 mod 的 `.skel`/`.atlas`/`.png` 完整替換。
 
-- [ ] 用 Dobby inline-hook Phase 2 定位到的 `Get*SpinePrefab`。
-- [ ] 在 hook 內判斷角色 ID（例 `char004102`）是否有對應 mod。
-- [ ] 有 mod → 從 sandbox 內 mod 資料夾載入替換資源：
-      - 路線 A：`AssetBundle.LoadFromFile` 載入我們預打包的 bundle，取出 `SkeletonDataAsset` 替換。
-      - 路線 B：直接建構 `SkeletonData` / 替換 atlas 紋理（較複雜，後評估）。
-- [ ] 替換 prefab 上的 `skeletonDataAsset` 與 `atlasAssets` 欄位後回傳。
-- [ ] 加入 mod 資料夾監看（對應 BrownDustX 的 `WatchModsDirectory`）做熱重載。
+### Mod 結構（來自專案 `mods/`，三種型態）
+key = 資產基底名：
+- **standing 立繪**：`char003604.{json|skel, atlas, png}`（單頁）
+- **dating 約會**：`illust_dating11.{skel, atlas, png + _N.png}`（多頁 atlas）
+- **skillcut 技能**：`cutscene_char066403.{json, atlas, png + _N.png}`（多頁）
+`.atlas` 首行 = png 檔名；`.modfile` 為空標記。
 
-**成功條件**：遊戲執行中切換角色即見替換，且不曾改動 `Shared/__data`。
+### Mod 掛載目錄設計（與 Phase 5 GUI 串接）
+- **掛載目錄**（loader 讀取）：`~/Library/Containers/com.neowizgames.game.browndust2ios/Data/bd2mods/`
+  （遊戲自身 container Data，sandbox 一定可讀；也可改用 io.playcover container，SBPL 允許 RW）。
+- 使用者流程（Phase 5）：選 mod 庫資料夾 → 勾選要掛的 mod → 管理器把選中的 mod **以捷徑/複製**放進掛載目錄。
+  ⚠️ sandbox 限制：symlink 目標若在允許路徑外會讀不到，故 mod 庫需置於允許路徑下，或直接複製。
+- loader 啟動時掃掛載目錄，建立 `資產名 → mod 路徑` 對照表。
+
+### 實作子階段（逐步、各自可驗證）
+- [ ] **4.1 hook + 識別**：Dobby inline-hook `SkeletonDataAsset.GetSkeletonData`(base+0x94A9560)，
+      在 hook 內讀 `this->skeletonJSON`(0x28) 的 Unity 物件 name，log 出正在載入哪個資產 → 確認能識別角色。
+- [ ] **4.2 il2cpp 互動 helper**：包好 `class_from_name`/`get_method_from_name`/`runtime_invoke`/
+      `string_new`/`array_new`，並處理 GC（`il2cpp_gc_disable` 或 pin handle）。
+- [ ] **4.3 mod 載入**：掃掛載目錄，對照資產名；讀 mod 的 atlas/skel/png 位元組。
+- [ ] **4.4 建替換 asset**：
+      - png → `Texture2D`（`LoadImage` 或 `LoadRawTextureData`）
+      - atlas text → `TextAsset` → `SpineAtlasAsset.CreateRuntimeInstance`(0x94AC7F4)
+      - skel/json → `TextAsset` → `SkeletonDataAsset.CreateRuntimeInstance`(0x94AB660)
+- [ ] **4.5 套用**：hook 回傳替換後的 `SkeletonData`，或改 `SkeletonGraphic.skeletonDataAsset`(0xD8)+`Initialize`(0x94B16AC)；妥善 pin 物件避免被 GC。
+- [ ] **4.6 熱重載**：監看掛載目錄（對應 BrownDustX `WatchModsDirectory`）。
+
+### 開發注意
+- gadget 與 loader 不可並存：用 `tools/inject_state.py {none|loader|gadget}` 切換。
+- 4.1 的 hook 邏輯可先用 **gadget + frida 快速原型**（驗證欄位 offset / 物件讀取），再移植到 Rust+Dobby。
+
+**成功條件**：遊戲執行中載入有 mod 的角色即見替換（skel+atlas+png），且不曾改動 `Shared/__data`。
 
 ---
 
