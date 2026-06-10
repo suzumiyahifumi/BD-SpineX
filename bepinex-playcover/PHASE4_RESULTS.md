@@ -50,11 +50,29 @@ GetSkeletonData(this) hook
  → 落到 orig(this) → 遊戲用我們的資料重建並快取 → 顯示 mod
 ```
 
-### 尚待處理
-- **二進位 `.skel`**（dating/skillcut 多數）：目前只支援文字 `.json`。需用 byte[] 建 skeletonJSON
-  （TextAsset 無法用 UTF-16 string 承載二進位；可改走能吃 byte[] 的路徑或建立帶 bytes 的 TextAsset）。
-- 多頁 atlas 已支援（依 atlas page 行序組 textures），待用 dating/skillcut 實測。
-- 還原/熱重載、log 路徑硬編改為動態、Phase 5 GUI 串接。
+### 實機驗證狀態（2026-06-11）
+| mod | 型態 | 結果 |
+|-----|------|------|
+| char003604 | standing / json / 1 頁 | ✅ 替換成功 |
+| cutscene_char067504（Luvencia） | skillcut / json / 3 頁 | ✅ |
+| cutscene_char004301（Nekyndalia） | skillcut / json / 3 頁 | ✅ |
+| cutscene_char066403（Angelica） | skillcut / json / 3 頁 | ✅ |
+| illust_dating11（Eclipse） | dating / **skel** / 10 頁 | ❌ 黑屏+崩潰 |
+
+**多頁 JSON mod 全數可運作。** 二進位 `.skel` 路線「能建構成功」（ReadSkeletonData 回傳 skeletonData、
+FillStateData 已呼叫、log 顯示 REPLACED），但 Eclipse 約會場景仍黑屏並崩潰（無新 crash report，
+疑似渲染執行緒用到不完整資料，或 dating 場景/binary 後處理差異）。
+
+### binary `.skel` 卡點分析與下一步
+- `TextAsset` 為原生物件、無可寫的 byte[] 欄位 → 無法用 string 承載二進位（已確認死路）。
+- 目前作法：自行 `GetAtlas → AtlasAttachmentLoader(Atlas[]) → ReadSkeletonData(byte[]) → 寫 skeletonData + FillStateData`。
+- JSON 路線讓遊戲自身 `GetSkeletonData` 完整重建（含 skeletonDataModifiers 等後處理）；
+  binary 路線是我們手工拼，可能漏了原始 `GetSkeletonData` 在 ReadSkeletonData 之後的步驟。
+- **建議**：反組譯 `GetSkeletonData`(base+0x94A9560) 與 `ReadSkeletonData(byte[])` 的實際組語，
+  精確比對「ReadSkeletonData 之後到 return 之間」的步驟並補齊（離線分析，不需反覆崩潰測試）。
+
+### 其他待辦
+- 還原/熱重載、log 路徑硬編改為動態、Phase 5 GUI 串接（選 mod→捷徑掛載）。
 
 ## （原 4.2–4.5 規劃，已完成）
 
