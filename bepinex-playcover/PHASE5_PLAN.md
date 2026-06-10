@@ -21,12 +21,18 @@
 - mount dir：`~/Library/Containers/com.neowizgames.game.browndust2ios/Data/bd2mods/`（sandbox 可讀寫）
 
 ## 子階段
-- [ ] 5.1 `macho-inject.ts` + 實測（Node 注入 → 啟動 → loader log）。
-- [ ] 5.2 `runtime-loader.ts`（狀態/注入/掛載/啟動）。
-- [ ] 5.3 IPC + preload。
-- [ ] 5.4 React「Runtime Mods」面板。
-- [ ] 5.5 打包：loader dylib 納入 extraResources、build pipeline。
+- [x] 5.1 `macho-inject.ts` + 實測（Node 注入 → 啟動 → loader log）。
+- [x] 5.2 `runtime-loader.ts`（狀態/注入/掛載/啟動）。
+- [x] 5.3 IPC + preload。
+- [x] 5.4 React「Runtime Mods」面板（使用者實測 OK）。
+- [x] 掛載：hardlink 優先 + 跨 volume 退回複製；**.skel 掛載時自動轉 .json**（繞過 binary 問題，實測 Eclipse 約會 OK）。
+- [ ] 5.5 打包：loader dylib 納入 extraResources（`backend/bd2loader`）、build:backends 加入 cargo build、release pipeline。
 
-## 已知限制（沿用 Phase 4）
-- 目前 JSON mod 全可；二進位 .skel 約會仍待解（loader 端問題，與 GUI 無關）。
-- loader log 路徑硬編待改。記憶體 pin 累積待清理。
+## 全類型實測（透過 GUI，2026-06-11）
+立繪 / 技能（多頁）/ 約會（json）/ 約會（binary skel→自動轉 json）皆正常顯示，連續觸發穩定。
+
+## 仍待處理
+- 5.5 打包整合（讓 release 使用者免 build）。
+- 記憶體：loader 每次重載 pin 新物件，長時間累積待清理。
+- loader log 路徑硬編待改為動態。
+- 選用：UI 英文化、symlink/copy 顯示、注入狀態與遊戲版本檢查。

@@ -67,11 +67,16 @@ GetSkeletonData(this) hook
 - **第二次觸發 spine 消失**：跨實例共用同一份 atlas，遊戲 Clear/Dispose 第一個實例時連帶釋放共用 atlas → 其他實例空白。
 - → 解法：**每個實例各自建一份**（不共用）；用「我們建過的 skel_ta/skel_data 指標集合」判斷某實例是否已替換，避免每次呼叫重建。
 
-#### 已知問題
-- **二進位 `.skel` 約會（特定 10 頁 Eclipse mod）黑屏+崩潰**：該 mod 的 skeletonData 讀取有效（71 動畫/1314 骨/553 slot）、
-  且完整補了 modifiers(=0)/ApplyMaterials/FillStateData，但仍失敗。**同場景的 json 版約會正常**，故問題侷限於
-  「二進位渲染路徑」或「該特定 mod」（其 skel 內嵌了 `cutscene_char003601` 路徑，疑似封裝異常）。待用其他二進位約會 mod 進一步隔離。
+#### 二進位 `.skel`：已用「掛載時自動轉 json」繞過 ✅（2026-06-11）
+- loader 的 binary 路線（自行 ReadSkeletonData→寫 skeletonData）在約會場景黑屏+崩潰（skeletonData 讀取有效 71/1314/553、
+  後處理完整，但渲染失敗；同場景 json 版正常）→ 根因侷限於 binary 渲染路徑。
+- **對策（Phase 5 採用）**：掛載時用 `SpineSkeletonDataConverter <skel> <json>` 自動把 `.skel` 轉成 `.json`，
+  loader 走穩定的 json 路線。**實測 Eclipse 約會（illust_dating11, 原 binary）轉換後正常顯示 mod。**
+- 結論：standing / skillcut / dating（json 與 binary 皆可）全部可用。
+
+#### 仍待處理
 - **記憶體**：每次重載建新貼圖/atlas 並 gchandle pin，長時間累積會增長，待加清理。
+- loader 端原生 binary 路線的渲染黑屏未深究（已被轉換繞過，非阻塞）。
 
 ### binary `.skel` 卡點分析與下一步
 - `TextAsset` 為原生物件、無可寫的 byte[] 欄位 → 無法用 string 承載二進位（已確認死路）。
