@@ -24,6 +24,8 @@ const RVA_GET_SKELETON_DATA: usize = 0x94A9560;
 // SkeletonDataAsset 欄位偏移（IL2CPP_TARGETS.md）
 const OFF_ATLAS_ASSETS: usize = 0x18; // AtlasAssetBase[] atlasAssets
 const OFF_SCALE: usize = 0x20; // float scale
+const OFF_BLEND_MODE_MATERIALS: usize = 0x38; // BlendModeMaterials blendModeMaterials
+const OFF_SKELETON_DATA_MODIFIERS: usize = 0x40; // List<SkeletonDataModifierAsset> skeletonDataModifiers
 const OFF_SKELETON_JSON: usize = 0x28; // TextAsset skeletonJSON
 const OFF_SKELETON_DATA: usize = 0x70; // SkeletonData skeletonData（CreateRuntimeInstance(initialize=true) 後即填好）
 
@@ -532,9 +534,50 @@ unsafe fn build_replacement(this: *mut c_void, key: &str, dir: &str, base: usize
         logline(&format!("[build] in-place swap DONE (json) {} skelTA={:p}", key, skel_ta));
     } else {
         gc_new(skel_data, 0);
+        // 診斷：讀 SkeletonData 的動畫/骨骼數量，判斷 ReadSkeletonData(byte[]) 是否讀出有效資料。
+        {
+            let sk_cls = class_of(domain, "spine-csharp.dll", "Spine", "SkeletonData");
+            let count_of = |getter: &str| -> i64 {
+                let m = method_by_name(sk_cls, getter, 0);
+                if m.is_null() { return -2; }
+                let lst = invoke(m, skel_data, &mut []);
+                if lst.is_null() { -1 } else { *((lst as *const u8).add(0x18) as *const i32) as i64 }
+            };
+            logline(&format!("[build] skel_data animations={} bones={} slots={}",
+                count_of("get_Animations"), count_of("get_Bones"), count_of("get_Slots")));
+        }
+        // 複製原始 GetSkeletonData 在 ReadSkeletonData 之後的後處理（反組譯得知）：
+        // (a) 套用 skeletonDataModifiers（List<SkeletonDataModifierAsset>，逐一 Apply(skeletonData)）。
+        let mods_list = *((this as *const u8).add(OFF_SKELETON_DATA_MODIFIERS) as *const *mut c_void);
+        if !mods_list.is_null() {
+            let items = *((mods_list as *const u8).add(0x10) as *const *mut c_void); // List._items (T[])
+            let size = *((mods_list as *const u8).add(0x18) as *const i32);          // List._size
+            logline(&format!("[build] skeletonDataModifiers count={}", size));
+            if !items.is_null() && size > 0 {
+                let mod_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SkeletonDataModifierAsset");
+                let m_apply = if mod_cls.is_null() { std::ptr::null_mut() } else { method_by_name(mod_cls, "Apply", 1) };
+                for i in 0..(size as usize) {
+                    let modifier = *((items as *const u8).add(IL2CPP_ARRAY_DATA + i * 8) as *const *mut c_void);
+                    if modifier.is_null() || m_apply.is_null() { continue; }
+                    let mut ma = [skel_data];
+                    invoke(m_apply, modifier, &mut ma); // 虛擬分派到實際 override
+                }
+                logline("[build] skeletonDataModifiers applied (skel)");
+            }
+        }
+        // (b) BlendModeMaterials.ApplyMaterials(skeletonData) → 設定混合模式材質（漏掉會黑屏）。
+        let bmm = *((this as *const u8).add(OFF_BLEND_MODE_MATERIALS) as *const *mut c_void);
+        if !bmm.is_null() {
+            let bmm_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "BlendModeMaterials");
+            let m_apply = method_by_name(bmm_cls, "ApplyMaterials", 1);
+            if !m_apply.is_null() {
+                let mut aa = [skel_data];
+                invoke(m_apply, bmm, &mut aa);
+                logline("[build] BlendModeMaterials.ApplyMaterials called (skel)");
+            } else { logline("[build] ApplyMaterials MISS (skel)"); }
+        }
+        // 設 skeletonData，再補 stateData（orig 早退會跳過 FillStateData）。
         *((this as *mut u8).add(OFF_SKELETON_DATA) as *mut *mut c_void) = skel_data;
-        // orig 會因 skeletonData!=null 早退、跳過 FillStateData，故自行補上 stateData，
-        // 否則播動畫的場景（如約會）會因 stateData 為 null 而崩潰。
         let sd_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SkeletonDataAsset");
         let m_fill = method_by_name(sd_cls, "FillStateData", 1);
         if !m_fill.is_null() {
