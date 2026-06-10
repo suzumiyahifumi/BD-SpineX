@@ -60,18 +60,22 @@ DOTNET_ROLL_FORWARD=LatestMajor ~/.dotnet/dotnet \
 
 ---
 
-## Phase 3 — 注入管線（Loader = Doorstop 等價物）
+## Phase 3 — 注入管線（Loader = Doorstop 等價物）✅ 已完成（2026-06-10）
 
 目標：做出能穩定注入並初始化的 loader dylib，先不替換資源，只證明「我們的程式碼在遊戲裡跑起來」。
+**結果見 `PHASE3_RESULTS.md`；程式在 `loader/`（Rust cdylib，零外部依賴）。**
 
-- [ ] 建 `loader/`（建議 Rust `cdylib` 或 C；Swift 亦可但與 il2cpp C API 互動 Rust/C 較直接）。
-- [ ] loader 入口（`__attribute__((constructor))` / dylib load）：
-      等 `il2cpp_init` 完成 → `il2cpp_thread_attach(il2cpp_domain_get())` → 啟動背景 log。
-- [ ] 注入器 `injector/`：對 app 主程式加 `LC_LOAD_DYLIB` 指向 loader、adhoc 重簽
-      （參考 PlayTools 注入；`install_name_tool -add_load_command` 或自寫 Mach-O patcher + `codesign -f -s -`）。
-- [ ] 驗證：啟動遊戲，loader 印出「hello from inside BrownDust II」與 il2cpp 版本。
+- [x] `loader/`：Rust cdylib，`__DATA,__mod_init_func` constructor 入口。
+- [x] 等 il2cpp 就緒 → `il2cpp_thread_attach(il2cpp_domain_get())` → 寫 log。成功印出 "Phase 3 OK"。
+- [x] 注入器 `tools/inject_dylib.py`：加 `LC_LOAD_DYLIB`（lief）+ 保留 entitlements adhoc 重簽。
+- [x] 驗證：loader 進入遊戲、解析 UnityFramework/domain、attach thread，遊戲穩定存活。
 
-**成功條件**：不靠 Frida，純自製 dylib 在遊戲程序內主動呼叫到 il2cpp API。
+**成功**：不靠 Frida，純自製 dylib 在遊戲程序內主動呼叫到 il2cpp API。
+
+踩到的雷（已記錄於 `PHASE3_RESULTS.md`，Phase 4 沿用結論）：
+1. constructor/早期執行緒**不可碰 dyld API**（會卡死啟動）→ 執行緒先 sleep(5s)。
+2. 遊戲以 RTLD_LOCAL 載 UnityFramework → 必須 `dlopen(path, RTLD_NOLOAD)` + 對 handle dlsym。
+3. **frida-gadget 與自製 loader 不可同時注入**（衝突）→ 開發 loader 時只注入 loader。
 
 ---
 
