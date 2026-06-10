@@ -50,18 +50,28 @@ GetSkeletonData(this) hook
  → 落到 orig(this) → 遊戲用我們的資料重建並快取 → 顯示 mod
 ```
 
-### 實機驗證狀態（2026-06-11）
+### 實機驗證狀態（2026-06-11，更新）
 | mod | 型態 | 結果 |
 |-----|------|------|
 | char003604 | standing / json / 1 頁 | ✅ 替換成功 |
-| cutscene_char067504（Luvencia） | skillcut / json / 3 頁 | ✅ |
+| cutscene_char067504（Luvencia） | skillcut / json / 3 頁 | ✅（連放兩次都正常） |
 | cutscene_char004301（Nekyndalia） | skillcut / json / 3 頁 | ✅ |
 | cutscene_char066403（Angelica） | skillcut / json / 3 頁 | ✅ |
-| illust_dating11（Eclipse） | dating / **skel** / 10 頁 | ❌ 黑屏+崩潰 |
+| illust_dating11（Eclipse, **json** 版） | dating / json / 7 頁 | ✅（載入時先黑一幀再出現） |
+| illust_dating11（Eclipse, **skel** 版） | dating / **skel** / 10 頁 | ❌ 黑屏+崩潰 |
 
-**多頁 JSON mod 全數可運作。** 二進位 `.skel` 路線「能建構成功」（ReadSkeletonData 回傳 skeletonData、
-FillStateData 已呼叫、log 顯示 REPLACED），但 Eclipse 約會場景仍黑屏並崩潰（無新 crash report，
-疑似渲染執行緒用到不完整資料，或 dating 場景/binary 後處理差異）。
+**JSON mod（立繪 / 多頁技能 / 約會）全數可運作，且修正了「第二次觸發消失/變回原始」。**
+
+#### 已修正的關鍵 bug
+- **第二次觸發變回原始**：遊戲重載時用「新的 SkeletonDataAsset 實例」，原本依名稱快取「已處理」會跳過新實例 → 變回原始。
+- **第二次觸發 spine 消失**：跨實例共用同一份 atlas，遊戲 Clear/Dispose 第一個實例時連帶釋放共用 atlas → 其他實例空白。
+- → 解法：**每個實例各自建一份**（不共用）；用「我們建過的 skel_ta/skel_data 指標集合」判斷某實例是否已替換，避免每次呼叫重建。
+
+#### 已知問題
+- **二進位 `.skel` 約會（特定 10 頁 Eclipse mod）黑屏+崩潰**：該 mod 的 skeletonData 讀取有效（71 動畫/1314 骨/553 slot）、
+  且完整補了 modifiers(=0)/ApplyMaterials/FillStateData，但仍失敗。**同場景的 json 版約會正常**，故問題侷限於
+  「二進位渲染路徑」或「該特定 mod」（其 skel 內嵌了 `cutscene_char003601` 路徑，疑似封裝異常）。待用其他二進位約會 mod 進一步隔離。
+- **記憶體**：每次重載建新貼圖/atlas 並 gchandle pin，長時間累積會增長，待加清理。
 
 ### binary `.skel` 卡點分析與下一步
 - `TextAsset` 為原生物件、無可寫的 byte[] 欄位 → 無法用 string 承載二進位（已確認死路）。
