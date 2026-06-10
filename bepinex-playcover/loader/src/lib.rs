@@ -22,7 +22,17 @@ const RTLD_NOLOAD: c_int = 0x10;
 // IL2CPP_TARGETS.md：SkeletonDataAsset.GetSkeletonData 的 RVA。
 const RVA_GET_SKELETON_DATA: usize = 0x94A9560;
 // SkeletonDataAsset 欄位偏移（IL2CPP_TARGETS.md）
+const OFF_ATLAS_ASSETS: usize = 0x18; // AtlasAssetBase[] atlasAssets
+const OFF_SCALE: usize = 0x20; // float scale
 const OFF_SKELETON_JSON: usize = 0x28; // TextAsset skeletonJSON
+const OFF_SKELETON_DATA: usize = 0x70; // SkeletonData skeletonData（CreateRuntimeInstance(initialize=true) 後即填好）
+
+// 多載用 RVA 精準定位（名稱+argc 會撞多載）
+const RVA_SPINEATLAS_CREATE_TEX_MAT: usize = 0x94AC378; // SpineAtlasAsset.CreateRuntimeInstance(TextAsset, Texture2D[], Material, bool, Func)
+const RVA_SKELDATA_CREATE_ARR: usize = 0x94AB660; // SkeletonDataAsset.CreateRuntimeInstance(TextAsset, AtlasAssetBase[], bool, float)
+
+// il2cpp array 資料起點（64-bit）
+const IL2CPP_ARRAY_DATA: usize = 0x20;
 
 // ---- 外部符號 ----
 extern "C" {
@@ -58,6 +68,11 @@ type FnClassFromName = unsafe extern "C" fn(*mut c_void, *const c_char, *const c
 type FnClassGetMethodFromName = unsafe extern "C" fn(*mut c_void, *const c_char, c_int) -> *mut c_void;
 type FnRuntimeInvoke =
     unsafe extern "C" fn(*mut c_void, *mut c_void, *mut *mut c_void, *mut *mut c_void) -> *mut c_void;
+type FnStringNew = unsafe extern "C" fn(*const c_char) -> *mut c_void;
+type FnArrayNew = unsafe extern "C" fn(*mut c_void, usize) -> *mut c_void;
+type FnObjectNew = unsafe extern "C" fn(*mut c_void) -> *mut c_void;
+type FnGcHandleNew = unsafe extern "C" fn(*mut c_void, c_int) -> u32;
+type FnClassGetMethods = unsafe extern "C" fn(*mut c_void, *mut *mut c_void) -> *mut c_void;
 
 // GetSkeletonData 原始函式（hook 後用來呼叫原始邏輯）
 type FnGetSkeletonData = unsafe extern "C" fn(*mut c_void, bool) -> *mut c_void;
@@ -65,6 +80,7 @@ type FnGetSkeletonData = unsafe extern "C" fn(*mut c_void, bool) -> *mut c_void;
 // ---- 全域狀態（pointer 以 usize 存）----
 static ORIG_GET_SKELETON_DATA: AtomicUsize = AtomicUsize::new(0);
 static UNITY_HANDLE: AtomicUsize = AtomicUsize::new(0);
+static UNITY_BASE: AtomicUsize = AtomicUsize::new(0);
 static M_OBJECT_GET_NAME: AtomicUsize = AtomicUsize::new(0); // MethodInfo* of UnityEngine.Object.get_name
 static F_RUNTIME_INVOKE: AtomicUsize = AtomicUsize::new(0);
 
@@ -207,6 +223,224 @@ unsafe fn unity_object_name(obj: *mut c_void) -> Option<String> {
     read_il2cpp_string(res)
 }
 
+// ---- 替換建構（策略 A）----
+// key → 結果：SkeletonData ptr（成功）/ 1（失敗，不再重試）。
+static REPL_CACHE: OnceLock<std::sync::Mutex<HashMap<String, usize>>> = OnceLock::new();
+fn repl_cache() -> &'static std::sync::Mutex<HashMap<String, usize>> {
+    REPL_CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()))
+}
+
+unsafe fn rfn<T: Copy>(name: &str) -> Option<T> {
+    let h = UNITY_HANDLE.load(Ordering::Acquire) as *mut c_void;
+    if h.is_null() { return None; }
+    resolve::<T>(h, name)
+}
+
+unsafe fn class_of(domain: *mut c_void, image: &str, ns: &str, name: &str) -> *mut c_void {
+    let h = UNITY_HANDLE.load(Ordering::Acquire) as *mut c_void;
+    let img = image_by_name(h, domain, image);
+    if img.is_null() { logline(&format!("[build] image MISS {}", image)); return std::ptr::null_mut(); }
+    let cfn: FnClassFromName = match rfn("il2cpp_class_from_name") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let nsc = CString::new(ns).unwrap();
+    let nmc = CString::new(name).unwrap();
+    let k = cfn(img, nsc.as_ptr(), nmc.as_ptr());
+    if k.is_null() { logline(&format!("[build] class MISS {}.{} in {}", ns, name, image)); }
+    k
+}
+
+unsafe fn method_by_name(klass: *mut c_void, name: &str, argc: c_int) -> *mut c_void {
+    let g: FnClassGetMethodFromName = match rfn("il2cpp_class_get_method_from_name") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let c = CString::new(name).unwrap();
+    g(klass, c.as_ptr(), argc)
+}
+
+/// 用 methodPointer == base+rva 精準定位多載的 MethodInfo*。
+unsafe fn method_by_rva(klass: *mut c_void, base: usize, rva: usize) -> *mut c_void {
+    let gm: FnClassGetMethods = match rfn("il2cpp_class_get_methods") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let want = (base + rva) as *mut c_void;
+    let mut iter: *mut c_void = std::ptr::null_mut();
+    loop {
+        let m = gm(klass, &mut iter as *mut *mut c_void);
+        if m.is_null() { break; }
+        let mp = *(m as *const *mut c_void); // MethodInfo[0] = methodPointer
+        if mp == want { return m; }
+    }
+    std::ptr::null_mut()
+}
+
+unsafe fn invoke(m: *mut c_void, obj: *mut c_void, args: &mut [*mut c_void]) -> *mut c_void {
+    let inv: FnRuntimeInvoke = match rfn("il2cpp_runtime_invoke") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let mut exc: *mut c_void = std::ptr::null_mut();
+    let p = if args.is_empty() { std::ptr::null_mut() } else { args.as_mut_ptr() };
+    let r = inv(m, obj, p, &mut exc as *mut *mut c_void);
+    if !exc.is_null() { logline("[build] runtime_invoke raised exception"); }
+    r
+}
+
+unsafe fn make_string(s: &str) -> *mut c_void {
+    let sn: FnStringNew = match rfn("il2cpp_string_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    match CString::new(s) { Ok(c)=>sn(c.as_ptr()), Err(_)=>std::ptr::null_mut() }
+}
+
+/// 由 bytes 建 byte[]（System.Byte 陣列）。
+unsafe fn make_byte_array(domain: *mut c_void, bytes: &[u8]) -> *mut c_void {
+    let byte_cls = class_of(domain, "mscorlib.dll", "System", "Byte");
+    if byte_cls.is_null() { return std::ptr::null_mut(); }
+    let an: FnArrayNew = match rfn("il2cpp_array_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let arr = an(byte_cls, bytes.len());
+    if arr.is_null() { return std::ptr::null_mut(); }
+    let dst = (arr as *mut u8).add(IL2CPP_ARRAY_DATA);
+    std::ptr::copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
+    arr
+}
+
+/// 建單一參考型別陣列並填入元素。
+unsafe fn make_ref_array(elem_cls: *mut c_void, elems: &[*mut c_void]) -> *mut c_void {
+    let an: FnArrayNew = match rfn("il2cpp_array_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let arr = an(elem_cls, elems.len());
+    if arr.is_null() { return std::ptr::null_mut(); }
+    for (i, e) in elems.iter().enumerate() {
+        let slot = (arr as *mut u8).add(IL2CPP_ARRAY_DATA + i * 8) as *mut *mut c_void;
+        *slot = *e;
+    }
+    arr
+}
+
+/// png bytes → Texture2D（含 LoadImage 解碼）。
+unsafe fn make_texture(domain: *mut c_void, png: &[u8]) -> *mut c_void {
+    let tex_cls = class_of(domain, "UnityEngine.CoreModule.dll", "UnityEngine", "Texture2D");
+    if tex_cls.is_null() { return std::ptr::null_mut(); }
+    let obj_new: FnObjectNew = match rfn("il2cpp_object_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let tex = obj_new(tex_cls);
+    let ctor = method_by_name(tex_cls, ".ctor", 2); // Texture2D(int,int)
+    if ctor.is_null() { logline("[build] Texture2D .ctor(2) MISS"); return std::ptr::null_mut(); }
+    let mut w: i32 = 2; let mut h: i32 = 2;
+    let mut args = [&mut w as *mut i32 as *mut c_void, &mut h as *mut i32 as *mut c_void];
+    invoke(ctor, tex, &mut args);
+    // ImageConversion.LoadImage(tex, byte[])
+    let ic_cls = class_of(domain, "UnityEngine.ImageConversionModule.dll", "UnityEngine", "ImageConversion");
+    if ic_cls.is_null() { return std::ptr::null_mut(); }
+    let m_load = method_by_name(ic_cls, "LoadImage", 2);
+    if m_load.is_null() { logline("[build] ImageConversion.LoadImage(2) MISS"); return std::ptr::null_mut(); }
+    let bytes = make_byte_array(domain, png);
+    if bytes.is_null() { return std::ptr::null_mut(); }
+    let mut args2 = [tex, bytes];
+    invoke(m_load, std::ptr::null_mut(), &mut args2);
+    tex
+}
+
+unsafe fn make_textasset(domain: *mut c_void, text: &str) -> *mut c_void {
+    let ta_cls = class_of(domain, "UnityEngine.CoreModule.dll", "UnityEngine", "TextAsset");
+    if ta_cls.is_null() { return std::ptr::null_mut(); }
+    let obj_new: FnObjectNew = match rfn("il2cpp_object_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
+    let ta = obj_new(ta_cls);
+    let ctor = method_by_name(ta_cls, ".ctor", 1); // TextAsset(string)
+    if ctor.is_null() { logline("[build] TextAsset .ctor(1) MISS"); return std::ptr::null_mut(); }
+    let s = make_string(text);
+    if s.is_null() { return std::ptr::null_mut(); }
+    let mut args = [s];
+    invoke(ctor, ta, &mut args);
+    ta
+}
+
+/// 讀 atlas 文字裡列出的 page png 檔名（行首、以 .png 結尾）。
+fn atlas_pages(atlas_text: &str) -> Vec<String> {
+    atlas_text
+        .lines()
+        .map(|l| l.trim_end())
+        .filter(|l| l.ends_with(".png") && !l.starts_with(char::is_whitespace))
+        .map(|l| l.to_string())
+        .collect()
+}
+
+/// 建構替換 SkeletonData（策略 A）。回傳 SkeletonData ptr 或 null。
+/// 目前支援：文字 .json 骨架 + 單/多頁 png。二進位 .skel 暫不支援（會回 null）。
+unsafe fn build_replacement(this: *mut c_void, key: &str, dir: &str, base: usize) -> *mut c_void {
+    let domain = match rfn::<FnDomainGet>("il2cpp_domain_get") { Some(f)=>f(), None=>return std::ptr::null_mut() };
+    let gc_new: FnGcHandleNew = match rfn("il2cpp_gchandle_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
+
+    // 1) 讀檔
+    let dirp = std::path::Path::new(dir);
+    let atlas_text = match std::fs::read_to_string(dirp.join(format!("{}.atlas", key))) {
+        Ok(t)=>t, Err(e)=>{ logline(&format!("[build] read atlas fail: {}", e)); return std::ptr::null_mut(); }
+    };
+    let json_path = dirp.join(format!("{}.json", key));
+    if !json_path.exists() {
+        logline(&format!("[build] {}: 無 .json（可能是二進位 .skel），暫不支援", key));
+        return std::ptr::null_mut();
+    }
+    let json_text = match std::fs::read_to_string(&json_path) {
+        Ok(t)=>t, Err(e)=>{ logline(&format!("[build] read json fail: {}", e)); return std::ptr::null_mut(); }
+    };
+
+    // 2) 建每頁 Texture2D
+    let pages = atlas_pages(&atlas_text);
+    if pages.is_empty() { logline("[build] atlas 無 page"); return std::ptr::null_mut(); }
+    let mut textures: Vec<*mut c_void> = Vec::new();
+    for page in &pages {
+        let png = match std::fs::read(dirp.join(page)) {
+            Ok(b)=>b, Err(e)=>{ logline(&format!("[build] read page {} fail: {}", page, e)); return std::ptr::null_mut(); }
+        };
+        let tex = make_texture(domain, &png);
+        if tex.is_null() { logline(&format!("[build] make_texture fail page {}", page)); return std::ptr::null_mut(); }
+        textures.push(tex);
+    }
+    logline(&format!("[build] {} textures built ({} page)", textures.len(), pages.len()));
+
+    // 3) 取原始 material 以複製 shader
+    let atlas_arr0 = *((this as *const u8).add(OFF_ATLAS_ASSETS) as *const *mut c_void);
+    let mut orig_mat: *mut c_void = std::ptr::null_mut();
+    if !atlas_arr0.is_null() {
+        let orig_atlas = *((atlas_arr0 as *const u8).add(IL2CPP_ARRAY_DATA) as *const *mut c_void);
+        if !orig_atlas.is_null() {
+            let sa_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SpineAtlasAsset");
+            if !sa_cls.is_null() {
+                let m_pm = method_by_name(sa_cls, "get_PrimaryMaterial", 0);
+                if !m_pm.is_null() { orig_mat = invoke(m_pm, orig_atlas, &mut []); }
+            }
+        }
+    }
+    logline(&format!("[build] orig_material={:p}", orig_mat));
+
+    // 4) SpineAtlasAsset.CreateRuntimeInstance(TextAsset, Texture2D[], Material, bool, Func)
+    let sa_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SpineAtlasAsset");
+    if sa_cls.is_null() { return std::ptr::null_mut(); }
+    let atlas_ta = make_textasset(domain, &atlas_text);
+    if atlas_ta.is_null() { return std::ptr::null_mut(); }
+    let tex_cls = class_of(domain, "UnityEngine.CoreModule.dll", "UnityEngine", "Texture2D");
+    let tex_arr = make_ref_array(tex_cls, &textures);
+    let m_sa_create = method_by_rva(sa_cls, base, RVA_SPINEATLAS_CREATE_TEX_MAT);
+    if m_sa_create.is_null() { logline("[build] SpineAtlasAsset.CreateRuntimeInstance by RVA MISS"); return std::ptr::null_mut(); }
+    let mut init: bool = true;
+    let mut func_null: *mut c_void = std::ptr::null_mut();
+    let mut sa_args = [atlas_ta, tex_arr, orig_mat, &mut init as *mut bool as *mut c_void, &mut func_null as *mut *mut c_void as *mut c_void];
+    let new_atlas = invoke(m_sa_create, std::ptr::null_mut(), &mut sa_args);
+    if new_atlas.is_null() { logline("[build] new SpineAtlasAsset null"); return std::ptr::null_mut(); }
+    logline(&format!("[build] new_atlas={:p}", new_atlas));
+
+    // 5) SkeletonDataAsset.CreateRuntimeInstance(TextAsset, AtlasAssetBase[], bool, float)
+    let sd_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SkeletonDataAsset");
+    if sd_cls.is_null() { return std::ptr::null_mut(); }
+    let base_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "AtlasAssetBase");
+    let atlas_assets = make_ref_array(base_cls, &[new_atlas]);
+    let skel_ta = make_textasset(domain, &json_text);
+    if skel_ta.is_null() { return std::ptr::null_mut(); }
+    let m_sd_create = method_by_rva(sd_cls, base, RVA_SKELDATA_CREATE_ARR);
+    if m_sd_create.is_null() { logline("[build] SkeletonDataAsset.CreateRuntimeInstance by RVA MISS"); return std::ptr::null_mut(); }
+    let mut init2: bool = true;
+    let mut scale: f32 = *((this as *const u8).add(OFF_SCALE) as *const f32);
+    if !(scale.is_finite() && scale != 0.0) { scale = 0.01; }
+    let mut sd_args = [skel_ta, atlas_assets, &mut init2 as *mut bool as *mut c_void, &mut scale as *mut f32 as *mut c_void];
+    let new_asset = invoke(m_sd_create, std::ptr::null_mut(), &mut sd_args);
+    if new_asset.is_null() { logline("[build] new SkeletonDataAsset null"); return std::ptr::null_mut(); }
+
+    // 6) 讀已建好的 skeletonData，並 pin 住 asset 防 GC
+    let skel_data = *((new_asset as *const u8).add(OFF_SKELETON_DATA) as *const *mut c_void);
+    gc_new(new_asset, 0);
+    logline(&format!("[build] DONE {} -> new_asset={:p} skeletonData={:p} scale={}", key, new_asset, skel_data, scale));
+    skel_data
+}
+
 // ---- hook replacement ----
 extern "C" fn repl_get_skeleton_data(this: *mut c_void, quiet: bool) -> *mut c_void {
     unsafe {
@@ -216,18 +450,34 @@ extern "C" fn repl_get_skeleton_data(this: *mut c_void, quiet: bool) -> *mut c_v
             unity_object_name(skel_json)
         } else { None };
 
-        // 比對掛載 mod（去副檔名）。命中只先 log，實際替換在 4.4/4.5。
+        // 比對掛載 mod（去副檔名）→ 命中則建構/取用替換 SkeletonData（策略 A）。
         if let Some(n) = name.as_deref() {
-            let key = asset_key(n);
+            let key = asset_key(n).to_string();
             if let Some(map) = MOD_MAP.get() {
-                if let Some(dir) = map.get(key) {
-                    logline(&format!("[MOD MATCH] asset='{}' key='{}' -> {}", n, key, dir));
-                } else {
-                    logline(&format!("[GetSkeletonData] asset='{}' (no mod)", n));
+                if let Some(dir) = map.get(&key).cloned() {
+                    // 查快取
+                    let cached = repl_cache().lock().ok().and_then(|m| m.get(&key).copied());
+                    let result = match cached {
+                        Some(1) => 0usize, // 之前建構失敗，走原始
+                        Some(v) if v != 0 => v,
+                        _ => {
+                            let base = UNITY_BASE.load(Ordering::Acquire);
+                            logline(&format!("[MOD MATCH] building replacement for '{}' <- {}", key, dir));
+                            let sd = build_replacement(this, &key, &dir, base) as usize;
+                            if let Ok(mut m) = repl_cache().lock() {
+                                m.insert(key.clone(), if sd == 0 { 1 } else { sd });
+                            }
+                            sd
+                        }
+                    };
+                    if result != 0 {
+                        logline(&format!("[REPLACED] '{}' -> SkeletonData={:#x}", key, result));
+                        return result as *mut c_void;
+                    }
                 }
             }
         }
-        // 呼叫原始函式
+        // 未命中或建構失敗 → 呼叫原始函式
         let orig_p = ORIG_GET_SKELETON_DATA.load(Ordering::Acquire);
         if orig_p != 0 {
             let orig: FnGetSkeletonData = std::mem::transmute(orig_p);
@@ -301,6 +551,7 @@ fn worker() {
                     let domain = domain_get();
                     if !domain.is_null() {
                         UNITY_HANDLE.store(handle as usize, Ordering::Release);
+                        UNITY_BASE.store(base, Ordering::Release);
                         logline(&format!(
                             "il2cpp ready: UnityFramework base={:#x} domain={:p}",
                             base, domain
