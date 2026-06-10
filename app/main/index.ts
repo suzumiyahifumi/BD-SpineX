@@ -9,6 +9,7 @@ import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyP
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
 import { detectGameVersion } from "../../core/game-version.js";
 import { isPackagedRuntime, managerDataDir, managerDataRootDir, resourcePath, supportedGameVersion } from "../../core/runtime-paths.js";
+import { getStatus as runtimeGetStatus, installLoader as runtimeInstallLoader, launchGame as runtimeLaunchGame, listLibraryMods as runtimeListLibraryMods, mountMod as runtimeMountMod, uninstallLoader as runtimeUninstallLoader, unmountMod as runtimeUnmountMod } from "../../core/runtime-loader.js";
 import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -148,6 +149,15 @@ ipcMain.handle("patch:ensure-original-backups-for-mods", async (event, args: { p
 );
 ipcMain.handle("patch:history", async () => readPatchHistory());
 ipcMain.handle("patch:previous-patched-mods", async () => readPreviousPatchedMods());
+
+// --- Runtime (BepInEx-for-PlayCover) ---
+ipcMain.handle("runtime:status", async () => runtimeGetStatus());
+ipcMain.handle("runtime:install", async () => runtimeInstallLoader());
+ipcMain.handle("runtime:uninstall", async () => runtimeUninstallLoader());
+ipcMain.handle("runtime:list-library", async (_event, dir: string) => runtimeListLibraryMods(dir));
+ipcMain.handle("runtime:mount", async (_event, srcDir: string) => runtimeMountMod(srcDir));
+ipcMain.handle("runtime:unmount", async (_event, folder: string) => runtimeUnmountMod(folder));
+ipcMain.handle("runtime:launch", async () => runtimeLaunchGame());
 
 function summarizePatchResult(result: ApplyPatchResult) {
   const changedLines = [
