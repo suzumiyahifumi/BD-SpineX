@@ -132,16 +132,25 @@ export async function installLoader(): Promise<{ ok: boolean; message: string }>
   const src = loaderSourcePath();
   if (!fs.existsSync(src)) return { ok: false, message: `找不到 loader dylib：${src}` };
 
-  // 1) 備份原始主程式 + entitlements（僅首次）
+  // 1) 取得「乾淨基底」與備份。遊戲更新後主程式會是全新未注入版，
+  //    此時必須用「新主程式」刷新備份與 entitlements，避免用舊版備份覆蓋新主程式。
   const bak = backupBinaryPath();
-  await fsp.mkdir(path.dirname(bak), { recursive: true });
-  if (!fs.existsSync(bak)) {
-    await fsp.copyFile(bin, bak);
-  }
   const ent = entitlementsCachePath();
-  if (!fs.existsSync(ent)) {
-    const { stdout } = await exec("codesign", ["-d", "--entitlements", "-", "--xml", bak]);
+  await fsp.mkdir(path.dirname(bak), { recursive: true });
+  const alreadyInjected = hasLoadDylib(bin, LOADER_LOAD_NAME);
+  if (!alreadyInjected) {
+    // 全新/更新後的乾淨主程式 → 刷新備份與 entitlements
+    await fsp.copyFile(bin, bak);
+    const { stdout } = await exec("codesign", ["-d", "--entitlements", "-", "--xml", bin]);
     await fsp.writeFile(ent, stdout);
+  } else {
+    // 已注入 → 從（同版本）備份還原乾淨基底再重做
+    if (!fs.existsSync(bak)) return { ok: false, message: "已注入但找不到備份，請先用 PlayCover 重裝遊戲" };
+    await fsp.copyFile(bak, bin);
+    if (!fs.existsSync(ent)) {
+      const { stdout } = await exec("codesign", ["-d", "--entitlements", "-", "--xml", bin]);
+      await fsp.writeFile(ent, stdout);
+    }
   }
 
   // 2) 複製 dylib 進 Frameworks、設 id、adhoc 簽
@@ -150,8 +159,7 @@ export async function installLoader(): Promise<{ ok: boolean; message: string }>
   await exec("install_name_tool", ["-id", LOADER_LOAD_NAME, dst]);
   await exec("codesign", ["-f", "-s", "-", dst]);
 
-  // 3) 加 LC_LOAD_DYLIB（從乾淨的備份開始，避免重複疊加）
-  await fsp.copyFile(bak, bin);
+  // 3) 加 LC_LOAD_DYLIB（bin 此時為乾淨基底）
   const r = addLoadDylib(bin, LOADER_LOAD_NAME);
   if (!r.ok) return { ok: false, message: `注入失敗：${r.reason}` };
 
@@ -161,10 +169,14 @@ export async function installLoader(): Promise<{ ok: boolean; message: string }>
   return { ok: true, message: "已安裝 Runtime loader（下次啟動遊戲生效）" };
 }
 
-/** 還原：用備份覆蓋主程式（移除注入）。 */
+/** 還原：用備份覆蓋主程式（移除注入）。只在目前已注入時動作，避免用舊備份覆蓋全新主程式。 */
 export async function uninstallLoader(): Promise<{ ok: boolean; message: string }> {
   const bin = mainBinaryPath();
   const bak = backupBinaryPath();
+  if (!fs.existsSync(bin)) return { ok: false, message: "找不到 BrownDustII" };
+  if (!hasLoadDylib(bin, LOADER_LOAD_NAME)) {
+    return { ok: true, message: "目前未注入，無需還原" };
+  }
   if (!fs.existsSync(bak)) return { ok: false, message: "找不到備份，無法還原" };
   await fsp.copyFile(bak, bin);
   return { ok: true, message: "已移除 Runtime loader（還原原始主程式）" };
