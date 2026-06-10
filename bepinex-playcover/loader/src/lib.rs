@@ -268,12 +268,21 @@ unsafe fn method_by_rva(klass: *mut c_void, base: usize, rva: usize) -> *mut c_v
     std::ptr::null_mut()
 }
 
+type FnFormatException = unsafe extern "C" fn(*mut c_void, *mut c_char, c_int);
+
 unsafe fn invoke(m: *mut c_void, obj: *mut c_void, args: &mut [*mut c_void]) -> *mut c_void {
     let inv: FnRuntimeInvoke = match rfn("il2cpp_runtime_invoke") { Some(f)=>f, None=>return std::ptr::null_mut() };
     let mut exc: *mut c_void = std::ptr::null_mut();
     let p = if args.is_empty() { std::ptr::null_mut() } else { args.as_mut_ptr() };
     let r = inv(m, obj, p, &mut exc as *mut *mut c_void);
-    if !exc.is_null() { logline("[build] runtime_invoke raised exception"); }
+    if !exc.is_null() {
+        let mut buf = [0u8; 1024];
+        if let Some(fmt) = rfn::<FnFormatException>("il2cpp_format_exception") {
+            fmt(exc, buf.as_mut_ptr() as *mut c_char, buf.len() as c_int);
+        }
+        let msg = CStr::from_ptr(buf.as_ptr() as *const c_char).to_string_lossy();
+        logline(&format!("[build] runtime_invoke EXCEPTION: {}", msg));
+    }
     r
 }
 
@@ -306,8 +315,9 @@ unsafe fn make_ref_array(elem_cls: *mut c_void, elems: &[*mut c_void]) -> *mut c
     arr
 }
 
-/// png bytes → Texture2D（含 LoadImage 解碼）。
-unsafe fn make_texture(domain: *mut c_void, png: &[u8]) -> *mut c_void {
+/// png bytes → Texture2D（含 LoadImage 解碼），並把 .name 設為 `name`
+/// （SpineAtlasAsset 以 texture.name 比對 atlas page，必須相符）。
+unsafe fn make_texture(domain: *mut c_void, png: &[u8], name: &str) -> *mut c_void {
     let tex_cls = class_of(domain, "UnityEngine.CoreModule.dll", "UnityEngine", "Texture2D");
     if tex_cls.is_null() { return std::ptr::null_mut(); }
     let obj_new: FnObjectNew = match rfn("il2cpp_object_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
@@ -326,6 +336,16 @@ unsafe fn make_texture(domain: *mut c_void, png: &[u8]) -> *mut c_void {
     if bytes.is_null() { return std::ptr::null_mut(); }
     let mut args2 = [tex, bytes];
     invoke(m_load, std::ptr::null_mut(), &mut args2);
+    // 設定 texture.name（UnityEngine.Object.set_name）以對應 atlas page
+    let obj_cls = class_of(domain, "UnityEngine.CoreModule.dll", "UnityEngine", "Object");
+    if !obj_cls.is_null() {
+        let m_setname = method_by_name(obj_cls, "set_name", 1);
+        if !m_setname.is_null() {
+            let s = make_string(name);
+            let mut a = [s];
+            invoke(m_setname, tex, &mut a);
+        }
+    }
     tex
 }
 
@@ -338,7 +358,7 @@ unsafe fn make_textasset(domain: *mut c_void, text: &str) -> *mut c_void {
     if ctor.is_null() { logline("[build] TextAsset .ctor(1) MISS"); return std::ptr::null_mut(); }
     let s = make_string(text);
     if s.is_null() { return std::ptr::null_mut(); }
-    let mut args = [s];
+    let mut args = [s]; // string 是參考型別，直接傳指標
     invoke(ctor, ta, &mut args);
     ta
 }
@@ -372,6 +392,8 @@ unsafe fn build_replacement(this: *mut c_void, key: &str, dir: &str, base: usize
     let json_text = match std::fs::read_to_string(&json_path) {
         Ok(t)=>t, Err(e)=>{ logline(&format!("[build] read json fail: {}", e)); return std::ptr::null_mut(); }
     };
+    logline(&format!("[build] atlas {} bytes, first line='{}'; json {} bytes",
+        atlas_text.len(), atlas_text.lines().next().unwrap_or(""), json_text.len()));
 
     // 2) 建每頁 Texture2D
     let pages = atlas_pages(&atlas_text);
@@ -381,7 +403,8 @@ unsafe fn build_replacement(this: *mut c_void, key: &str, dir: &str, base: usize
         let png = match std::fs::read(dirp.join(page)) {
             Ok(b)=>b, Err(e)=>{ logline(&format!("[build] read page {} fail: {}", page, e)); return std::ptr::null_mut(); }
         };
-        let tex = make_texture(domain, &png);
+        let page_name = page.trim_end_matches(".png"); // texture.name 用去副檔名的 page 名
+        let tex = make_texture(domain, &png, page_name);
         if tex.is_null() { logline(&format!("[build] make_texture fail page {}", page)); return std::ptr::null_mut(); }
         textures.push(tex);
     }
@@ -412,33 +435,40 @@ unsafe fn build_replacement(this: *mut c_void, key: &str, dir: &str, base: usize
     let m_sa_create = method_by_rva(sa_cls, base, RVA_SPINEATLAS_CREATE_TEX_MAT);
     if m_sa_create.is_null() { logline("[build] SpineAtlasAsset.CreateRuntimeInstance by RVA MISS"); return std::ptr::null_mut(); }
     let mut init: bool = true;
-    let mut func_null: *mut c_void = std::ptr::null_mut();
-    let mut sa_args = [atlas_ta, tex_arr, orig_mat, &mut init as *mut bool as *mut c_void, &mut func_null as *mut *mut c_void as *mut c_void];
+    // 參考型別直接傳指標；func（Func<>）傳 null 本身（不是 &null）；bool 傳 &value。
+    let mut sa_args = [
+        atlas_ta,
+        tex_arr,
+        orig_mat,
+        &mut init as *mut bool as *mut c_void,
+        std::ptr::null_mut(),
+    ];
     let new_atlas = invoke(m_sa_create, std::ptr::null_mut(), &mut sa_args);
     if new_atlas.is_null() { logline("[build] new SpineAtlasAsset null"); return std::ptr::null_mut(); }
     logline(&format!("[build] new_atlas={:p}", new_atlas));
 
-    // 5) SkeletonDataAsset.CreateRuntimeInstance(TextAsset, AtlasAssetBase[], bool, float)
-    let sd_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SkeletonDataAsset");
-    if sd_cls.is_null() { return std::ptr::null_mut(); }
+    // 5) 就地替換原始 asset 的欄位，讓「遊戲自己的 GetSkeletonData」用我們的資料重建。
+    //    比自行 CreateRuntimeInstance + 回傳更穩：this->skeletonData 會被原始邏輯填好、保持一致，
+    //    不會發生「回傳了 skeletonData 但 this->skeletonData 仍 null」導致後續 null deref。
     let base_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "AtlasAssetBase");
     let atlas_assets = make_ref_array(base_cls, &[new_atlas]);
     let skel_ta = make_textasset(domain, &json_text);
-    if skel_ta.is_null() { return std::ptr::null_mut(); }
-    let m_sd_create = method_by_rva(sd_cls, base, RVA_SKELDATA_CREATE_ARR);
-    if m_sd_create.is_null() { logline("[build] SkeletonDataAsset.CreateRuntimeInstance by RVA MISS"); return std::ptr::null_mut(); }
-    let mut init2: bool = true;
-    let mut scale: f32 = *((this as *const u8).add(OFF_SCALE) as *const f32);
-    if !(scale.is_finite() && scale != 0.0) { scale = 0.01; }
-    let mut sd_args = [skel_ta, atlas_assets, &mut init2 as *mut bool as *mut c_void, &mut scale as *mut f32 as *mut c_void];
-    let new_asset = invoke(m_sd_create, std::ptr::null_mut(), &mut sd_args);
-    if new_asset.is_null() { logline("[build] new SkeletonDataAsset null"); return std::ptr::null_mut(); }
+    if atlas_assets.is_null() || skel_ta.is_null() {
+        logline("[build] atlas_array/skel_ta null"); return std::ptr::null_mut();
+    }
 
-    // 6) 讀已建好的 skeletonData，並 pin 住 asset 防 GC
-    let skel_data = *((new_asset as *const u8).add(OFF_SKELETON_DATA) as *const *mut c_void);
-    gc_new(new_asset, 0);
-    logline(&format!("[build] DONE {} -> new_asset={:p} skeletonData={:p} scale={}", key, new_asset, skel_data, scale));
-    skel_data
+    // pin 我們建的物件防 GC（Boehm 保守式 GC，欄位直接寫入無需 write barrier）
+    gc_new(new_atlas, 0);
+    gc_new(atlas_assets, 0);
+    gc_new(skel_ta, 0);
+    for t in &textures { gc_new(*t, 0); }
+
+    // 寫欄位：atlasAssets / skeletonJSON；清空 skeletonData(0x70) 強制重建
+    *((this as *mut u8).add(OFF_ATLAS_ASSETS) as *mut *mut c_void) = atlas_assets;
+    *((this as *mut u8).add(OFF_SKELETON_JSON) as *mut *mut c_void) = skel_ta;
+    *((this as *mut u8).add(OFF_SKELETON_DATA) as *mut *mut c_void) = std::ptr::null_mut();
+    logline(&format!("[build] in-place swap DONE {} (new_atlas={:p} skelTA={:p})", key, new_atlas, skel_ta));
+    1 as *mut c_void // 非 null = 成功
 }
 
 // ---- hook replacement ----
@@ -455,24 +485,17 @@ extern "C" fn repl_get_skeleton_data(this: *mut c_void, quiet: bool) -> *mut c_v
             let key = asset_key(n).to_string();
             if let Some(map) = MOD_MAP.get() {
                 if let Some(dir) = map.get(&key).cloned() {
-                    // 查快取
+                    // 只在第一次命中時就地替換欄位；之後遊戲自身 GetSkeletonData 會回傳
+                    // 已重建並快取於 this->skeletonData 的我們的資料，故一律落到下方呼叫 orig。
                     let cached = repl_cache().lock().ok().and_then(|m| m.get(&key).copied());
-                    let result = match cached {
-                        Some(1) => 0usize, // 之前建構失敗，走原始
-                        Some(v) if v != 0 => v,
-                        _ => {
-                            let base = UNITY_BASE.load(Ordering::Acquire);
-                            logline(&format!("[MOD MATCH] building replacement for '{}' <- {}", key, dir));
-                            let sd = build_replacement(this, &key, &dir, base) as usize;
-                            if let Ok(mut m) = repl_cache().lock() {
-                                m.insert(key.clone(), if sd == 0 { 1 } else { sd });
-                            }
-                            sd
+                    if cached.is_none() {
+                        let base = UNITY_BASE.load(Ordering::Acquire);
+                        logline(&format!("[MOD MATCH] in-place swap for '{}' <- {}", key, dir));
+                        let ok = !build_replacement(this, &key, &dir, base).is_null();
+                        if let Ok(mut m) = repl_cache().lock() {
+                            m.insert(key.clone(), if ok { 2 } else { 1 });
                         }
-                    };
-                    if result != 0 {
-                        logline(&format!("[REPLACED] '{}' -> SkeletonData={:#x}", key, result));
-                        return result as *mut c_void;
+                        logline(&format!("[{}] '{}'", if ok { "REPLACED" } else { "BUILD FAILED" }, key));
                     }
                 }
             }
