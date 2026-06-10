@@ -21,9 +21,10 @@ Process.enumerateModules()
   });
 
 // 確認 il2cpp API 是否可解析（feasibility 已靜態確認 241 個導出）。
+// frida 17 API：Module.findGlobalExportByName（舊 Module.findExportByName 已移除）。
 const probe = ['il2cpp_init', 'il2cpp_domain_get', 'il2cpp_class_from_name', 'il2cpp_runtime_invoke'];
 console.log('\n[il2cpp exports]');
 for (const name of probe) {
-  const addr = Module.findExportByName(null, name);
+  const addr = Module.findGlobalExportByName(name);
   console.log(`  ${name}: ${addr ? addr : 'MISS'}`);
 }

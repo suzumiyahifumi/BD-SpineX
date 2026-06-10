@@ -15,43 +15,39 @@ pip install frida-tools     # frida CLI + python
 frida --version
 ```
 
-## attach 限制與解法
+## attach 方式（已採用：frida-gadget）
 
-主程式 **沒有 `get-task-allow`**，Frida 不能直接 attach。二選一：
+主程式 **沒有 `get-task-allow`**，Frida 不能直接 `attach`。本專案採用 **frida-gadget 注入**
+（與最終產品管線一致）：把 gadget 當 dylib 用 `LC_LOAD_DYLIB` 注入，listen 在 `127.0.0.1:27042`。
+完整步驟與還原見 [`../INJECTION.md`](../INJECTION.md)。
 
-### A. 重簽成可除錯（最快開始探測）
+## 執行（gadget listen 模式）
 
-```bash
-APP="$HOME/Library/Containers/io.playcover.PlayCover/Applications/com.neowizgames.game.browndust2ios.app"
-# 取出現有 entitlements，加入 get-task-allow，再 adhoc 重簽
-codesign -d --entitlements ent.plist --xml "$APP/BrownDustII"
-/usr/libexec/PlistBuddy -c "Add :com.apple.security.get-task-allow bool true" ent.plist
-codesign -f -s - --entitlements ent.plist "$APP/BrownDustII"
-```
-
-> 注意：重簽後若 SIP 仍限制，attach 可能需要 `sudo frida ...`。
-> 重裝/更新遊戲會還原簽章，需重做。
-
-### B. frida-gadget（推薦，與最終注入管線一致）
-
-把 `frida-gadget.dylib` 當成普通 dylib，用與 PlayTools 相同的 `LC_LOAD_DYLIB` 手法注入
-（見 `../DEVELOPMENT_PLAN.md` Phase 3）。這條路不需要 `get-task-allow`，
-也順便驗證了最終產品的注入機制。
-
-## 執行
-
-啟動遊戲後：
+啟動遊戲、等 gadget listen 後：
 
 ```bash
-frida -n BrownDustII -l bd2_modules_probe.js     # 確認 UnityFramework / il2cpp 導出
-frida -n BrownDustII -l bd2_il2cpp_probe.js       # 從執行時解析 Spine 類別與方法位址
-frida -n BrownDustII -l bd2_file_probe.js         # 觀察 __data / Spine 資源載入路徑
+# 確認 gadget 在 listen
+lsof -nP -iTCP:27042 -sTCP:LISTEN
+.venv-tools/bin/frida-ps -H 127.0.0.1:27042       # 應看到 "Gadget"
+
+# 非互動 runner（推薦，腳本用 send() 回傳）：
+.venv-tools/bin/python run_probe.py bd2_resolve_check.js 10    # ★ RVA 交叉驗證
+.venv-tools/bin/python run_probe.py bd2_hook_observe.js 30     # 攔截 GetSkeletonData（需切到角色畫面）
+.venv-tools/bin/python run_probe.py _diag.js 6                 # 模組/API 診斷
+
+# 互動 REPL（腳本用 console.log）：
+.venv-tools/bin/frida -H 127.0.0.1:27042 Gadget -l bd2_modules_probe.js
+.venv-tools/bin/frida -H 127.0.0.1:27042 Gadget -l bd2_il2cpp_probe.js
 ```
 
-## 成功條件（對應 DEVELOPMENT_PLAN Phase 1）
+> frida 17 API 注意：舊的 `Module.findExportByName(null, ...)` 已移除，改用
+> `Module.findGlobalExportByName(...)` 或 `module.findExportByName(...)`。腳本已更新。
 
-- `bd2_modules_probe`：看到 `UnityFramework` base/size，il2cpp 導出非 MISS。
-- `bd2_il2cpp_probe`：印出 `SkeletonGraphic` / `SkeletonDataAsset` 等類別與其方法位址。
-- `bd2_file_probe`：在切換角色時看到 `__data` 載入與 backtrace。
+## 成功條件（對應 DEVELOPMENT_PLAN Phase 1）— **已全數通過**
 
-通過後進入 Phase 2（Il2CppDumper 取精確簽章）。
+- ✅ `_diag` / `bd2_modules_probe`：`UnityFramework` base=0x300000000，il2cpp 導出非 MISS。
+- ✅ `bd2_resolve_check`：`SkeletonDataAsset`/`SpineAtlasAsset`/`SkeletonGraphic` 解析成功，
+      執行時位址 == `base + dumpRVA`（match=true）。
+- ✅ `bd2_hook_observe`：成功 attach 到 `GetSkeletonData`（切到角色畫面可看到 live 呼叫）。
+
+結果見 [`../PHASE1_RESULTS.md`](../PHASE1_RESULTS.md)。下一步：Phase 3 自製 loader。

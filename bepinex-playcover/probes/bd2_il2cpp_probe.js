@@ -10,7 +10,9 @@ if (!uf) {
 }
 
 function fn(name, ret, args) {
-  const a = Module.findExportByName('UnityFramework', name) || Module.findExportByName(null, name);
+  // frida 17 API：模組層級查找優先，再退回全域。
+  let a = uf && uf.findExportByName ? uf.findExportByName(name) : null;
+  if (!a) a = Module.findGlobalExportByName(name);
   if (!a) { console.log(`[MISS] ${name}`); return null; }
   return new NativeFunction(a, ret, args);
 }
