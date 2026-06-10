@@ -5,9 +5,14 @@
 
 | 檔案 | 內容 |
 |------|------|
-| [`FEASIBILITY.md`](FEASIBILITY.md) | 可行性研究報告與本機靜態分析結果（**先看這個**） |
-| [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) | 修訂後的分階段開發規劃（Phase 1–5） |
-| [`probes/`](probes/) | Phase 1 可執行的 Frida 探測腳本 + 操作說明 |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | **整個 runtime patch 機制的端到端技術細節（先看這個）** |
+| [`VERSIONING.md`](VERSIONING.md) | 版本綁定常數、遊戲更新行為、升級新版 SOP、近期改動 |
+| [`IL2CPP_TARGETS.md`](IL2CPP_TARGETS.md) | hook 目標方法 RVA 與欄位偏移 |
+| [`FEASIBILITY.md`](FEASIBILITY.md) | 可行性研究報告與本機靜態分析 |
+| [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) | 分階段開發規劃（Phase 1–5） |
+| `PHASE{1,3,4,5}_*.md` | 各階段實作結果與踩雷紀錄 |
+| [`INJECTION.md`](INJECTION.md) | 注入流程（探測期 frida-gadget） |
+| [`probes/`](probes/) | Frida 探測腳本（開發用） |
 
 ## 一句話結論
 
