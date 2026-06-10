@@ -181,3 +181,5 @@ experiments/rust-uabea-cli/._target/**
 bepinex-playcover/.venv-tools/
 bepinex-playcover/tools/
 bepinex-playcover/dump/
+
+bepinex-playcover/loader/target/
