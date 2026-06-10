@@ -1141,3 +1141,9 @@ tr.pendingPatchChange.pendingPatchRepair td {
   flex-direction: column;
   gap: 2px;
 }
+
+/* same-key conflict (cannot apply) */
+tr.pendingPatchChange.pendingPatchConflict td {
+  background: #e9d5ff;
+  box-shadow: inset 3px 0 0 #8b5cf6;
+}

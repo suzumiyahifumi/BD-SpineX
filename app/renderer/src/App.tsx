@@ -8,8 +8,8 @@ type LogEntry = { id: string; time: string; message: string; tone?: "ok" | "warn
 type ModSortKey = "folder" | "name" | "category" | "status";
 type ModSort = { key: ModSortKey; direction: "asc" | "desc" };
 type ModCategory = "char" | "dating" | "cutscene" | "other";
-type PendingTone = "added" | "removed";
-type RuntimeChange = { folder: string; key: string; enabled: boolean; implicit?: boolean };
+type PendingTone = "added" | "removed" | "conflict";
+type RuntimeChange = { folder: string; key: string; enabled: boolean; implicit?: boolean; conflict?: boolean };
 
 const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Runtime Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0", development: false };
 const MODSDIR_KEY = "bd-spinex:runtime-modsdir";
@@ -71,9 +71,10 @@ export function App() {
   );
   const tones = useMemo(() => {
     const t: Record<string, PendingTone> = {};
-    for (const c of pendingChanges) t[c.folder] = c.enabled ? "added" : "removed";
+    for (const c of pendingChanges) t[c.folder] = c.conflict ? "conflict" : c.enabled ? "added" : "removed";
     return t;
   }, [pendingChanges]);
+  const hasConflict = useMemo(() => pendingChanges.some((c) => c.conflict), [pendingChanges]);
 
   const versionLocked = isGameVersionMismatch(appInfo, gameVersionInfo);
   const appReady = Boolean(status?.appFound && status?.loaderAvailable);
@@ -124,7 +125,7 @@ export function App() {
 
   const applyChanges = useCallback(() => {
     void runTask(async () => {
-      if (pendingChanges.length === 0) return;
+      if (pendingChanges.length === 0 || hasConflict) return;
       if (!status?.injected) {
         log("Installing runtime loader…");
         const r = await window.bd2.runtimeInstall();
@@ -149,7 +150,7 @@ export function App() {
       setDesired({});
       log(`Applied: ${mounted} mounted, ${unmounted} unmounted. 重新啟動遊戲以套用。`, "ok");
     });
-  }, [runTask, pendingChanges, status, library, log]);
+  }, [runTask, pendingChanges, hasConflict, status, library, log]);
 
   const restoreAll = useCallback(() => {
     void runTask(async () => {
@@ -332,9 +333,9 @@ export function App() {
           </div>
           <div className="actionButtons" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <button
-              disabled={modsLocked || pendingChanges.length === 0}
+              disabled={modsLocked || pendingChanges.length === 0 || hasConflict}
               onClick={applyChanges}
-              title={versionLocked ? "Update BD-SpineX version" : pendingChanges.length === 0 ? "沒有待套用變更" : ""}
+              title={versionLocked ? "Update BD-SpineX version" : hasConflict ? "有同 key 衝突，請先解決" : pendingChanges.length === 0 ? "沒有待套用變更" : ""}
             >
               Apply Changes{pendingChanges.length ? ` (${pendingChanges.length})` : ""}
             </button>
@@ -342,6 +343,7 @@ export function App() {
             <button disabled={busy || (!status?.injected && mountedMods.length === 0)} onClick={restoreAll}>
               全部還原（卸載全部 + 移除注入）
             </button>
+            {hasConflict && <p className="hint">⚠️ 有多個相同 key 的 mod 同時勾選（紫色列），請只保留一個才能 Apply。</p>}
             {busy && <p className="hint">Action running…</p>}
             {versionLocked && <p className="hint">Update BD-SpineX version</p>}
           </div>
@@ -383,6 +385,17 @@ function getRuntimePendingRows(library: RuntimeMod[], mountedMods: RuntimeMod[],
       if (addedKeys.has(m.key)) { rows.push({ folder: m.folder, key: m.key, enabled: false, implicit: true }); seen.add(m.folder); }
     }
   }
+  // 衝突：同時勾選多個「相同 key 且未掛載」的 mod → 無法判斷掛哪個 → 標記衝突（紫底、無法 Apply）
+  const enabledByKey = new Map<string, RuntimeChange[]>();
+  for (const r of rows) {
+    if (!r.enabled) continue;
+    const list = enabledByKey.get(r.key) ?? [];
+    list.push(r);
+    enabledByKey.set(r.key, list);
+  }
+  for (const list of enabledByKey.values()) {
+    if (list.length >= 2) for (const r of list) r.conflict = true;
+  }
   return rows;
 }
 
@@ -413,7 +426,7 @@ function createLogEntry(message: string, tone?: LogEntry["tone"]): LogEntry {
 }
 function formatBool(v: boolean) { return v ? "On" : "Off"; }
 function formatPendingToneClass(tone?: PendingTone) {
-  return tone === "added" ? "pendingPatchAdd" : tone === "removed" ? "pendingPatchRemove" : "";
+  return tone === "conflict" ? "pendingPatchConflict" : tone === "added" ? "pendingPatchAdd" : tone === "removed" ? "pendingPatchRemove" : "";
 }
 
 function normalizeVersionForCompare(version?: string) {
