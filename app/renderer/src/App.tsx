@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { RuntimePanel } from "./RuntimePanel";
 import type { AppInfo, ApplyPatchOptions, BundleAsset, GameVersionInfo, ModsIndex, PatchBackend, PatchHistory, PatchPlanEntry, PatchProgress, PatchStateChange, PreviousPatchedMods, SharedIndex, SharedScanBackend, SharedScanProgress } from "../../../core/types";
 
 type Settings = {
@@ -727,6 +728,8 @@ export function App() {
           {readyModCount} mod(s) ready
         </div>
       </header>
+
+      <RuntimePanel />
 
       <section className="panel settingsGrid">
         <PathField
