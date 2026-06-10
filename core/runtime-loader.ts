@@ -170,13 +170,72 @@ export async function uninstallLoader(): Promise<{ ok: boolean; message: string 
   return { ok: true, message: "已移除 Runtime loader（還原原始主程式）" };
 }
 
+/** Spine 轉換工具路徑（packaged → resources/tools；dev → manager-data）。 */
+function converterPath() {
+  return isPackagedRuntime()
+    ? resourcePath("tools", "SpineSkeletonDataConverter")
+    : path.resolve("manager-data/tools/SpineSkeletonDataConverter");
+}
+
+/** 能 hardlink 就 hardlink（同 volume、不複製資料）；跨 volume 失敗則退回複製。 */
+async function linkOrCopyFile(src: string, dst: string) {
+  try {
+    await fsp.link(src, dst);
+  } catch {
+    await fsp.copyFile(src, dst);
+  }
+}
+
+/**
+ * 掛載一個 mod 到遊戲讀取目錄。
+ * - 檔案優先 hardlink（省空間），跨 volume 退回複製。
+ * - 若 mod 只有二進位 .skel（無 .json），自動轉成 .json（loader 的 json 路線最穩定，
+ *   可避開二進位 .skel 在約會場景的問題）。
+ */
 export async function mountMod(srcDir: string): Promise<{ ok: boolean; message: string }> {
   if (!fs.existsSync(srcDir)) return { ok: false, message: "來源資料夾不存在" };
-  const dest = path.join(mountDir(), path.basename(srcDir));
+  const folder = path.basename(srcDir);
+  const dest = path.join(mountDir(), folder);
   await fsp.mkdir(mountDir(), { recursive: true });
   await fsp.rm(dest, { recursive: true, force: true });
-  await fsp.cp(srcDir, dest, { recursive: true, filter: (s) => !path.basename(s).startsWith("._") });
-  return { ok: true, message: `已掛載 ${path.basename(srcDir)}` };
+  await fsp.mkdir(dest, { recursive: true });
+
+  const entries = await fsp.readdir(srcDir, { withFileTypes: true });
+  let linked = 0;
+  let copied = 0;
+  for (const e of entries) {
+    if (!e.isFile() || e.name.startsWith("._")) continue;
+    const src = path.join(srcDir, e.name);
+    const dst = path.join(dest, e.name);
+    const before = copied;
+    try {
+      await fsp.link(src, dst);
+      linked++;
+    } catch {
+      await fsp.copyFile(src, dst);
+      copied = before + 1;
+    }
+  }
+
+  // 找 atlas 取得 key，若只有 .skel 則轉 .json
+  const files = await fsp.readdir(dest);
+  const atlas = files.find((f) => f.endsWith(".atlas") && !f.startsWith("._"));
+  let convertedNote = "";
+  if (atlas) {
+    const key = atlas.slice(0, -".atlas".length);
+    const hasJson = files.includes(`${key}.json`);
+    const skel = path.join(dest, `${key}.skel`);
+    if (!hasJson && fs.existsSync(skel)) {
+      try {
+        await exec(converterPath(), [skel, path.join(dest, `${key}.json`)]);
+        convertedNote = "（已將 .skel 自動轉為 .json）";
+      } catch (err) {
+        convertedNote = `（.skel→.json 轉換失敗，將以二進位掛載：${String(err).slice(0, 80)}）`;
+      }
+    }
+  }
+
+  return { ok: true, message: `已掛載 ${folder}（hardlink ${linked} / 複製 ${copied}）${convertedNote}` };
 }
 
 export async function unmountMod(folder: string): Promise<{ ok: boolean; message: string }> {
