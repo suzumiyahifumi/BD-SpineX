@@ -19,28 +19,22 @@
 
 ---
 
-## Phase 1 — Runtime Probe（探測，不修改遊戲行為）
+## Phase 1 — Runtime Probe ✅ 已完成（2026-06-10）
 
 目標：在活著的遊戲程序裡確認模組、IL2CPP、Spine runtime 真的存在且可觀察。
+**結果見 `PHASE1_RESULTS.md`；注入流程見 `INJECTION.md`。**
 
-**先決條件（待辦）**
-- [ ] 安裝 `frida` / `frida-tools`（`pip install frida-tools`）。
-- [ ] 解決 attach 限制（二選一）：
-  - 重簽 app 加 `get-task-allow` →（見 `probes/README.md` 的 `resign-debuggable`），或
-  - 注入 frida-gadget dylib（與最終注入管線一致，推薦）。
+- [x] 工具：`.venv-tools` 裝 frida-tools 17.11.0。
+- [x] attach：採 **frida-gadget 注入**（`LC_LOAD_DYLIB` + adhoc 重簽，listen 127.0.0.1:27042）。
+- [x] `bd2_resolve_check.js`：解析 `SkeletonDataAsset`/`SpineAtlasAsset`/`SkeletonGraphic`，
+      **執行時位址 == base + dumpRVA（match=true）**。
+- [x] `bd2_hook_observe.js`：成功 attach `GetSkeletonData`（Interceptor 可掛）。
 
-**步驟**
-- [ ] `probes/bd2_modules_probe.js`：確認 `UnityFramework` 載入、base/size。
-- [ ] `probes/bd2_il2cpp_probe.js`：呼叫 `il2cpp_domain_get` / `il2cpp_class_from_name`
-      解析 `SkeletonGraphic`、`SkeletonDataAsset`、`SpineAtlasAsset`、`MenuIllustController`，
-      印出 method table，確認可從執行時拿到方法位址。
-- [ ] `probes/bd2_file_probe.js`：hook `open`/`fopen` 觀察 `__data` 實際載入路徑與時機。
+**全部成功條件達成**：注入鏈、il2cpp 解析、RVA 對應、攔截能力皆驗證。
+（`bd2_file_probe.js` 為輔助觀察用，非阻塞。）
 
-**成功條件**
-- ✅ 能進入遊戲程序執行 JS
-- ✅ 看到 `UnityFramework` 模組
-- ✅ 從 il2cpp 拿到 Spine 類別與其方法位址
-- ✅ 看到角色資源（`__data`）載入點
+**關鍵結論**：UnityFramework base=0x300000000，靜態 dump 的 RVA 可**直接**用於 inline hook
+（runtime addr = base + RVA），版本更新後只需重 dump。
 
 ---
 
