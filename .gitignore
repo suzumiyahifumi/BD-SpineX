@@ -176,3 +176,8 @@ release/**
 experiments/rust-uabea-cli/target/**
 experiments/rust-uabea-cli/._target
 experiments/rust-uabea-cli/._target/**
+
+# BepInEx-for-PlayCover research tooling (large / regenerable, branch bd2/BepInEx_for_playcover)
+bepinex-playcover/.venv-tools/
+bepinex-playcover/tools/
+bepinex-playcover/dump/

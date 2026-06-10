@@ -44,21 +44,25 @@
 
 ---
 
-## Phase 2 — IL2CPP Metadata 分析
+## Phase 2 — IL2CPP Metadata 分析 ✅ 已完成（2026-06-10）
 
 目標：拿到精確的類別/方法簽章，作為 hook 的依據。
 
-- [ ] 用 `Il2CppDumper`（輸入 `UnityFramework` + `global-metadata.dat`）產生 `dump.cs` 與位址表。
-- [ ] 定位並記錄下列方法的 RVA / 參數 / 回傳型別：
-  1. `*.GetIllustSpinePrefab`
-  2. `*.GetDatingIllustSpinePrefab`
-  3. `*.GetSpecialIllustSpinePrefab`
-  4. `SkeletonDataAsset.GetSkeletonData`
-  5. `SpineAtlasAsset.GetAtlas`
-  6. `AssetBundle.LoadFromFile`
-- [ ] 比對 Windows `BrownDustX` 反組譯的 `SpineReplacer` 流程，標出每個 hook 點要替換的欄位
-      （`skeletonDataAsset`、`atlasAssets` / `spineAtlasAsset`）。
-- [ ] 產出 `docs/IL2CPP_TARGETS.md`：把方法 → 位址 → 替換策略對應表寫死，供 Phase 3 使用。
+- [x] 用 `Il2CppDumper` v6.7.46（輸入 `UnityFramework` + `global-metadata.dat`）產生 `dump.cs`/`script.json`。
+      Metadata/Il2Cpp Version 31，dump 在 `dump/`（git ignored）。
+- [x] 定位並記錄關鍵方法 RVA → 見 **`IL2CPP_TARGETS.md`**。
+- [x] **重要轉折**：遊戲自身方法名**被混淆**（unicode），`Get*SpinePrefab` 僅以 enum 欄位名保留，
+      **無法靠遊戲方法名 hook**。但 **Spine 函式庫類別（spine-unity）未混淆**，
+      所以改 hook Spine 層（`SkeletonDataAsset.GetSkeletonData` 等），反而對應到原規劃的優先級 #1/#2/#4/#5/#6。
+- [x] 已定位欄位偏移供直接改寫：`SkeletonDataAsset.atlasAssets/skeletonJSON/skeletonData`、
+      `SkeletonGraphic.skeletonDataAsset/customTextureOverride`、`SpineAtlasAsset.atlasFile/materials/atlas`。
+
+**RVA 重產方式**（版本更新後）：
+```bash
+DOTNET_ROLL_FORWARD=LatestMajor ~/.dotnet/dotnet \
+  bepinex-playcover/tools/Il2CppDumper/Il2CppDumper.dll \
+  "<UnityFramework>" "<global-metadata.dat>" bepinex-playcover/dump
+```
 
 ---
 
@@ -112,8 +116,18 @@
 
 ---
 
-## 立即下一步（unblock 用）
+## 進度與立即下一步
 
-1. `pip install frida-tools` 並用 `probes/README.md` 的 `resign-debuggable` 重簽，跑 `bd2_modules_probe.js`。
-2. 下載 `Il2CppDumper`，對本機 `UnityFramework` + `global-metadata.dat` 做一次 dump，產出 `IL2CPP_TARGETS.md`。
-3. 兩者完成後即可開始 Phase 3 loader 雛形。
+**已完成（2026-06-10）**
+- [x] 工具環境：`bepinex-playcover/.venv-tools`（python3.13）裝好 frida-tools 17.11.0；
+      `~/.dotnet` 裝好 .NET 8 runtime；`tools/Il2CppDumper` 就緒。
+- [x] Phase 2 靜態 dump 完成，`IL2CPP_TARGETS.md` 產出。
+
+**下一步（依序）**
+1. **Phase 1 live probe**（需遊戲執行中 + 解決 attach）：
+   - attach 需重簽 app 加 `get-task-allow`，**會修改你已安裝的遊戲簽章**——執行前先確認。
+   - 或改用 frida-gadget 注入（與最終管線一致）。
+   - 跑 `bd2_il2cpp_probe.js` 驗證 `SkeletonDataAsset` 執行時位址 == `base + 0x94A9560`。
+2. **Phase 3 loader 雛形**：可在 Phase 1 驗證後或平行開始（Rust cdylib，先只 log）。
+
+> 註：Phase 2 已先行完成（靜態、不碰遊戲）；Phase 1 因需動到遊戲簽章而暫緩，待你確認。
