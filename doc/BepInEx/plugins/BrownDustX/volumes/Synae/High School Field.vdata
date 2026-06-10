@@ -1,0 +1,10 @@
+{
+	"name": "VP_CharMap1001_011",
+	"author": "Synae",
+	"bloom": {
+		"intensity": 1
+	},
+	"colorAdjustments": {
+		"postExposure": 1
+	}
+}
