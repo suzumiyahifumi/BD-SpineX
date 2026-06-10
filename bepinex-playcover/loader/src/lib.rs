@@ -7,11 +7,13 @@
 //!
 //! 注入：以 `LC_LOAD_DYLIB` 加進 BrownDustII 主程式（見 ../tools/inject_dylib.py）。
 
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::raw::{c_char, c_int, c_void};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // ---- 常數 ----
@@ -66,9 +68,15 @@ static UNITY_HANDLE: AtomicUsize = AtomicUsize::new(0);
 static M_OBJECT_GET_NAME: AtomicUsize = AtomicUsize::new(0); // MethodInfo* of UnityEngine.Object.get_name
 static F_RUNTIME_INVOKE: AtomicUsize = AtomicUsize::new(0);
 
-// ---- log ----
+// ---- log / mods 目錄 ----
 const HARDCODED_LOG: &str =
     "/Users/suzumiyahifumi/Library/Containers/com.neowizgames.game.browndust2ios/Data/bd2loader.log";
+// 掛載目錄（Phase 5 GUI 會往這裡放選中的 mod）。
+const MOUNT_DIR: &str =
+    "/Users/suzumiyahifumi/Library/Containers/com.neowizgames.game.browndust2ios/Data/bd2mods";
+
+// key（去副檔名的資產名，如 char003604 / illust_dating11 / cutscene_char066403）→ mod 子資料夾路徑
+static MOD_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
 
 fn log_paths() -> Vec<String> {
     let mut v = vec![HARDCODED_LOG.to_string()];
@@ -92,6 +100,44 @@ fn logline(msg: &str) {
             break;
         }
     }
+}
+
+// ---- mod 掛載目錄掃描 / 比對 ----
+/// 掃 MOUNT_DIR 下每個 mod 子資料夾，把其中含 spine 檔（.atlas/.skel/.json）的「基底名」
+/// 對應到該子資料夾。基底名即遊戲資產 key（去掉多頁後綴 _N 與副檔名）。
+fn scan_mods() -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    let root = std::path::Path::new(MOUNT_DIR);
+    let entries = match std::fs::read_dir(root) {
+        Ok(e) => e,
+        Err(_) => return map,
+    };
+    for entry in entries.flatten() {
+        let dir = entry.path();
+        if !dir.is_dir() { continue; }
+        if let Ok(files) = std::fs::read_dir(&dir) {
+            for f in files.flatten() {
+                let p = f.path();
+                let name = match p.file_name().and_then(|s| s.to_str()) {
+                    Some(n) => n, None => continue,
+                };
+                if name.starts_with("._") { continue; }
+                // 只認 .atlas 當代表（每個 mod 一個 atlas，stem 即 key）
+                if name.ends_with(".atlas") {
+                    let key = name.trim_end_matches(".atlas").to_string();
+                    map.insert(key, dir.to_string_lossy().into_owned());
+                }
+            }
+        }
+    }
+    map
+}
+
+/// 由遊戲資產 name（如 "char003604.skel"）取出比對 key（去副檔名）。
+fn asset_key(name: &str) -> &str {
+    name.trim_end_matches(".skel")
+        .trim_end_matches(".json")
+        .trim_end_matches(".atlas")
 }
 
 // ---- il2cpp helpers ----
@@ -169,11 +215,18 @@ extern "C" fn repl_get_skeleton_data(this: *mut c_void, quiet: bool) -> *mut c_v
             let skel_json = *((this as *const u8).add(OFF_SKELETON_JSON) as *const *mut c_void);
             unity_object_name(skel_json)
         } else { None };
-        logline(&format!(
-            "[GetSkeletonData] this={:p} asset='{}'",
-            this,
-            name.as_deref().unwrap_or("?")
-        ));
+
+        // 比對掛載 mod（去副檔名）。命中只先 log，實際替換在 4.4/4.5。
+        if let Some(n) = name.as_deref() {
+            let key = asset_key(n);
+            if let Some(map) = MOD_MAP.get() {
+                if let Some(dir) = map.get(key) {
+                    logline(&format!("[MOD MATCH] asset='{}' key='{}' -> {}", n, key, dir));
+                } else {
+                    logline(&format!("[GetSkeletonData] asset='{}' (no mod)", n));
+                }
+            }
+        }
         // 呼叫原始函式
         let orig_p = ORIG_GET_SKELETON_DATA.load(Ordering::Acquire);
         if orig_p != 0 {
@@ -186,6 +239,12 @@ extern "C" fn repl_get_skeleton_data(this: *mut c_void, quiet: bool) -> *mut c_v
 }
 
 fn install_hook(handle: *mut c_void, domain: *mut c_void, base: usize) {
+    // 掃掛載目錄，建立 key→mod 路徑表
+    let map = scan_mods();
+    let keys: Vec<String> = map.keys().cloned().collect();
+    let _ = MOD_MAP.set(map);
+    logline(&format!("scanned {} mod(s) from {}: {:?}", keys.len(), MOUNT_DIR, keys));
+
     unsafe {
         // 解析 UnityEngine.Object.get_name 供識別用
         if let (Some(class_from_name), Some(get_method)) = (
