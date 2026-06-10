@@ -123,15 +123,23 @@ export function App() {
     [log, refreshStatus]
   );
 
+  const installLoader = useCallback(() => {
+    void runTask(async () => {
+      const r = await window.bd2.runtimeInstall();
+      log(r.message, r.ok ? "ok" : "err");
+    });
+  }, [runTask, log]);
+
+  const uninstallLoader = useCallback(() => {
+    void runTask(async () => {
+      const r = await window.bd2.runtimeUninstall();
+      log(r.message, r.ok ? "ok" : "warn");
+    });
+  }, [runTask, log]);
+
   const applyChanges = useCallback(() => {
     void runTask(async () => {
       if (pendingChanges.length === 0 || hasConflict) return;
-      if (!status?.injected) {
-        log("Installing runtime loader…");
-        const r = await window.bd2.runtimeInstall();
-        log(r.message, r.ok ? "ok" : "err");
-        if (!r.ok) return;
-      }
       const byFolder = new Map(library.map((m) => [m.folder, m]));
       let mounted = 0, unmounted = 0;
       // 先卸載（含 auto），再掛載，避免同 key 衝突
@@ -149,6 +157,9 @@ export function App() {
       }
       setDesired({});
       log(`Applied: ${mounted} mounted, ${unmounted} unmounted. 重新啟動遊戲以套用。`, "ok");
+      if (mounted > 0 && !status?.injected) {
+        log("提醒：尚未啟用 Runtime 注入，掛載的 mod 不會生效。請在設定區開啟注入。", "warn");
+      }
     });
   }, [runTask, pendingChanges, hasConflict, status, library, log]);
 
@@ -208,6 +219,21 @@ export function App() {
           onBrowse={selectDir}
           invalid={missingModsDir}
         />
+        <div className="field">
+          <span className="fieldLabel">
+            <span>Runtime 注入 (BepInEx)</span>
+            <HelpButton title="Runtime 注入">
+              注入會把 loader 加進遊戲主程式（備份原檔 + 重簽），啟動遊戲後才會載入並套用掛載的 mod。移除注入會還原原始主程式（已掛載的 mod 檔仍保留，重新注入即恢復）。遊戲更新後需重新注入。
+            </HelpButton>
+          </span>
+          <div className="pathRow">
+            <span className={`badge ${status?.injected ? "patched" : ""}`} style={{ alignSelf: "center" }}>
+              {status?.injected ? "已注入" : "未注入"}
+            </span>
+            <button type="button" disabled={busy || !appReady || Boolean(status?.injected)} onClick={installLoader}>安裝注入</button>
+            <button type="button" disabled={busy || !status?.injected} onClick={uninstallLoader}>移除注入</button>
+          </div>
+        </div>
       </section>
 
       <section className="scanGrid">
