@@ -1126,3 +1126,18 @@ tr.pendingPatchChange.pendingPatchRepair td {
     justify-content: flex-start;
   }
 }
+
+/* Runtime mode additions */
+.errorPill {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(220, 80, 80, 0.14);
+  border: 1px solid rgba(220, 80, 80, 0.4);
+  color: #ffb4b4;
+  font-size: 13px;
+}
+.tableTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
