@@ -30,6 +30,7 @@ const OFF_SKELETON_DATA: usize = 0x70; // SkeletonData skeletonData（CreateRunt
 // 多載用 RVA 精準定位（名稱+argc 會撞多載）
 const RVA_SPINEATLAS_CREATE_TEX_MAT: usize = 0x94AC378; // SpineAtlasAsset.CreateRuntimeInstance(TextAsset, Texture2D[], Material, bool, Func)
 const RVA_SKELDATA_CREATE_ARR: usize = 0x94AB660; // SkeletonDataAsset.CreateRuntimeInstance(TextAsset, AtlasAssetBase[], bool, float)
+const RVA_SKELDATA_READ_BYTES: usize = 0x94AB960; // SkeletonDataAsset.ReadSkeletonData(byte[], AttachmentLoader, float) [static]
 
 // il2cpp array 資料起點（64-bit）
 const IL2CPP_ARRAY_DATA: usize = 0x20;
@@ -238,14 +239,31 @@ unsafe fn rfn<T: Copy>(name: &str) -> Option<T> {
 
 unsafe fn class_of(domain: *mut c_void, image: &str, ns: &str, name: &str) -> *mut c_void {
     let h = UNITY_HANDLE.load(Ordering::Acquire) as *mut c_void;
-    let img = image_by_name(h, domain, image);
-    if img.is_null() { logline(&format!("[build] image MISS {}", image)); return std::ptr::null_mut(); }
     let cfn: FnClassFromName = match rfn("il2cpp_class_from_name") { Some(f)=>f, None=>return std::ptr::null_mut() };
     let nsc = CString::new(ns).unwrap();
     let nmc = CString::new(name).unwrap();
-    let k = cfn(img, nsc.as_ptr(), nmc.as_ptr());
-    if k.is_null() { logline(&format!("[build] class MISS {}.{} in {}", ns, name, image)); }
-    k
+    // 先試指定 image
+    let img = image_by_name(h, domain, image);
+    if !img.is_null() {
+        let k = cfn(img, nsc.as_ptr(), nmc.as_ptr());
+        if !k.is_null() { return k; }
+    }
+    // 後備：掃所有 assembly image 找該類別（避免猜錯 assembly）
+    if let (Some(get_asm), Some(asm_img)) = (
+        rfn::<FnDomainGetAssemblies>("il2cpp_domain_get_assemblies"),
+        rfn::<FnAssemblyGetImage>("il2cpp_assembly_get_image"),
+    ) {
+        let mut count: usize = 0;
+        let arr = get_asm(domain, &mut count as *mut usize);
+        for i in 0..count {
+            let asm = *(arr as *mut *mut c_void).add(i);
+            let im = asm_img(asm);
+            let k = cfn(im, nsc.as_ptr(), nmc.as_ptr());
+            if !k.is_null() { return k; }
+        }
+    }
+    logline(&format!("[build] class MISS {}.{} (image {} + all-scan)", ns, name, image));
+    std::ptr::null_mut()
 }
 
 unsafe fn method_by_name(klass: *mut c_void, name: &str, argc: c_int) -> *mut c_void {
@@ -384,16 +402,18 @@ unsafe fn build_replacement(this: *mut c_void, key: &str, dir: &str, base: usize
     let atlas_text = match std::fs::read_to_string(dirp.join(format!("{}.atlas", key))) {
         Ok(t)=>t, Err(e)=>{ logline(&format!("[build] read atlas fail: {}", e)); return std::ptr::null_mut(); }
     };
+    // 骨架來源：文字 .json 或二進位 .skel
     let json_path = dirp.join(format!("{}.json", key));
-    if !json_path.exists() {
-        logline(&format!("[build] {}: 無 .json（可能是二進位 .skel），暫不支援", key));
+    let skel_path = dirp.join(format!("{}.skel", key));
+    let json_text: Option<String> = if json_path.exists() { std::fs::read_to_string(&json_path).ok() } else { None };
+    let skel_bytes: Option<Vec<u8>> = if json_text.is_none() && skel_path.exists() { std::fs::read(&skel_path).ok() } else { None };
+    if json_text.is_none() && skel_bytes.is_none() {
+        logline(&format!("[build] {}: 找不到 .json/.skel", key));
         return std::ptr::null_mut();
     }
-    let json_text = match std::fs::read_to_string(&json_path) {
-        Ok(t)=>t, Err(e)=>{ logline(&format!("[build] read json fail: {}", e)); return std::ptr::null_mut(); }
-    };
-    logline(&format!("[build] atlas {} bytes, first line='{}'; json {} bytes",
-        atlas_text.len(), atlas_text.lines().next().unwrap_or(""), json_text.len()));
+    logline(&format!("[build] atlas {} bytes, first line='{}'; skeleton={}",
+        atlas_text.len(), atlas_text.lines().next().unwrap_or(""),
+        if let Some(j)=&json_text { format!("json {}B", j.len()) } else { format!("skel {}B", skel_bytes.as_ref().unwrap().len()) }));
 
     // 2) 建每頁 Texture2D
     let pages = atlas_pages(&atlas_text);
@@ -447,28 +467,87 @@ unsafe fn build_replacement(this: *mut c_void, key: &str, dir: &str, base: usize
     if new_atlas.is_null() { logline("[build] new SpineAtlasAsset null"); return std::ptr::null_mut(); }
     logline(&format!("[build] new_atlas={:p}", new_atlas));
 
-    // 5) 就地替換原始 asset 的欄位，讓「遊戲自己的 GetSkeletonData」用我們的資料重建。
-    //    比自行 CreateRuntimeInstance + 回傳更穩：this->skeletonData 會被原始邏輯填好、保持一致，
-    //    不會發生「回傳了 skeletonData 但 this->skeletonData 仍 null」導致後續 null deref。
+    // 5) 共同：建 atlasAssets 陣列（先不寫入欄位，等全部建好再一次寫，避免半套狀態）。
     let base_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "AtlasAssetBase");
     let atlas_assets = make_ref_array(base_cls, &[new_atlas]);
-    let skel_ta = make_textasset(domain, &json_text);
-    if atlas_assets.is_null() || skel_ta.is_null() {
-        logline("[build] atlas_array/skel_ta null"); return std::ptr::null_mut();
+    if atlas_assets.is_null() { logline("[build] atlas_assets null"); return std::ptr::null_mut(); }
+
+    let mut scale: f32 = *((this as *const u8).add(OFF_SCALE) as *const f32);
+    if !(scale.is_finite() && scale != 0.0) { scale = 0.01; }
+
+    // 6) 分支建構骨架資料（仍不寫欄位）。
+    //    json → 建 skeletonJSON TextAsset，最後讓遊戲自身重建（清空 skeletonData）。
+    //    skel → 自行 ReadSkeletonData(byte[]) 建好 SkeletonData，最後直接寫入。
+    let mut skel_ta: *mut c_void = std::ptr::null_mut();
+    let mut skel_data: *mut c_void = std::ptr::null_mut();
+
+    if let Some(json) = &json_text {
+        skel_ta = make_textasset(domain, json);
+        if skel_ta.is_null() { logline("[build] skel_ta null"); return std::ptr::null_mut(); }
+    } else {
+        let skel = skel_bytes.as_ref().unwrap();
+        // 用我們的 new_atlas 直接取 Spine Atlas（不需先寫 this.atlasAssets）
+        let sa_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SpineAtlasAsset");
+        let m_getatlas = method_by_name(sa_cls, "GetAtlas", 1); // GetAtlas(bool onlyMetaData)
+        if m_getatlas.is_null() { logline("[build] SpineAtlasAsset.GetAtlas MISS"); return std::ptr::null_mut(); }
+        let mut only_meta: bool = false;
+        let mut ga_args = [&mut only_meta as *mut bool as *mut c_void];
+        let atlas_obj = invoke(m_getatlas, new_atlas, &mut ga_args);
+        if atlas_obj.is_null() { logline("[build] GetAtlas null"); return std::ptr::null_mut(); }
+        // Atlas[] { atlas_obj }
+        let atlas_cls = class_of(domain, "spine-csharp.dll", "Spine", "Atlas");
+        let atlas_array = make_ref_array(atlas_cls, &[atlas_obj]);
+        if atlas_array.is_null() { return std::ptr::null_mut(); }
+        // new Spine.AtlasAttachmentLoader(Atlas[])
+        let loader_cls = class_of(domain, "spine-csharp.dll", "Spine", "AtlasAttachmentLoader");
+        if loader_cls.is_null() { return std::ptr::null_mut(); }
+        let obj_new: FnObjectNew = match rfn("il2cpp_object_new") { Some(f)=>f, None=>return std::ptr::null_mut() };
+        let loader = obj_new(loader_cls);
+        let lctor = method_by_name(loader_cls, ".ctor", 1);
+        if lctor.is_null() { logline("[build] AtlasAttachmentLoader .ctor(1) MISS"); return std::ptr::null_mut(); }
+        let mut lc_args = [atlas_array];
+        invoke(lctor, loader, &mut lc_args);
+        // SkeletonDataAsset.ReadSkeletonData(byte[], AttachmentLoader, float) [static]
+        let sd_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SkeletonDataAsset");
+        let m_read = method_by_rva(sd_cls, base, RVA_SKELDATA_READ_BYTES);
+        if m_read.is_null() { logline("[build] ReadSkeletonData(byte[]) by RVA MISS"); return std::ptr::null_mut(); }
+        let skel_arr = make_byte_array(domain, skel);
+        if skel_arr.is_null() { return std::ptr::null_mut(); }
+        let mut rd_args = [skel_arr, loader, &mut scale as *mut f32 as *mut c_void];
+        skel_data = invoke(m_read, std::ptr::null_mut(), &mut rd_args);
+        if skel_data.is_null() { logline("[build] ReadSkeletonData returned null"); return std::ptr::null_mut(); }
+        gc_new(loader, 0);
     }
 
-    // pin 我們建的物件防 GC（Boehm 保守式 GC，欄位直接寫入無需 write barrier）
+    // 7) 全部建構成功 → 一次寫入欄位 + pin。失敗時上面已 return，原 asset 不受影響。
     gc_new(new_atlas, 0);
     gc_new(atlas_assets, 0);
-    gc_new(skel_ta, 0);
     for t in &textures { gc_new(*t, 0); }
-
-    // 寫欄位：atlasAssets / skeletonJSON；清空 skeletonData(0x70) 強制重建
     *((this as *mut u8).add(OFF_ATLAS_ASSETS) as *mut *mut c_void) = atlas_assets;
-    *((this as *mut u8).add(OFF_SKELETON_JSON) as *mut *mut c_void) = skel_ta;
-    *((this as *mut u8).add(OFF_SKELETON_DATA) as *mut *mut c_void) = std::ptr::null_mut();
-    logline(&format!("[build] in-place swap DONE {} (new_atlas={:p} skelTA={:p})", key, new_atlas, skel_ta));
-    1 as *mut c_void // 非 null = 成功
+
+    if !skel_ta.is_null() {
+        gc_new(skel_ta, 0);
+        *((this as *mut u8).add(OFF_SKELETON_JSON) as *mut *mut c_void) = skel_ta;
+        *((this as *mut u8).add(OFF_SKELETON_DATA) as *mut *mut c_void) = std::ptr::null_mut();
+        logline(&format!("[build] in-place swap DONE (json) {} skelTA={:p}", key, skel_ta));
+    } else {
+        gc_new(skel_data, 0);
+        *((this as *mut u8).add(OFF_SKELETON_DATA) as *mut *mut c_void) = skel_data;
+        // orig 會因 skeletonData!=null 早退、跳過 FillStateData，故自行補上 stateData，
+        // 否則播動畫的場景（如約會）會因 stateData 為 null 而崩潰。
+        let sd_cls = class_of(domain, "spine-unity.dll", "Spine.Unity", "SkeletonDataAsset");
+        let m_fill = method_by_name(sd_cls, "FillStateData", 1);
+        if !m_fill.is_null() {
+            let mut q: bool = true;
+            let mut fa = [&mut q as *mut bool as *mut c_void];
+            invoke(m_fill, this, &mut fa);
+            logline("[build] FillStateData called (skel)");
+        } else {
+            logline("[build] FillStateData MISS (skel)");
+        }
+        logline(&format!("[build] in-place swap DONE (skel) {} skeletonData={:p}", key, skel_data));
+    }
+    1 as *mut c_void
 }
 
 // ---- hook replacement ----
