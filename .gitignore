@@ -180,6 +180,7 @@ experiments/rust-uabea-cli/._target/**
 # BepInEx-for-PlayCover: research/planning workspace kept local-only (not in repo)
 bepinex-playcover/
 SPINE_RUNTIME_PROBE_RESEARCH.md
+doc/
 
 # Runtime loader (product code lives in native/bd2loader; build outputs & devkit are local)
 native/bd2loader/target/
