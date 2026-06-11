@@ -12,6 +12,7 @@ use std::ffi::{CStr, CString};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::raw::{c_char, c_int, c_void};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -88,19 +89,41 @@ static M_OBJECT_GET_NAME: AtomicUsize = AtomicUsize::new(0); // MethodInfo* of U
 static F_RUNTIME_INVOKE: AtomicUsize = AtomicUsize::new(0);
 
 // ---- log / mods 目錄 ----
-const HARDCODED_LOG: &str =
-    "/Users/suzumiyahifumi/Library/Containers/com.neowizgames.game.browndust2ios/Data/bd2loader.log";
-// 掛載目錄（Phase 5 GUI 會往這裡放選中的 mod）。
-const MOUNT_DIR: &str =
-    "/Users/suzumiyahifumi/Library/Containers/com.neowizgames.game.browndust2ios/Data/bd2mods";
+const BUNDLE_ID: &str = "com.neowizgames.game.browndust2ios";
+const DISABLED_MARKER: &str = ".bdspinex-disabled";
 
 // key（去副檔名的資產名，如 char003604 / illust_dating11 / cutscene_char066403）→ mod 子資料夾路徑
 static MOD_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
 
+fn container_data_dir() -> Option<PathBuf> {
+    let home = PathBuf::from(std::env::var_os("HOME")?);
+    let container_suffix = PathBuf::from("Library").join("Containers").join(BUNDLE_ID).join("Data");
+    if home.ends_with(&container_suffix) {
+        Some(home)
+    } else {
+        Some(home.join(container_suffix))
+    }
+}
+
+fn mount_dir() -> Option<PathBuf> {
+    Some(container_data_dir()?.join("bd2mods"))
+}
+
+fn mods_disabled_path() -> Option<PathBuf> {
+    Some(mount_dir()?.join(DISABLED_MARKER))
+}
+
+fn mods_disabled() -> bool {
+    mods_disabled_path().map(|p| p.exists()).unwrap_or(false)
+}
+
 fn log_paths() -> Vec<String> {
-    let mut v = vec![HARDCODED_LOG.to_string()];
-    if let Ok(home) = std::env::var("HOME") {
-        v.push(format!("{}/bd2loader.log", home));
+    let mut v = Vec::new();
+    if let Some(data_dir) = container_data_dir() {
+        v.push(data_dir.join("bd2loader.log").to_string_lossy().into_owned());
+    }
+    if let Some(home) = std::env::var_os("HOME") {
+        v.push(PathBuf::from(home).join("bd2loader.log").to_string_lossy().into_owned());
     }
     v.push("/tmp/bd2loader.log".to_string());
     v
@@ -126,14 +149,31 @@ fn logline(msg: &str) {
 /// 對應到該子資料夾。基底名即遊戲資產 key（去掉多頁後綴 _N 與副檔名）。
 fn scan_mods() -> HashMap<String, String> {
     let mut map = HashMap::new();
-    let root = std::path::Path::new(MOUNT_DIR);
-    let entries = match std::fs::read_dir(root) {
+    if mods_disabled() {
+        logline("mods disabled by BD-SpineX marker; runtime map is empty");
+        return map;
+    }
+    let root = match mount_dir() {
+        Some(p) => p,
+        None => return map,
+    };
+    scan_mods_in(&root, &mut map);
+    map
+}
+
+fn scan_mods_in(root: &std::path::Path, map: &mut HashMap<String, String>) {
+    let entries = match std::fs::read_dir(&root) {
         Ok(e) => e,
-        Err(_) => return map,
+        Err(_) => return,
     };
     for entry in entries.flatten() {
         let dir = entry.path();
         if !dir.is_dir() { continue; }
+        let dir_name = match dir.file_name().and_then(|s| s.to_str()) {
+            Some(n) => n,
+            None => continue,
+        };
+        if dir_name.starts_with(".") || dir_name == "__MACOSX" { continue; }
         if let Ok(files) = std::fs::read_dir(&dir) {
             for f in files.flatten() {
                 let p = f.path();
@@ -148,8 +188,8 @@ fn scan_mods() -> HashMap<String, String> {
                 }
             }
         }
+        scan_mods_in(&dir, map);
     }
-    map
 }
 
 /// 由遊戲資產 name（如 "char003604.skel"）取出比對 key（去副檔名）。
@@ -622,10 +662,13 @@ extern "C" fn repl_get_skeleton_data(this: *mut c_void, quiet: bool) -> *mut c_v
 
 fn install_hook(handle: *mut c_void, domain: *mut c_void, base: usize) {
     // 掃掛載目錄，建立 key→mod 路徑表
+    let mount_dir_label = mount_dir()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "(HOME unavailable)".to_string());
     let map = scan_mods();
     let keys: Vec<String> = map.keys().cloned().collect();
     let _ = MOD_MAP.set(map);
-    logline(&format!("scanned {} mod(s) from {}: {:?}", keys.len(), MOUNT_DIR, keys));
+    logline(&format!("scanned {} mod(s) from {}: {:?}", keys.len(), mount_dir_label, keys));
 
     unsafe {
         // 解析 UnityEngine.Object.get_name 供識別用

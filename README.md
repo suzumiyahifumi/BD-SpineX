@@ -5,101 +5,68 @@
 <h1 align="center">BD-SpineX</h1>
 
 <p align="center">
-  A macOS Spine mod manager for the PlayCover version of BrownDust II.
+  Runtime Spine mod manager for the PlayCover version of BrownDust II on macOS.
 </p>
 
 [![GitHub Release](https://img.shields.io/github/v/release/suzumiyahifumi/BD-SpineX?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 [![Downloads](https://img.shields.io/github/downloads/suzumiyahifumi/BD-SpineX/total?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)](#requirements)
 [![License](https://img.shields.io/badge/source-GPLv3-blue?style=flat-square)](LICENSE)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?style=flat-square)](https://buymeacoffee.com/suzumiyahifumi)
 
-> ✨ Install and manage Spine mods for the PlayCover version of BrownDust II on macOS.
+> Manage BrownDust II Spine mods on macOS without manually editing game bundles.
 >
-> ⬇️ Download the latest version: [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases)
->
-> ☕ Like this project? [Buy me a coffee](https://buymeacoffee.com/suzumiyahifumi)
+> Download the latest version: [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 
-BD-SpineX is built for players who want a simpler BrownDust II mod workflow on macOS: choose your PlayCover game data, scan your mod folders, apply selected Spine mods, and restore changes without manually editing AssetBundles.
+BD-SpineX is made for the PlayCover version of BrownDust II. Current builds use Runtime Injection: mods are mounted into the game container and loaded at runtime, while the original `__data` files can stay clean.
 
 ---
 
-## ✨ Current Release
+## Requirements
 
-The release version is tied to the supported BrownDust II game version. Hotfix builds may add a suffix such as `-b2` while still supporting the same game version.
-
-```text
-BD-SpineX 2.27.19 -> BrownDust II 2.27.19
-```
-
-If your installed game version does not match the supported BrownDust II version, mod actions are locked until you use a matching release.
-
-### 🚀 Highlights
-
-- 🔎 PlayCover `Shared` AssetBundle scanning
-- 📁 Recursive Mods folder scanning
-- ✅ Mod status table with selectable apply/restore workflow
-- 🧩 Spine `.atlas`, `.skel`, `.json`, and `.png` patch support
-- 🔄 Automatic supported Spine JSON conversion when needed
-- 🧭 Bundled game-version indexes used first for faster update checks
-- 🛟 Incremental backups and restore support
-- 🧹 Automatic cleanup of old patch history and backups after successful version migration
-- 📂 One-click Records Folder access for history, backups, and migration reports
-- 🌳 `__data`-based Patch Status with collapsible mod details
-- 🛠️ Repair mode for patched or changed entries
-- 🗂️ Versioned history, backups, converted files, and user-scanned indexes
-- ⚡ Mod Power for turning active mods off and restoring saved selections later
-- 📦 Bundled backend tools, so release users do not need .NET, Rust, or build tools
-
----
-
-## 🖥️ Requirements
-
-- 🍎 macOS
+- 🍎 macOS on Apple Silicon
 - 🎮 PlayCover version of BrownDust II
-- 🔐 A BD-SpineX release matching your current BrownDust II version
+- 🔐 A BD-SpineX release matching your BrownDust II game version
 
-⚠️ The current release build is unsigned. On first launch, macOS may require manual approval in System Settings.
+The app is currently unsigned. On first launch, macOS may require manual approval in System Settings.
 
 ---
 
-## 🛠️ How to Use
+## ⚙️ How to Use
 
-1. Download the macOS DMG from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
+1. Download the DMG from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
 2. Open BD-SpineX.
-3. Select your PlayCover BrownDust II `Shared` folder.
-4. Select the folder where you store your mods.
-5. Click `Scan Mods`.
-6. Select the mods you want to install.
+3. Select the folder where you keep your mods.
+4. Click `Install Runtime Injection`.
+5. Click `Refresh Mods`.
+6. Select the mods you want.
 7. Click `Apply Changes`.
+8. Launch or restart the game.
 
-💡 BD-SpineX releases include the matching game index. Use `Scan Shared for Mods` only when you want to refresh or troubleshoot local index data.
-
-💡 After changing mod selections, apply changes again so the game files match your current enabled list.
+After a BrownDust II game update, install the matching BD-SpineX release and run `Install Runtime Injection` again.
 
 ---
 
-## 📁 Recommended Mods Layout
+## 📁 Mods Folder
 
-BD-SpineX supports nested folders, so you can organize mods by source, author, pack, character, or any structure you prefer.
+Nested folders are supported, so you can organize mods by source, author, pack, or character.
 
 ```text
 Mods/
-  Nexus/
+  Discord/
     AuthorName/
       CostumePack/
         char123456.skel
         char123456.atlas
         char123456.png
-  Discord/
+  Nexus/
     CollectionName/
       AnotherMod/
-        char654321.json
-        char654321.atlas
-        char654321.png
+        illust_dating11.json
+        illust_dating11.atlas
+        illust_dating11.png
 ```
 
-Each mod folder should contain matching Spine files:
+Each mod folder should include:
 
 - `.atlas`
 - `.png`
@@ -107,25 +74,58 @@ Each mod folder should contain matching Spine files:
 
 ---
 
-## 🔐 Version Matching
+## 🧩 Runtime Injection
 
-Use the BD-SpineX release that matches your BrownDust II game version. A suffix such as `-b2` marks a BD-SpineX hotfix for the same game version and does not create a separate game-data history version.
+Runtime Injection installs `libbd2loader.dylib` into the PlayCover BrownDust II app and adds it to the game executable. BD-SpineX keeps a clean executable backup so injection can be removed later.
 
-When the game updates, install the matching BD-SpineX release. BD-SpineX uses the bundled current-version index first, then falls back to a targeted Shared scan only if needed. History and backups are separated by version so old bundle hashes are not reused on a newer game build.
+- ✅ `Apply Changes` mounts or unmounts selected mods.
+- 🧹 `Restore All` removes all mounted runtime mods, but keeps injection installed.
+- 💡 `Mod Power` turns all mounted mods off or back on without moving folders.
+- 🚀 `Launch Game` opens the PlayCover app bundle through macOS.
 
-If BD-SpineX finds patched mods from an older version, it can select them for review and ask whether to inherit the previous install state. Confirming runs a fresh patch against the current version's index.
-
-After a version migration completes successfully, BD-SpineX removes old patch history and backup data to keep storage usage under control. If migration is partial or failed, old records are kept for recovery. Use `Open Records Folder` in the app to inspect the current version's history, backups, and migration reports.
+Close BrownDust II before installing or removing injection.
 
 ---
 
-## 📝 Notes
+## 🔄 Upgrading From Older Patch Builds
 
-- 🍎 BD-SpineX is macOS-only.
-- 🎮 BD-SpineX is intended for the PlayCover version of BrownDust II.
-- 🛟 Keep your own backup before experimenting with mods, especially after game updates.
-- 📦 The packaged app includes the required patch backend and Spine converter.
-- 🧰 Development and packaging notes are kept in [RELEASE.md](RELEASE.md).
+Older BD-SpineX builds patched `__data` directly. If BD-SpineX detects old patch records, it lets you choose:
+
+- `Do Nothing`: keep files as-is and continue using the app.
+- `Unpatch Only`: restore clean `__data` from old backups and remove old patch records.
+- `Migrate`: restore clean `__data`, install Runtime Injection, and mount matching mods from your Mods Folder.
+
+If you choose `Do Nothing` and later want a clean `__data`, reinstall BrownDust II in PlayCover.
+
+---
+
+## ⚠️ Notes
+
+- BD-SpineX is macOS-only.
+- Use the release that matches your BrownDust II version. Suffixes such as `-ex1` are BD-SpineX experiment/hotfix builds for the same game version.
+- Runtime mods may load the first time a matching asset appears in-game, so very large mods can cause a brief first-load stutter.
+- Release builds include the required backend tools; users do not need .NET, Rust, Python, or UABEA installed.
+- Keep your own backup before experimenting with mods, especially after game updates.
+
+---
+
+## ❓ FAQ
+
+### Why are mods locked?
+
+BD-SpineX locks mod actions when the game app is missing, Runtime Injection is not installed, the Mods Folder is not set, the game version does not match, or a task is already running.
+
+### Do I need to scan PlayCover Shared?
+
+No for runtime mods. The current runtime workflow loads mounted Spine files directly instead of patching `__data`.
+
+### Why do I need to reinject after a game update?
+
+Game updates can replace the BrownDust II app bundle and executable. Reinstall Runtime Injection after updating the game.
+
+### Can I use this with the Windows version?
+
+No. This project is for macOS and PlayCover.
 
 ---
 
@@ -133,39 +133,11 @@ After a version migration completes successfully, BD-SpineX removes old patch hi
 
 BD-SpineX source code is licensed under **GPLv3**. See [LICENSE](LICENSE).
 
-Packaged release builds include `SpineSkeletonDataConverter`, which is licensed separately under **PolyForm Noncommercial License 1.0.0**. Treat the downloadable release bundle as noncommercial because that converter is bundled. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.
-
----
-
-## ❓ FAQ
-
-### 🔒 Why are mod actions locked?
-
-BD-SpineX locks mod actions when required folders are missing or when the app version does not match the detected BrownDust II version.
-
-### 🔎 Do I still need to scan Shared?
-
-Usually no. Release builds include the matching BrownDust II index. `Scan Shared for Mods` is still available for troubleshooting or refreshing local data.
-
-### 🛠️ What does Repair do?
-
-Repair stages an already patched or changed mod for a safer re-patch. It is useful when the game file state no longer matches the expected backup state.
-
-### 📂 Where are patch records stored?
-
-Use `Open Records Folder` in BD-SpineX. It opens the current version's records folder, including patch history, backups, and migration reports.
-
-### 📦 Do I need to install .NET, Rust, or UABEA?
-
-No. Release builds bundle the backend tools needed by the app.
-
-### 🪟 Can I use this with the Windows version of BrownDust II?
-
-No. This project is currently built for macOS and the PlayCover version of BrownDust II.
+Packaged release builds include `SpineSkeletonDataConverter`, which is licensed separately under **PolyForm Noncommercial License 1.0.0**. Treat downloadable release bundles as noncommercial because that converter is bundled. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.
 
 ---
 
 ## 🙏 Credits
 
-- 💬 Thanks to the BrownDust II modding community for the workflows and testing needs this tool is built around.
-- 🧩 Thanks to the projects and tools that make Spine and AssetBundle patching possible.
+- Thanks to the BrownDust II modding community for testing, workflows, and feedback.
+- Thanks to the projects and tools that make Spine and runtime modding possible.
