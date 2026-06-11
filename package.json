@@ -10,6 +10,7 @@
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"tsc -p tsconfig.main.json --watch\" \"wait-on tcp:5173 dist/app/main/index.js dist/app/preload/index.cjs && electron .\"",
     "build": "tsc -p tsconfig.main.json && vite build",
     "build:backends": "node scripts/build-backends.mjs",
+    "build:loader": "node scripts/build-loader.mjs",
     "release:prepare": "node scripts/prepare-release.mjs",
     "dist:mac": "npm run build:backends && npm run release:prepare && npm run build && COPYFILE_DISABLE=1 electron-builder --mac --arm64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.main.json",
@@ -48,6 +49,13 @@
       {
         "from": "dist-native/unitypy-backend",
         "to": "backend/unitypy"
+      },
+      {
+        "from": "dist-native/bd2loader",
+        "to": "backend/bd2loader",
+        "filter": [
+          "libbd2loader.dylib"
+        ]
       },
       {
         "from": "python",
