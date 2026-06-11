@@ -61,7 +61,7 @@ export function loaderSourcePath() {
   if (isPackagedRuntime()) {
     return resourcePath("backend", "bd2loader", LOADER_DYLIB);
   }
-  return path.resolve("bepinex-playcover/loader/target/aarch64-apple-darwin/release", LOADER_DYLIB);
+  return path.resolve("native/bd2loader/target/aarch64-apple-darwin/release", LOADER_DYLIB);
 }
 
 function classifyKey(key: string): RuntimeMod["type"] {

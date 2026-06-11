@@ -10,8 +10,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // frida-gum devkit（loader 靜態連入；macOS arm64）。pin 版本即可，只用其 hook API。
 const GUM_VERSION = "17.11.0";
-const loaderDir = path.join(root, "bepinex-playcover", "loader");
-const gumDir = path.join(root, "bepinex-playcover", "tools", "frida-gum");
+const loaderDir = path.join(root, "native", "bd2loader");
+const gumDir = path.join(root, "native", "frida-gum");
 const target = "aarch64-apple-darwin";
 const builtDylib = path.join(loaderDir, "target", target, "release", "libbd2loader.dylib");
 const outDir = path.join(root, "dist-native", "bd2loader");
