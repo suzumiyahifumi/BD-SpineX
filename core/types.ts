@@ -212,6 +212,26 @@ export type PreviousPatchedMods = {
   sourceVersions: string[];
 };
 
+export type LegacyRuntimeMigrationStatus = "idle" | "restoring" | "injecting" | "mounting" | "cleaning" | "done" | "failed";
+
+export type LegacyRuntimeMigrationCheck = {
+  needed: boolean;
+  modNames: string[];
+  sourceVersions: string[];
+  historyPaths: string[];
+};
+
+export type LegacyRuntimeMigrationResult = {
+  ok: boolean;
+  status: LegacyRuntimeMigrationStatus;
+  message: string;
+  restoredBundles: string[];
+  mountedMods: string[];
+  missingMods: string[];
+  removedPaths: string[];
+  errors: string[];
+};
+
 export type PatchDataCheckStatus = "ok" | "missing" | "changed" | "no_backup";
 
 export type PatchDataCheckEntry = {

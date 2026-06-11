@@ -2,6 +2,7 @@
 // 由 build:backends 呼叫，亦可獨立執行：node scripts/build-loader.mjs
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -53,8 +54,51 @@ export async function buildLoader() {
   }
   await fs.mkdir(outDir, { recursive: true });
   await fs.copyFile(builtDylib, outDylib);
+  await sanitizePrivatePathStrings(outDylib);
   await fs.chmod(outDylib, 0o755);
   console.log(`[build-loader] done → ${path.relative(root, outDylib)}`);
+}
+
+async function sanitizePrivatePathStrings(filePath) {
+  const buf = await fs.readFile(filePath);
+  const privateValues = [
+    os.homedir(),
+    path.dirname(os.homedir()),
+    os.userInfo().username,
+    root,
+    "/Users/",
+    "/Volumes/"
+  ].filter(Boolean);
+
+  for (const value of privateValues) {
+    replaceAllInPlace(buf, Buffer.from(value), placeholderBytes(value.length));
+  }
+
+  // frida-gum devkits may contain upstream build-machine paths. They are not
+  // used by bd2loader at runtime, but should not ship as local-looking paths.
+  replaceAllInPlace(buf, Buffer.from("/Users/runner"), placeholderBytes("/Users/runner".length));
+
+  await fs.writeFile(filePath, buf);
+  const text = buf.toString("latin1");
+  const leaks = ["/Users/", "/Volumes/", os.userInfo().username, root].filter((p) => p && text.includes(p));
+  if (leaks.length > 0) {
+    throw new Error(`Private path string remained in ${path.relative(root, filePath)}: ${leaks.join(", ")}`);
+  }
+}
+
+function replaceAllInPlace(buf, needle, replacement) {
+  if (needle.length === 0 || needle.length !== replacement.length) {
+    return;
+  }
+  let offset = 0;
+  while ((offset = buf.indexOf(needle, offset)) !== -1) {
+    replacement.copy(buf, offset);
+    offset += replacement.length;
+  }
+}
+
+function placeholderBytes(length) {
+  return Buffer.from("BDSPINEX_BUILD_PATH".repeat(Math.ceil(length / 18)).slice(0, length));
 }
 
 // 獨立執行

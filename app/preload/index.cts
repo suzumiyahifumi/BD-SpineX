@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, GameVersionInfo, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, PreviousPatchedMods, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
+import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, GameVersionInfo, LegacyRuntimeMigrationCheck, LegacyRuntimeMigrationResult, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, PreviousPatchedMods, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
 import type { RuntimeMod, RuntimeStatus } from "../../core/runtime-loader.js";
 
 const api = {
@@ -50,10 +50,14 @@ const api = {
   readPreviousPatchedMods: () => ipcRenderer.invoke("patch:previous-patched-mods") as Promise<PreviousPatchedMods>,
   // --- Runtime (BepInEx-for-PlayCover) ---
   runtimeStatus: () => ipcRenderer.invoke("runtime:status") as Promise<RuntimeStatus>,
+  runtimeMigrationCheck: () => ipcRenderer.invoke("runtime:migration-check") as Promise<LegacyRuntimeMigrationCheck>,
+  runtimeUnpatchLegacy: () => ipcRenderer.invoke("runtime:unpatch-legacy") as Promise<LegacyRuntimeMigrationResult>,
+  runtimeMigrateLegacy: (modsDir: string) => ipcRenderer.invoke("runtime:migrate-legacy", { modsDir }) as Promise<LegacyRuntimeMigrationResult>,
   runtimeInstall: () => ipcRenderer.invoke("runtime:install") as Promise<{ ok: boolean; message: string }>,
   runtimeUninstall: () => ipcRenderer.invoke("runtime:uninstall") as Promise<{ ok: boolean; message: string }>,
+  runtimeSetEnabled: (enabled: boolean) => ipcRenderer.invoke("runtime:set-enabled", enabled) as Promise<{ ok: boolean; message: string }>,
   runtimeListLibrary: (dir: string) => ipcRenderer.invoke("runtime:list-library", dir) as Promise<RuntimeMod[]>,
-  runtimeMount: (srcDir: string) => ipcRenderer.invoke("runtime:mount", srcDir) as Promise<{ ok: boolean; message: string }>,
+  runtimeMount: (srcDir: string, folder?: string) => ipcRenderer.invoke("runtime:mount", { srcDir, folder }) as Promise<{ ok: boolean; message: string }>,
   runtimeUnmount: (folder: string) => ipcRenderer.invoke("runtime:unmount", folder) as Promise<{ ok: boolean; message: string }>,
   runtimeLaunch: () => ipcRenderer.invoke("runtime:launch") as Promise<{ ok: boolean; message: string }>
 };
