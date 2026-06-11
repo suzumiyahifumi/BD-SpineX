@@ -177,9 +177,14 @@ experiments/rust-uabea-cli/target/**
 experiments/rust-uabea-cli/._target
 experiments/rust-uabea-cli/._target/**
 
-# BepInEx-for-PlayCover research tooling (large / regenerable, branch bd2/BepInEx_for_playcover)
-bepinex-playcover/.venv-tools/
-bepinex-playcover/tools/
-bepinex-playcover/dump/
+# BepInEx-for-PlayCover: research/planning workspace kept local-only (not in repo)
+bepinex-playcover/
+SPINE_RUNTIME_PROBE_RESEARCH.md
 
-bepinex-playcover/loader/target/
+# Runtime loader (product code lives in native/bd2loader; build outputs & devkit are local)
+native/bd2loader/target/
+native/frida-gum/
+
+# Claude Code local skills/config (not project)
+.claude/
+skills-lock.json
