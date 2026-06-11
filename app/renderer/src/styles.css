@@ -122,6 +122,7 @@ input[type="checkbox"] {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  margin-bottom: 14px;
   padding: 16px;
 }
 
@@ -405,7 +406,7 @@ progress {
 
 .modsHeaderControls {
   display: grid;
-  grid-template-columns: auto minmax(220px, 320px);
+  grid-template-columns: auto auto minmax(220px, 320px);
   gap: 8px;
   align-items: end;
   justify-content: end;
@@ -744,6 +745,10 @@ th {
   background: #f8fafc;
 }
 
+tbody tr:hover td {
+  background: #f3f7fb;
+}
+
 tr.pendingPatchChange td {
   background: #fff0f0;
 }
@@ -758,6 +763,22 @@ tr.pendingPatchChange.pendingPatchRemove td {
 
 tr.pendingPatchChange.pendingPatchRepair td {
   background: #f3e8ff;
+}
+
+tr.pendingPatchChange:hover td {
+  background: #ffe8e8;
+}
+
+tr.pendingPatchChange.pendingPatchAdd:hover td {
+  background: #ffe8bd;
+}
+
+tr.pendingPatchChange.pendingPatchRemove:hover td {
+  background: #fbd7d7;
+}
+
+tr.pendingPatchChange.pendingPatchRepair:hover td {
+  background: #ead5ff;
 }
 
 .empty {
@@ -856,6 +877,23 @@ tr.pendingPatchChange.pendingPatchRepair td {
 .inheritHistoryActions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.migrationPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  border-color: #f5c77f;
+  background: #fff7e6;
+  padding: 12px 14px;
+}
+
+.migrationActions {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
   gap: 8px;
 }
 
@@ -1075,6 +1113,16 @@ tr.pendingPatchChange.pendingPatchRepair td {
   color: #17633d;
 }
 
+.injectionBadge.injected {
+  background: #dfeee7;
+  color: #17633d;
+}
+
+.injectionBadge.notInjected {
+  background: #fde7e7;
+  color: #9f1d1d;
+}
+
 .badge.restored {
   background: #ede9fe;
   color: #6d28d9;
@@ -1125,4 +1173,61 @@ tr.pendingPatchChange.pendingPatchRepair td {
   .segmentedControl {
     justify-content: flex-start;
   }
+}
+
+/* Runtime mode additions */
+.errorPill {
+  padding: 10px 12px;
+  border: 1px solid #f1c9c9;
+  border-radius: 6px;
+  background: #fff7f7;
+  color: #9f1d1d;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.warningPill {
+  padding: 10px 12px;
+  border: 1px solid #f5c77f;
+  border-radius: 6px;
+  background: #fff7e6;
+  color: #8a4b09;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.errorPill + .warningPill,
+.warningPill + .errorPill {
+  margin-top: 8px;
+}
+
+.panel > .errorPill,
+.panel > .warningPill {
+  margin: 14px;
+}
+.tableTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionButtons {
+  display: grid;
+  gap: 8px;
+}
+
+.actionButtons button {
+  width: 100%;
+}
+
+/* same-key conflict (cannot apply) */
+tr.pendingPatchChange.pendingPatchConflict td {
+  background: #e9d5ff;
+  box-shadow: inset 3px 0 0 #8b5cf6;
+}
+
+tr.pendingPatchChange.pendingPatchConflict:hover td {
+  background: #ddc1ff;
 }

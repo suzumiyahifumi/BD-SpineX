@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { buildLoader } from "./build-loader.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dotnet = path.join(root, "manager-data", "tools", "dotnet", "dotnet");
@@ -49,6 +50,9 @@ await chmodExecutable(packagedRustCli);
 await buildUnityPyExecutable("unitypy_patch_bundle", path.join(root, "python", "patch_bundle.py"));
 await buildUnityPyExecutable("unitypy_scan_bundle", path.join(root, "python", "scan_bundle.py"));
 await buildUnityPyExecutable("astc_encode", path.join(root, "python", "astc_encode.py"));
+
+// 執行時 loader（BepInEx-for-PlayCover）→ dist-native/bd2loader/libbd2loader.dylib
+await buildLoader();
 
 async function buildUnityPyExecutable(name, entryPoint) {
   await run(python, [

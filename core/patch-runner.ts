@@ -8,7 +8,7 @@ import { patchBundleBatch, type PatchBundleJob } from "./asset-patcher.js";
 import { managerDataDir, managerDataRootDir, managerDataVersion } from "./runtime-paths.js";
 import { convertJsonToSkel } from "./spine-converter.js";
 import { ensureSpineConverter } from "./tool-manager.js";
-import type { ApplyPatchOptions, ApplyPatchResult, ModEntry, ModsIndex, PatchBackend, PatchDataCheckEntry, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchRunStatus, PatchStateChange, PreviousPatchedMods } from "./types.js";
+import type { ApplyPatchOptions, ApplyPatchResult, LegacyRuntimeMigrationCheck, ModEntry, ModsIndex, PatchBackend, PatchDataCheckEntry, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchProgress, PatchRunEntry, PatchRunStatus, PatchStateChange, PreviousPatchedMods } from "./types.js";
 
 type PreparedPatchFiles = {
   atlases: string[];
@@ -917,6 +917,84 @@ export async function readPreviousPatchedMods(): Promise<PreviousPatchedMods> {
   };
 }
 
+export async function checkLegacyRuntimeMigration(): Promise<LegacyRuntimeMigrationCheck> {
+  const currentHistoryPath = path.resolve(patchHistoryPath());
+  const histories = await findPreviousPatchHistoryPaths(currentHistoryPath);
+  const modNames = new Set<string>();
+  const sourceVersions = new Set<string>();
+  const historyPaths: string[] = [];
+
+  for (const historyPath of histories) {
+    const history = await readHistoryFile(historyPath);
+    if (!history) continue;
+    const active = getActivePatchedModNames(history);
+    if (active.length === 0) continue;
+
+    historyPaths.push(historyPath);
+    const sourceVersion = versionFromHistoryPath(historyPath);
+    sourceVersions.add(sourceVersion);
+    for (const modName of active) modNames.add(modName);
+  }
+
+  return {
+    needed: modNames.size > 0,
+    modNames: [...modNames].sort((a, b) => a.localeCompare(b)),
+    sourceVersions: [...sourceVersions].sort((a, b) => a.localeCompare(b)),
+    historyPaths
+  };
+}
+
+export async function readLegacyActivePatchEntries() {
+  const currentHistoryPath = path.resolve(patchHistoryPath());
+  const histories = await findPreviousPatchHistoryPaths(currentHistoryPath);
+  const entries: Array<PatchRunEntry & { sourceVersion: string }> = [];
+
+  for (const historyPath of histories) {
+    const history = await readHistoryFile(historyPath);
+    if (!history) continue;
+    const sourceVersion = versionFromHistoryPath(historyPath);
+    const byModName = new Map<string, PatchRunEntry[]>();
+    for (const entry of history.entries) {
+      byModName.set(entry.modName, [...(byModName.get(entry.modName) ?? []), entry]);
+    }
+    for (const modEntries of byModName.values()) {
+      const latestPatched = getLatestEntriesById(modEntries).filter((entry) => entry.status === "patched");
+      entries.push(...latestPatched.map((entry) => ({ ...entry, sourceVersion })));
+    }
+  }
+
+  return entries;
+}
+
+export async function cleanupLegacyRuntimeMigrationRecords(sourceVersions: string[]) {
+  const removedPaths: string[] = [];
+  const skippedPaths: string[] = [];
+  const root = path.resolve(managerDataRootDir());
+  const currentVersion = managerDataVersion();
+  const uniqueVersions = [...new Set(sourceVersions)].filter(Boolean);
+
+  for (const sourceVersion of uniqueVersions) {
+    const targets = getRuntimeMigrationCleanupTargets(sourceVersion, currentVersion);
+    for (const target of targets) {
+      const resolved = path.resolve(target);
+      if (!isPathInside(resolved, root) || resolved === root || resolved.includes(`${path.sep}versions${path.sep}${currentVersion}${path.sep}`)) {
+        skippedPaths.push(target);
+        continue;
+      }
+      if (!await fileExists(resolved)) continue;
+      await fs.rm(resolved, { recursive: true, force: true });
+      removedPaths.push(target);
+    }
+  }
+
+  await writePatchMigrationCleanupReport(uniqueVersions, {
+    status: "completed",
+    removedPaths,
+    skippedPaths
+  });
+  return removedPaths;
+}
+
 async function preparePatchFilesCached(
   mod: ModEntry,
   cache: Map<string, PreparedPatchFiles>,
@@ -1799,6 +1877,44 @@ function getMigratedPatchRecordCleanupTargets(sourceVersion: string, currentVers
     path.join(versionDir, "backups"),
     path.join(versionDir, "converted")
   ];
+}
+
+function getRuntimeMigrationCleanupTargets(sourceVersion: string, currentVersion: string) {
+  const root = managerDataRootDir();
+
+  if (sourceVersion === "legacy") {
+    return [
+      path.join(root, "patch-history.json"),
+      path.join(root, "shared-index.json"),
+      path.join(root, "shared-file-index.json"),
+      path.join(root, "patch-migration-report.json"),
+      path.join(root, "backups"),
+      path.join(root, "converted")
+    ];
+  }
+
+  const versionDir = path.join(root, "versions", sanitizePathPart(sourceVersion));
+  if (sanitizePathPart(sourceVersion) === currentVersion) {
+    return [];
+  }
+
+  return [
+    path.join(versionDir, "patch-history.json"),
+    path.join(versionDir, "shared-index.json"),
+    path.join(versionDir, "shared-file-index.json"),
+    path.join(versionDir, "patch-migration-report.json"),
+    path.join(versionDir, "patch-migration-cleanup-report.json"),
+    path.join(versionDir, "backups"),
+    path.join(versionDir, "converted")
+  ];
+}
+
+export function legacyOriginalBackupPath(sourceVersion: string, bundleId: string) {
+  const root = managerDataRootDir();
+  const base = sourceVersion === "legacy"
+    ? root
+    : path.join(root, "versions", sanitizePathPart(sourceVersion));
+  return path.join(base, "backups", bundleId, "__data.original");
 }
 
 async function writePatchMigrationCleanupReport(

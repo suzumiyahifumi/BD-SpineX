@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -65,7 +66,8 @@ async function assertRequiredReleaseInputs() {
     "dist-native/uabea-cli/uabea_cli",
     "dist-native/unitypy-backend/unitypy_patch_bundle",
     "dist-native/unitypy-backend/unitypy_scan_bundle",
-    "dist-native/unitypy-backend/astc_encode"
+    "dist-native/unitypy-backend/astc_encode",
+    "dist-native/bd2loader/libbd2loader.dylib"
   ];
 
   for (const relativePath of requiredFiles) {
@@ -106,8 +108,10 @@ async function assertNoPrivatePaths() {
   const scanRoots = [
     "app",
     "core",
+    "native/bd2loader",
     "experiments/uabea-patcher",
     "experiments/rust-uabea-cli/src",
+    "dist-native/bd2loader/libbd2loader.dylib",
     `manager-data/versions/${gameVersion}/shared-index.json`,
     `manager-data/versions/${gameVersion}/shared-file-index.json`,
     "package.json"
@@ -115,9 +119,9 @@ async function assertNoPrivatePaths() {
   const privatePatterns = [
     "/Users/",
     "/Volumes/",
-    "suzumiyahifumi",
+    os.userInfo().username,
     root
-  ];
+  ].filter(Boolean);
   const leaks = [];
 
   for (const relativePath of scanRoots) {
