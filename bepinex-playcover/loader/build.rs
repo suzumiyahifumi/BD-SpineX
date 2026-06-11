@@ -14,5 +14,9 @@ fn main() {
     println!("cargo:rustc-link-lib=framework=AppKit");
     println!("cargo:rustc-link-lib=dylib=c++");
 
+    // 編譯時就把 install_name 設成最終注入路徑，安裝時即不需 install_name_tool（Xcode CLT），
+    // 讓 release 使用者免裝任何額外依賴。
+    println!("cargo:rustc-link-arg=-Wl,-install_name,@executable_path/Frameworks/libbd2loader.dylib");
+
     println!("cargo:rerun-if-changed=build.rs");
 }

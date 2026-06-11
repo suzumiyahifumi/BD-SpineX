@@ -153,10 +153,11 @@ export async function installLoader(): Promise<{ ok: boolean; message: string }>
     }
   }
 
-  // 2) 複製 dylib 進 Frameworks、設 id、adhoc 簽
+  // 2) 複製 dylib 進 Frameworks、adhoc 簽。
+  //    install_name 已在編譯時烤入（@executable_path/Frameworks/libbd2loader.dylib），
+  //    故不需 install_name_tool（Xcode CLT），release 使用者免裝額外依賴。
   const dst = path.join(frameworksDir(), LOADER_DYLIB);
   await fsp.copyFile(src, dst);
-  await exec("install_name_tool", ["-id", LOADER_LOAD_NAME, dst]);
   await exec("codesign", ["-f", "-s", "-", dst]);
 
   // 3) 加 LC_LOAD_DYLIB（bin 此時為乾淨基底）
