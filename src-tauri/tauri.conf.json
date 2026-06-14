@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BD-SpineX",
+  "version": "2.27.19",
+  "identifier": "com.bdspinex.manager",
+  "build": {
+    "beforeDevCommand": "vite --host 127.0.0.1",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "npm run build:loader && vite build",
+    "frontendDist": "../dist/renderer"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "BD-SpineX - Runtime Mod Manager",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 640
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg"],
+    "category": "Utility",
+    "icon": ["../build/icon.icns", "../build/icon.png"],
+    "resources": [
+      "../manager-data/tools/SpineSkeletonDataConverter",
+      "../dist-native/bd2loader/libbd2loader.dylib"
+    ],
+    "macOS": {
+      "signingIdentity": null
+    }
+  }
+}

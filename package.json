@@ -8,6 +8,8 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"tsc -p tsconfig.main.json --watch\" \"wait-on tcp:5173 dist/app/main/index.js dist/app/preload/index.cjs && electron .\"",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "build": "tsc -p tsconfig.main.json && vite build",
     "build:backends": "node scripts/build-backends.mjs",
     "build:loader": "node scripts/build-loader.mjs",
@@ -80,6 +82,7 @@
     }
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.0.0",
     "react": "^19.0.0",
@@ -89,6 +92,7 @@
     "wait-on": "^8.0.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

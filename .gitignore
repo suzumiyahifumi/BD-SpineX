@@ -130,6 +130,7 @@ dist
 # TernJS port file
 .tern-port
 ._*
+**/._*
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
@@ -173,6 +174,8 @@ mods/**
 # Packaged release outputs.
 dist-native/**
 release/**
+src-tauri/target/**
+src-tauri/gen/schemas/**
 experiments/rust-uabea-cli/target/**
 experiments/rust-uabea-cli/._target
 experiments/rust-uabea-cli/._target/**
