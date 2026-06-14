@@ -485,12 +485,12 @@ export function App() {
         </div>
       </section>
 
-      <section className="contentGrid">
+      <section className="contentGrid singleCol">
         <div className="panel tablePanel">
           <div className="panelTitle titleWithHelp">
             <span>Pending Changes</span>
             <HelpButton title="Pending Changes">
-              This table shows what will change when Apply Changes is pressed. Rows marked (auto) are removals staged because they share the same asset key as a newly selected mod. Nothing is changed before you apply.
+              This table shows what will change when Apply Changes is pressed. Rows marked (auto) are removals staged because they share the same asset key as a newly selected mod. Nothing is changed before you apply. Apply, Launch, and Mod Power live in the cartridge player dock below.
             </HelpButton>
           </div>
           <table>
@@ -511,49 +511,6 @@ export function App() {
             </tbody>
           </table>
         </div>
-
-        <aside className="panel sidePanel">
-          <div className="panelTitle titleWithHelp">
-            <span>Actions</span>
-            <HelpButton title="Actions">
-              Apply Changes mounts or unmounts the staged mods. Restore All removes every mounted mod from the game container but does not remove Runtime Injection.
-            </HelpButton>
-          </div>
-          <div className={`modPowerPanel ${modsEnabled ? "enabled" : "disabled"}`}>
-            <div>
-              <div className="modPowerLabel titleWithHelp">
-                <span>Mod Power</span>
-                <HelpButton title="Mod Power">
-                  Turns all runtime mods on or off without moving mounted mod folders. The loader reads this switch when the game starts, so restart the game after changing it.
-                </HelpButton>
-              </div>
-              <div className="modPowerState">
-                {modsEnabled
-                  ? `${mountedMods.length} mounted mod(s) ready`
-                  : `${mountedMods.length} mounted mod(s) kept, currently off`}
-              </div>
-            </div>
-            <button disabled={busy} onClick={toggleModPower} type="button">
-              {modsEnabled ? "Turn Off Mods" : "Restore Mods"}
-            </button>
-          </div>
-          <div className="actionButtons">
-            <button
-              disabled={modsLocked || pendingChanges.length === 0 || hasConflict}
-              onClick={applyChanges}
-              title={versionLocked ? "Update BD-SpineX version" : hasConflict ? "Resolve same-key conflicts first" : pendingChanges.length === 0 ? "No staged changes" : ""}
-            >
-              Apply Changes{pendingChanges.length ? ` (${pendingChanges.length})` : ""}
-            </button>
-            <button disabled={busy || !appReady} onClick={launchGame}>Launch Game</button>
-            <button disabled={busy || mountedMods.length === 0} onClick={restoreAll} title={mountedMods.length === 0 ? "No mounted mods to remove" : "Unmount every mounted runtime mod"}>
-              Restore All
-            </button>
-            {hasConflict && <p className="hint warning">Multiple mods with the same key are selected. Keep only one purple row per key before applying.</p>}
-            {busy && <p className="hint">Action running...</p>}
-            {versionLocked && <p className="hint">Update BD-SpineX version</p>}
-          </div>
-        </aside>
       </section>
 
       <section className="panel logPanel">
@@ -657,6 +614,82 @@ export function App() {
     );
   };
 
+  const dockFillPct = library.length > 0 ? Math.round((mountedMods.length / library.length) * 100) : 0;
+  const dockSpinning = modsEnabled && mountedMods.length > 0;
+  const applyDisabled = modsLocked || pendingChanges.length === 0 || hasConflict;
+  const launchDisabled = busy || !appReady;
+
+  const playerDock = (
+    <div className={`dock ${modsEnabled ? "" : "is-off"}`} role="region" aria-label="Cartridge player">
+      <div className="dockNow">
+        <div className={`dockCover ${dockSpinning ? "spinning" : ""}`} aria-hidden="true" />
+        <div className="dockMeta">
+          <div className="dockEyebrow">Now Loading</div>
+          <div className="dockTitle">
+            {pendingChanges.length > 0
+              ? `${pendingChanges.length} change${pendingChanges.length > 1 ? "s" : ""} staged`
+              : mountedMods.length > 0
+                ? `${mountedMods.length} cartridge${mountedMods.length > 1 ? "s" : ""} loaded`
+                : "No cartridges loaded"}
+          </div>
+          <div className="dockSub">
+            <span>{mountedMods.length} mounted</span>
+            {hasConflict && <span className="conflict"> · conflict</span>}
+            {!modsEnabled && <span className="off"> · mods off</span>}
+            {gameRunning && <span className="warn"> · game running</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="dockTrack">
+        <div className="dockBar"><div className="dockFill" style={{ width: `${dockFillPct}%` }} /></div>
+        <div className="dockTimes"><span>{mountedMods.length} mounted</span><span>of {library.length} scanned</span></div>
+      </div>
+
+      <div className="dockControls">
+        <button
+          type="button"
+          className={`dockBtn ${modsEnabled ? "on" : ""}`}
+          disabled={busy}
+          onClick={toggleModPower}
+          title={modsEnabled ? "Mod Power: on — click to turn all mods off" : "Mod Power: off — click to restore mods"}
+          aria-pressed={modsEnabled}
+        >
+          ⏻
+        </button>
+        <button
+          type="button"
+          className="dockBtn"
+          disabled={busy || mountedMods.length === 0}
+          onClick={restoreAll}
+          title={mountedMods.length === 0 ? "No mounted mods to remove" : "Restore All — unmount every mounted cartridge"}
+        >
+          ↩
+        </button>
+        <span className="dockDivider" aria-hidden="true" />
+        <button
+          type="button"
+          className="dockBtn apply"
+          disabled={applyDisabled}
+          onClick={applyChanges}
+          title={versionLocked ? "Update BD-SpineX version" : hasConflict ? "Resolve same-key conflicts first" : pendingChanges.length === 0 ? "No staged changes" : "Apply staged changes"}
+        >
+          ▶ Apply{pendingChanges.length ? ` (${pendingChanges.length})` : ""}
+        </button>
+        <button
+          type="button"
+          className="dockBtn launch"
+          disabled={launchDisabled}
+          onClick={launchGame}
+          title={appReady ? "Launch BrownDust II" : "PlayCover BrownDust II not ready"}
+          aria-label="Launch game"
+        >
+          🚀
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="appShell">
       <nav className="appRail">
@@ -723,6 +756,8 @@ export function App() {
         {view === "library" && libraryView}
         {view === "settings" && settingsView}
         {view !== "library" && view !== "settings" && placeholderView(view)}
+
+        {playerDock}
       </main>
     </div>
   );
