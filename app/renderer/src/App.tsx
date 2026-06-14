@@ -34,6 +34,8 @@ const NAV_GROUPS: { id: NavItem["group"]; label: string }[] = [
 const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Runtime Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0", development: false };
 const MODSDIR_KEY = "bd-spinex:runtime-modsdir";
 const MIGRATION_DISMISSED_KEY = "bd-spinex:legacy-runtime-migration-dismissed";
+const MODVIEW_KEY = "bd-spinex:mod-view";
+type ModView = "grid" | "list";
 
 function typeToCategory(type: RuntimeMod["type"]): ModCategory {
   return type === "skillcut" ? "cutscene" : type === "dating" ? "dating" : type === "standing" ? "char" : "other";
@@ -51,6 +53,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [modFilter, setModFilter] = useState("");
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
+  const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
   const [migrationCheck, setMigrationCheck] = useState<LegacyRuntimeMigrationCheck | null>(null);
   const [migrationRunning, setMigrationRunning] = useState(false);
   const [migrationDismissed, setMigrationDismissed] = useState(false);
@@ -155,6 +158,10 @@ export function App() {
   }
   function updateModSort(key: ModSortKey) {
     setModSort((cur) => ({ key, direction: cur.key === key && cur.direction === "asc" ? "desc" : "asc" }));
+  }
+  function updateModView(next: ModView) {
+    setModView(next);
+    localStorage.setItem(MODVIEW_KEY, next);
   }
 
   const runTask = useCallback(
@@ -361,14 +368,25 @@ export function App() {
           <div className="modsHeader">
             <div>
               <div className="panelTitle titleWithHelp">
-                <span>Mods</span>
-                <HelpButton title="Mods table">
-                  Check a mod to stage it for mounting. Uncheck a mounted mod to stage removal. Sorting, filtering, and scrolling remain available while actions are locked.
+                <span>Cartridges</span>
+                <HelpButton title="Mod cartridges">
+                  Each mod is a game cartridge. Click a cartridge to stage it for mounting, or click a mounted one to stage removal. Lit gold contact pins mean it is mounted; a green/red/purple frame means staged add / staged removal / same-key conflict. Switch to List for a dense sortable table.
                 </HelpButton>
               </div>
               <div className="tableHint">{visibleMods.length} shown / {library.length} scanned</div>
+              <div className="modViewToggle segmentedControl" role="tablist" aria-label="Mod view">
+                <button className={modView === "grid" ? "active" : ""} onClick={() => updateModView("grid")} type="button" aria-pressed={modView === "grid"}>
+                  <span>Cartridges</span>
+                </button>
+                <button className={modView === "list" ? "active" : ""} onClick={() => updateModView("list")} type="button" aria-pressed={modView === "list"}>
+                  <span>List</span>
+                </button>
+              </div>
             </div>
             <div className="modsHeaderControls">
+              <button disabled={modsLocked || selectableVisibleMods.length === 0} onClick={toggleVisible} title={allVisibleModsSelected ? "Clear all visible" : "Select all visible"} type="button">
+                {allVisibleModsSelected ? "Clear All" : "Select All"}
+              </button>
               <button disabled={busy || !modsDir} onClick={refreshModsFolder} title="Scan the selected Mods Folder again" type="button">
                 Refresh Mods
               </button>
@@ -383,6 +401,25 @@ export function App() {
           </div>
 
           <div className={`modsTableFrame ${modsLocked ? "locked" : ""}`}>
+            {modView === "grid" ? (
+              <div className="cartShelf">
+                {library.length === 0 ? (
+                  <div className="cartEmpty">{modsDir ? "No mods found." : "Choose a Mods Folder above to load your cartridges."}</div>
+                ) : visibleMods.length === 0 ? (
+                  <div className="cartEmpty">No mods match this filter.</div>
+                ) : visibleMods.map((mod) => (
+                  <Cartridge
+                    key={mod.path}
+                    mod={mod}
+                    have={mountedFolders.has(mod.folder)}
+                    selected={isDesired(mod.folder)}
+                    tone={tones[mod.folder]}
+                    locked={modsLocked}
+                    onToggle={() => updateDesired(mod.folder, !isDesired(mod.folder))}
+                  />
+                ))}
+              </div>
+            ) : (
             <table>
               <colgroup>
                 <col className="patchCol" />
@@ -438,6 +475,7 @@ export function App() {
                 })}
               </tbody>
             </table>
+            )}
             {modsLocked && (
               <div className="modsLockOverlay" aria-hidden="true">
                 <span>{formatModsLockReason(versionLocked, appReady, injectionMissing, missingModsDir, modsActionLocked)}</span>
@@ -807,6 +845,56 @@ function renderModSortButton(label: string, key: ModSortKey, sort: ModSort, onSo
     <button className={`sortButton ${active ? "active" : ""}`} type="button" onClick={() => onSort(key)}>
       <span>{label}</span>
       <span aria-hidden="true">{direction === "asc" ? "▲" : direction === "desc" ? "▼" : "↕"}</span>
+    </button>
+  );
+}
+
+function Cartridge(props: {
+  mod: RuntimeMod;
+  have: boolean;
+  selected: boolean;
+  tone?: PendingTone;
+  locked: boolean;
+  onToggle: () => void;
+}) {
+  const { mod, have, selected, tone, locked, onToggle } = props;
+  const category = typeToCategory(mod.type);
+  const folderName = formatFolderName(mod.folder);
+  const stateClass =
+    tone === "conflict" ? "is-conflict" :
+    tone === "added" ? "is-add" :
+    tone === "removed" ? "is-remove" :
+    have ? "is-mounted" : "";
+  const status =
+    tone === "conflict" ? "conflict · same key" :
+    tone === "added" ? "staged · mount" :
+    tone === "removed" ? "staged · unmount" :
+    have ? "mounted" : "available";
+  const title = `${folderName}\n${mod.key} · ${category}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}`;
+  return (
+    <button
+      type="button"
+      className={`cart cat-${category} ${stateClass} ${selected ? "is-selected" : ""}`}
+      disabled={locked}
+      onClick={onToggle}
+      aria-pressed={selected}
+      title={title}
+    >
+      <span className="cartCheck" aria-hidden="true">✓</span>
+      <span className="cartLabel">
+        <span className="cartArt" aria-hidden="true" />
+        <span className="cartCap">{mod.key}</span>
+      </span>
+      <span className="cartBody">
+        <span className="cartText">
+          <span className="cartTitle">{folderName}</span>
+          <span className="cartStatus">{status}</span>
+        </span>
+        <span className="cartCatDot" aria-hidden="true" />
+      </span>
+      <span className="cartPins" aria-hidden="true">
+        <i /><i /><i /><i /><i /><i /><i /><i />
+      </span>
     </button>
   );
 }

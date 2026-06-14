@@ -1761,3 +1761,245 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     display: none;
   }
 }
+
+/* ============================================================
+   Stage 4 — Mod cartridges (SNES / Game Boy cartridge grid)
+   A mod is rendered as a game cartridge. State mirrors the
+   existing desired/mounted/conflict logic in App.tsx.
+   ============================================================ */
+.modViewToggle {
+  margin-top: 10px;
+}
+
+.cartShelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 16px;
+  padding: 4px;
+  max-height: 460px;
+  overflow: auto;
+}
+
+.cart {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+  aspect-ratio: 5 / 6;
+  padding: 11px;
+  border: 1px solid var(--stroke);
+  border-radius: 16px 16px 8px 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015)),
+    linear-gradient(180deg, #221d3e, #14112400);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.26s cubic-bezier(.2,.7,.2,1), box-shadow 0.26s, border-color 0.2s;
+}
+
+/* cartridge shoulder notch */
+.cart::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 20px;
+  right: 20px;
+  height: 11px;
+  border-radius: 0 0 9px 9px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.cart:hover:not(:disabled) {
+  transform: translateY(-6px) rotate(-0.5deg);
+  border-color: var(--stroke-2);
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.55);
+}
+
+.cart:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.cart.is-mounted {
+  border-color: rgba(246, 198, 107, 0.45);
+  background:
+    linear-gradient(180deg, rgba(246, 198, 107, 0.16), rgba(0, 0, 0, 0.04)),
+    linear-gradient(180deg, #352a12, #1a140700);
+}
+
+.cart.is-add {
+  border-color: rgba(103, 232, 160, 0.5);
+  background:
+    linear-gradient(180deg, rgba(103, 232, 160, 0.16), rgba(0, 0, 0, 0.04)),
+    linear-gradient(180deg, #143026, #0c1a1400);
+}
+
+.cart.is-remove {
+  border-color: rgba(255, 122, 138, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 122, 138, 0.15), rgba(0, 0, 0, 0.04)),
+    linear-gradient(180deg, #3a1620, #1a0c1000);
+}
+
+.cart.is-conflict {
+  border-color: rgba(199, 155, 255, 0.55);
+  background:
+    linear-gradient(180deg, rgba(199, 155, 255, 0.18), rgba(0, 0, 0, 0.04)),
+    linear-gradient(180deg, #2a1f47, #160f2900);
+}
+
+/* selection check */
+.cartCheck {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--stroke);
+  color: transparent;
+}
+
+.cart.is-selected .cartCheck {
+  background: linear-gradient(160deg, var(--gold), var(--gold-deep));
+  border-color: transparent;
+  color: #1a1206;
+}
+
+/* printed label window */
+.cartLabel {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+}
+
+.cartArt {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 120% at 72% 18%, var(--art, #5b6cff), transparent 60%),
+    radial-gradient(120% 120% at 12% 92%, var(--art2, #2a2350), transparent 58%);
+  opacity: 0.9;
+}
+
+.cartArt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 6px);
+}
+
+.cartCap {
+  position: relative;
+  width: 100%;
+  padding: 7px 9px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.72));
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #dfe6ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* category art hues */
+.cart.cat-char    { --art: #3aa8ff; --art2: #1d2c6e; }
+.cart.cat-dating  { --art: #ff5ca8; --art2: #5a1740; }
+.cart.cat-cutscene{ --art: #9b7bff; --art2: #2a1f57; }
+.cart.cat-other   { --art: #f6c66b; --art2: #4a3712; }
+
+.cartBody {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cartText {
+  min-width: 0;
+  flex: 1;
+}
+
+.cartTitle {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 750;
+  line-height: 1.2;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cartStatus {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--text-faint);
+}
+
+.cart.is-mounted .cartStatus { color: var(--gold); }
+.cart.is-add .cartStatus { color: var(--ok); }
+.cart.is-remove .cartStatus { color: var(--err); }
+.cart.is-conflict .cartStatus { color: var(--conflict); }
+
+.cartCatDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cart.cat-char .cartCatDot    { background: var(--cyan); }
+.cart.cat-dating .cartCatDot  { background: var(--magenta); }
+.cart.cat-cutscene .cartCatDot{ background: var(--violet); }
+.cart.cat-other .cartCatDot   { background: var(--gold); }
+
+/* contact pins */
+.cartPins {
+  display: flex;
+  gap: 3px;
+  padding: 0 3px;
+}
+
+.cartPins i {
+  flex: 1;
+  height: 5px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #6b5a32, #3a2f18);
+  opacity: 0.55;
+}
+
+.cart.is-mounted .cartPins i {
+  background: linear-gradient(180deg, #f6c66b, #9c7426);
+  opacity: 1;
+  box-shadow: 0 0 6px rgba(246, 198, 107, 0.7);
+}
+
+.cartEmpty {
+  grid-column: 1 / -1;
+  padding: 48px 8px;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart:hover:not(:disabled) { transform: none; }
+}
