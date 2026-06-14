@@ -1,8 +1,55 @@
+/* ============================================================
+   BD-SpineX — Liquid Glass Theme (dark)
+   Re-skin of the runtime mod manager. Class names and layout
+   are preserved 1:1 with the previous light theme so the React
+   logic in App.tsx needs no changes — only the visual layer
+   (color, glass, depth) is rebuilt.
+   See design/BD-SpineX-Redesign.html for the full design book.
+   ============================================================ */
+
 :root {
-  color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f4f6f8;
-  color: #18212f;
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    Inter, ui-sans-serif, system-ui, "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif;
+
+  /* canvas */
+  --bg-0: #06070d;
+  --bg-1: #0b0d18;
+
+  /* glass */
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-2: rgba(255, 255, 255, 0.08);
+  --glass-3: rgba(255, 255, 255, 0.12);
+  --stroke: rgba(255, 255, 255, 0.14);
+  --stroke-2: rgba(255, 255, 255, 0.22);
+  --shine: rgba(255, 255, 255, 0.5);
+  --shadow: rgba(2, 4, 12, 0.55);
+
+  /* brand */
+  --gold: #f6c66b;
+  --gold-2: #ffdf9e;
+  --gold-deep: #d29a3e;
+  --violet: #9b7bff;
+  --cyan: #5ff3f6;
+  --magenta: #ff5ca8;
+
+  /* text */
+  --text: #eef1fb;
+  --text-dim: #aab2cc;
+  --text-faint: #707a98;
+
+  /* state */
+  --ok: #67e8a0;
+  --ok-bg: rgba(103, 232, 160, 0.12);
+  --warn: #ffce6a;
+  --warn-bg: rgba(255, 206, 106, 0.12);
+  --err: #ff7a8a;
+  --err-bg: rgba(255, 122, 138, 0.12);
+  --conflict: #c79bff;
+  --conflict-bg: rgba(199, 155, 255, 0.16);
+
+  background: var(--bg-0);
+  color: var(--text);
 }
 
 * {
@@ -11,6 +58,14 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
+  /* aurora — the light the glass refracts */
+  background:
+    radial-gradient(1200px 800px at 12% -10%, #1a1640 0%, transparent 58%),
+    radial-gradient(1000px 720px at 100% 0%, #07212b 0%, transparent 52%),
+    radial-gradient(900px 700px at 60% 110%, #2a103a 0%, transparent 55%),
+    var(--bg-0);
+  background-attachment: fixed;
 }
 
 button,
@@ -20,60 +75,92 @@ select {
 }
 
 button {
-  border: 1px solid #b9c4d2;
-  background: #ffffff;
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: #152033;
+  border: 1px solid var(--stroke);
+  background: var(--glass-2);
+  border-radius: 999px;
+  padding: 9px 14px;
+  color: var(--text);
   cursor: pointer;
+  font-weight: 600;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: background 0.18s, border-color 0.18s, transform 0.18s, color 0.18s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--glass-3);
+  border-color: var(--stroke-2);
+  transform: translateY(-1px);
 }
 
 button:disabled {
   cursor: not-allowed;
-  color: #8b96a6;
-  background: #eef2f6;
+  color: var(--text-faint);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 input,
 select {
   width: 100%;
   min-width: 0;
-  border: 1px solid #b9c4d2;
-  border-radius: 6px;
-  padding: 8px 10px;
-  background: #ffffff;
-  color: #18212f;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+input::placeholder {
+  color: var(--text-faint);
+}
+
+input:focus,
+select:focus {
+  border-color: rgba(246, 198, 107, 0.55);
+  box-shadow: 0 0 0 3px rgba(246, 198, 107, 0.14);
 }
 
 input[type="checkbox"] {
   width: 18px;
   height: 18px;
   min-width: 18px;
-  accent-color: #256f63;
+  padding: 0;
+  accent-color: var(--gold);
 }
 
 .shell {
   min-height: 100vh;
-  padding: 24px;
+  padding: 28px;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
+/* ---------- Top bar ---------- */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .topbar h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #ffffff, #c7cde6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .topbar p {
   margin: 4px 0 0;
-  color: #5e6b7d;
+  color: var(--text-faint);
 }
 
 .topbar .appSubtitle {
@@ -81,22 +168,22 @@ input[type="checkbox"] {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  color: #2d394c;
+  color: var(--text-dim);
   font-size: 15px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .versionBadge {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--stroke);
   border-radius: 999px;
-  padding: 2px 8px;
-  background: #ffffff;
-  color: #475569;
+  padding: 2px 9px;
+  background: var(--glass-2);
+  color: var(--text-dim);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .statusPill,
@@ -105,25 +192,42 @@ input[type="checkbox"] {
   align-items: center;
   min-height: 26px;
   border-radius: 999px;
-  padding: 3px 10px;
-  background: #dfeee7;
-  color: #17633d;
+  padding: 3px 11px;
+  background: var(--ok-bg);
+  border: 1px solid rgba(103, 232, 160, 0.28);
+  color: var(--ok);
   font-size: 13px;
   font-weight: 650;
 }
 
+/* ============================================================
+   GLASS PANELS
+   ============================================================ */
 .panel {
-  border: 1px solid #d3dae4;
-  border-radius: 8px;
-  background: #ffffff;
+  position: relative;
+  border: 1px solid var(--stroke);
+  border-radius: 20px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  backdrop-filter: blur(16px) saturate(1.5);
+  box-shadow:
+    0 8px 32px var(--shadow),
+    inset 0 1px 0 0 var(--shine),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+@supports (backdrop-filter: url(#liquid-lens)) {
+  .panel {
+    backdrop-filter: blur(8px) url(#liquid-lens) saturate(1.6);
+  }
 }
 
 .settingsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 14px;
-  padding: 16px;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 18px;
 }
 
 .settingsActions,
@@ -146,9 +250,9 @@ input[type="checkbox"] {
   min-height: 28px;
   border-radius: 999px;
   padding: 0 10px;
-  color: #445268;
+  color: var(--text-dim);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
 }
@@ -156,14 +260,14 @@ input[type="checkbox"] {
 .advancedSettingsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  border-top: 1px solid #e3e8ef;
-  padding-top: 14px;
+  gap: 16px;
+  border-top: 1px solid var(--stroke);
+  padding-top: 16px;
 }
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -171,18 +275,18 @@ input[type="checkbox"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #445268;
+  color: var(--text-dim);
   font-size: 13px;
   font-weight: 650;
 }
 
 .field.invalid > .fieldLabel {
-  color: #b42318;
+  color: var(--err);
 }
 
 .field.invalid input {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 2px rgb(220 38 38 / 0.14);
+  border-color: rgba(255, 122, 138, 0.6);
+  box-shadow: 0 0 0 3px rgba(255, 122, 138, 0.16);
 }
 
 .pathRow {
@@ -196,7 +300,7 @@ input[type="checkbox"] {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 14px 0;
+  margin: 16px 0;
 }
 
 .actionWithHelp,
@@ -207,6 +311,7 @@ input[type="checkbox"] {
   gap: 6px;
 }
 
+/* ---------- Help popover ---------- */
 .helpRoot {
   position: relative;
   display: inline-flex;
@@ -223,21 +328,22 @@ input[type="checkbox"] {
   height: 16px;
   min-height: 16px;
   place-items: center;
-  border-color: #cbd5e1;
+  border: 1px solid var(--stroke);
   border-radius: 999px;
   padding: 0;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--glass-2);
+  color: var(--text-dim);
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
-  opacity: 0.72;
+  opacity: 0.8;
 }
 
 .helpButton:hover {
-  border-color: #94a3b8;
-  color: #256f63;
+  border-color: rgba(246, 198, 107, 0.55);
+  color: var(--gold);
   opacity: 1;
+  transform: none;
 }
 
 .helpPopup {
@@ -247,12 +353,14 @@ input[type="checkbox"] {
   width: 280px;
   max-width: calc(100vw - 32px);
   gap: 8px;
-  border: 1px solid #f59e0b;
-  border-radius: 8px;
-  padding: 12px;
-  background: #ffffff;
-  box-shadow: 0 18px 44px rgba(24, 33, 47, 0.18);
-  color: #18212f;
+  border: 1px solid rgba(246, 198, 107, 0.4);
+  border-radius: 14px;
+  padding: 13px;
+  background: rgba(16, 18, 30, 0.92);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  color: var(--text);
   text-align: left;
   white-space: normal;
 }
@@ -266,16 +374,16 @@ input[type="checkbox"] {
 }
 
 .helpPopupTitle {
-  color: #18212f;
+  color: var(--gold-2);
   font-size: 13px;
   font-weight: 800;
 }
 
 .helpPopupText {
-  color: #536276;
+  color: var(--text-dim);
   font-size: 13px;
   font-weight: 450;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .helpContentStack {
@@ -290,25 +398,27 @@ input[type="checkbox"] {
   border-radius: 0;
   padding: 0;
   background: transparent;
-  color: #256f63;
+  color: var(--gold);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .helpLinkButton:hover {
-  color: #174f47;
+  color: var(--gold-2);
+  background: transparent;
+  transform: none;
 }
 
 .helpCloseButton {
   justify-self: start;
   min-height: 26px;
   border-radius: 999px;
-  padding: 0 10px;
-  color: #445268;
+  padding: 0 12px;
+  color: var(--text-dim);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .advancedToolbar {
@@ -316,13 +426,14 @@ input[type="checkbox"] {
   flex-wrap: wrap;
   gap: 10px;
   flex-basis: 100%;
-  border-top: 1px solid #d3dae4;
-  padding-top: 10px;
+  border-top: 1px solid var(--stroke);
+  padding-top: 12px;
 }
 
+/* ---------- Progress ---------- */
 .progressPanel {
-  margin-bottom: 14px;
-  padding: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
 }
 
 .progressHeader {
@@ -333,51 +444,53 @@ input[type="checkbox"] {
 }
 
 .progressText {
-  color: #536276;
+  color: var(--text-dim);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
 
 .progressCounter {
-  color: #2f3f56;
+  color: var(--text);
   font-size: 13px;
   font-weight: 750;
 }
 
 progress {
   width: 100%;
-  height: 12px;
+  height: 10px;
   margin-top: 12px;
-  accent-color: #256f63;
+  border-radius: 999px;
+  accent-color: var(--gold);
 }
 
 .progressPanel.complete progress {
-  accent-color: #16834a;
+  accent-color: var(--ok);
 }
 
 .progressPanel.complete .progressCounter {
-  color: #17633d;
+  color: var(--ok);
 }
 
+/* ---------- Layout grids ---------- */
 .scanGrid,
 .contentGrid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .scanGrid {
   grid-template-columns: minmax(0, 1fr);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .contentGrid {
-  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-columns: minmax(0, 1fr) 240px;
 }
 
 .tablePanel,
 .sidePanel,
 .logPanel {
-  padding: 14px;
+  padding: 16px;
 }
 
 .modsPanel,
@@ -388,7 +501,7 @@ progress {
 }
 
 .modsPanel {
-  max-height: 520px;
+  max-height: 540px;
   overflow: visible;
 }
 
@@ -397,7 +510,7 @@ progress {
   grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
   gap: 12px;
   align-items: end;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .modsHeader .panelTitle {
@@ -425,7 +538,7 @@ progress {
 }
 
 .modFilterField span {
-  color: #445268;
+  color: var(--text-dim);
   font-size: 12px;
   font-weight: 700;
 }
@@ -448,6 +561,7 @@ progress {
   position: relative;
   min-height: 0;
   overflow: hidden;
+  border-radius: 14px;
 }
 
 .modsLockOverlay {
@@ -457,18 +571,19 @@ progress {
   display: grid;
   place-items: center;
   pointer-events: none;
-  background: rgb(15 23 42 / 0.34);
+  background: rgba(6, 7, 13, 0.5);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 .modsLockOverlay span {
-  border: 1px solid rgb(255 255 255 / 0.42);
+  border: 1px solid var(--stroke-2);
   border-radius: 999px;
-  padding: 5px 12px;
-  background: rgb(15 23 42 / 0.72);
-  color: #ffffff;
+  padding: 6px 14px;
+  background: rgba(16, 18, 30, 0.86);
+  color: var(--text);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0;
 }
 
 .modsTableFrame.locked input[type="checkbox"] {
@@ -547,18 +662,18 @@ progress {
 
 .repairButton {
   min-height: 24px;
-  padding: 2px 7px;
-  border-color: #ddd6fe;
-  background: #ffffff;
-  color: #6d28d9;
+  padding: 2px 9px;
+  border-color: rgba(199, 155, 255, 0.4);
+  background: var(--conflict-bg);
+  color: var(--conflict);
   font-size: 12px;
   font-weight: 800;
 }
 
 .repairButton.active {
-  border-color: #8b5cf6;
-  background: #ede9fe;
-  color: #5b21b6;
+  border-color: rgba(199, 155, 255, 0.7);
+  background: rgba(199, 155, 255, 0.26);
+  color: #e3d2ff;
 }
 
 .modsPanel .folderCell {
@@ -581,12 +696,15 @@ progress {
   padding: 0;
   color: inherit;
   font: inherit;
+  font-weight: 700;
   text-align: left;
 }
 
 .sortButton:hover,
 .sortButton.active {
-  color: #9f1d1d;
+  color: var(--gold);
+  background: transparent;
+  transform: none;
 }
 
 .patchBulkControls {
@@ -606,41 +724,47 @@ progress {
   line-height: 1;
 }
 
+/* ---------- Category chips ---------- */
 .categoryBadge {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 2px 9px;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
+  border: 1px solid var(--stroke);
 }
 
 .categoryBadge.char {
-  background: #dbeafe;
-  color: #315b9c;
+  background: rgba(95, 243, 246, 0.12);
+  border-color: rgba(95, 243, 246, 0.3);
+  color: var(--cyan);
 }
 
 .categoryBadge.cutscene {
-  background: #ede9fe;
-  color: #6b5aa8;
+  background: rgba(155, 123, 255, 0.14);
+  border-color: rgba(155, 123, 255, 0.32);
+  color: var(--violet);
 }
 
 .categoryBadge.dating {
-  background: #fce7f3;
-  color: #9b5b85;
+  background: rgba(255, 92, 168, 0.12);
+  border-color: rgba(255, 92, 168, 0.3);
+  color: var(--magenta);
 }
 
 .categoryBadge.other {
-  background: #e0f2fe;
-  color: #3f6f88;
+  background: rgba(246, 198, 107, 0.12);
+  border-color: rgba(246, 198, 107, 0.3);
+  color: var(--gold);
 }
 
 .panelTitle {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-size: 14px;
   font-weight: 750;
-  color: #2d394c;
+  color: var(--text);
 }
 
 .tableHeader {
@@ -648,7 +772,7 @@ progress {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .tableHeader .panelTitle {
@@ -664,51 +788,65 @@ progress {
 }
 
 .tableHint {
-  color: #6b7789;
+  color: var(--text-faint);
   font-size: 12px;
 }
 
+/* ---------- Segmented control ---------- */
 .segmentedControl {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   justify-content: flex-end;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--stroke);
 }
 
 .segmentedControl button {
   min-height: 30px;
-  padding: 5px 8px;
+  padding: 5px 12px;
   font-size: 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
 }
 
 .segmentedControl button span {
-  color: #5d6b7d;
-  font-weight: 750;
+  color: var(--text-dim);
+  font-weight: 700;
 }
 
 .segmentedControl button.active {
-  border-color: #256f63;
-  background: #e1f0ec;
-  color: #15584f;
+  background: var(--glass-3);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
+.segmentedControl button.active span {
+  color: var(--text);
+}
+
+/* ---------- Asset summary ---------- */
 .assetSummaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
 .assetSummaryItem {
-  border: 1px solid #dbe2ea;
-  border-radius: 6px;
-  padding: 9px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 11px;
   min-width: 0;
+  background: var(--glass);
 }
 
 .assetSummaryLabel,
 .assetSummaryMeta {
-  color: #647287;
+  color: var(--text-faint);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -717,11 +855,12 @@ progress {
 
 .assetSummaryCount {
   margin: 3px 0;
-  color: #253449;
+  color: var(--text);
   font-size: 22px;
   font-weight: 800;
 }
 
+/* ---------- Tables ---------- */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -730,8 +869,8 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid #e3e8ef;
-  padding: 9px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 10px 10px;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -740,97 +879,112 @@ td {
 }
 
 th {
-  color: #59677a;
+  color: var(--text-dim);
   font-weight: 700;
-  background: #f8fafc;
+  background: rgba(12, 14, 24, 0.86);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+td {
+  color: var(--text-dim);
+}
+
+td code {
+  color: var(--cyan);
 }
 
 tbody tr:hover td {
-  background: #f3f7fb;
+  background: rgba(255, 255, 255, 0.04);
 }
 
+/* pending change tones */
 tr.pendingPatchChange td {
-  background: #fff0f0;
+  background: rgba(255, 122, 138, 0.08);
 }
 
 tr.pendingPatchChange.pendingPatchAdd td {
-  background: #fff1d6;
+  background: rgba(103, 232, 160, 0.1);
+  box-shadow: inset 3px 0 0 var(--ok);
 }
 
 tr.pendingPatchChange.pendingPatchRemove td {
-  background: #fde7e7;
+  background: rgba(255, 122, 138, 0.1);
+  box-shadow: inset 3px 0 0 var(--err);
 }
 
 tr.pendingPatchChange.pendingPatchRepair td {
-  background: #f3e8ff;
+  background: rgba(199, 155, 255, 0.12);
+  box-shadow: inset 3px 0 0 var(--conflict);
 }
 
 tr.pendingPatchChange:hover td {
-  background: #ffe8e8;
+  background: rgba(255, 122, 138, 0.14);
 }
 
 tr.pendingPatchChange.pendingPatchAdd:hover td {
-  background: #ffe8bd;
+  background: rgba(103, 232, 160, 0.16);
 }
 
 tr.pendingPatchChange.pendingPatchRemove:hover td {
-  background: #fbd7d7;
+  background: rgba(255, 122, 138, 0.16);
 }
 
 tr.pendingPatchChange.pendingPatchRepair:hover td {
-  background: #ead5ff;
+  background: rgba(199, 155, 255, 0.18);
 }
 
 .empty {
-  color: #778397;
+  color: var(--text-faint);
   text-align: center;
-  padding: 42px 8px;
+  padding: 44px 8px;
 }
 
+/* ---------- Side panel ---------- */
 .sidePanel {
   display: grid;
   align-content: start;
-  gap: 9px;
+  gap: 10px;
 }
 
 .modPowerPanel {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
-  border: 1px solid #dbe2ea;
-  border-radius: 6px;
-  padding: 10px;
-  background: #f8fafc;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--glass);
 }
 
 .modPowerPanel.enabled {
-  border-color: #badccc;
-  background: #f1fbf6;
+  border-color: rgba(103, 232, 160, 0.3);
+  background: var(--ok-bg);
 }
 
 .modPowerPanel.disabled {
-  border-color: #ddd6fe;
-  background: #f5f3ff;
+  border-color: rgba(199, 155, 255, 0.3);
+  background: var(--conflict-bg);
 }
 
 .modPowerLabel {
-  color: #2d394c;
+  color: var(--text);
   font-size: 13px;
   font-weight: 800;
 }
 
 .modPowerState {
   margin-top: 2px;
-  color: #647287;
+  color: var(--text-faint);
   font-size: 12px;
 }
 
 .modPowerPanel.enabled .modPowerLabel {
-  color: #17633d;
+  color: var(--ok);
 }
 
 .modPowerPanel.disabled .modPowerLabel {
-  color: #6d28d9;
+  color: var(--conflict);
 }
 
 .backendStatus {
@@ -838,40 +992,41 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border: 1px solid #dbe4ee;
-  border-radius: 6px;
-  padding: 8px 10px;
-  background: #f8fafc;
-  color: #536275;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: var(--glass);
+  color: var(--text-dim);
   font-size: 12px;
 }
 
 .backendStatus strong {
-  color: #243044;
+  color: var(--text);
   font-size: 12px;
   font-weight: 800;
 }
 
+/* ---------- Migration / inherit panels ---------- */
 .inheritHistoryPanel {
   display: grid;
   gap: 10px;
-  border: 1px solid #f5c77f;
-  border-radius: 6px;
-  padding: 10px;
-  background: #fff7e6;
+  border: 1px solid rgba(255, 206, 106, 0.3);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--warn-bg);
 }
 
 .inheritHistoryTitle {
-  color: #8a4b09;
+  color: var(--warn);
   font-size: 13px;
   font-weight: 800;
 }
 
 .inheritHistoryText {
   margin-top: 3px;
-  color: #6f5a36;
+  color: var(--text-dim);
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .inheritHistoryActions {
@@ -885,10 +1040,10 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  margin-bottom: 14px;
-  border-color: #f5c77f;
-  background: #fff7e6;
-  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-color: rgba(255, 206, 106, 0.3);
+  background: var(--warn-bg);
+  padding: 14px 16px;
 }
 
 .migrationActions {
@@ -899,33 +1054,41 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 
 .hint {
   margin: 4px 0 0;
-  color: #6b7789;
+  color: var(--text-faint);
   font-size: 13px;
   line-height: 1.45;
 }
 
 .hint.warning {
-  color: #9f1d1d;
-  font-weight: 750;
+  color: var(--warn);
+  font-weight: 700;
 }
 
+/* ---------- Log ---------- */
 .logPanel {
-  margin-top: 14px;
+  margin-top: 16px;
+}
+
+.logPanel h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text);
 }
 
 .errorPanel {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .historyPanel {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .historyTableFrame {
   max-height: 360px;
   overflow: auto;
-  border: 1px solid #e3e8ef;
-  border-radius: 6px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
 }
 
 .historyTableFrame th {
@@ -939,15 +1102,15 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 }
 
 .historyBundleRow td {
-  border-top: 1px solid #dbe4ee;
-  background: #f8fafc;
-  color: #253449;
+  border-top: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
   font-weight: 750;
 }
 
 .historyModRow td {
-  background: #ffffff;
-  color: #526175;
+  background: transparent;
+  color: var(--text-dim);
 }
 
 .historyTreeCell {
@@ -973,7 +1136,9 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 }
 
 .historyTreeToggle:hover {
-  color: #15584f;
+  color: var(--gold);
+  background: transparent;
+  transform: none;
 }
 
 .historyTreeCell span:last-child {
@@ -999,38 +1164,38 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 }
 
 .treeMarker {
-  color: #526175;
+  color: var(--text-dim);
 }
 
 .treeBranch {
-  color: #94a3b8;
+  color: var(--text-faint);
 }
 
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .summaryItem {
   display: grid;
   gap: 4px;
   min-width: 0;
-  border: 1px solid #f1c9c9;
-  border-radius: 6px;
-  background: #fff7f7;
-  padding: 10px;
+  border: 1px solid rgba(255, 122, 138, 0.28);
+  border-radius: 12px;
+  background: var(--err-bg);
+  padding: 11px;
 }
 
 .summaryCount {
-  color: #9f1d1d;
+  color: var(--err);
   font-size: 20px;
   font-weight: 800;
 }
 
 .summaryText {
-  color: #733;
+  color: var(--text-dim);
   font-size: 12px;
   line-height: 1.35;
   overflow: hidden;
@@ -1043,7 +1208,7 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 }
 
 .errorPanel td:last-child {
-  color: #9f1d1d;
+  color: var(--err);
 }
 
 .logStream {
@@ -1054,8 +1219,8 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
   max-height: 220px;
   margin: 0;
   overflow: auto;
-  color: #334155;
-  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-dim);
+  font: 12px/1.5 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .logLine {
@@ -1068,7 +1233,7 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 }
 
 .logTime {
-  color: #94a3b8;
+  color: var(--text-faint);
   white-space: nowrap;
 }
 
@@ -1079,53 +1244,74 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 
 .logAccent {
   border-radius: 4px;
-  padding: 0 3px;
+  padding: 0 4px;
   font-weight: 800;
 }
 
+.logAccent.ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.logAccent.warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.logAccent.err {
+  background: var(--err-bg);
+  color: var(--err);
+}
+
 .logAccent.action {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--err-bg);
+  color: var(--err);
 }
 
 .logAccent.module {
-  background: #ffedd5;
-  color: #c2410c;
+  background: var(--warn-bg);
+  color: var(--warn);
 }
 
 .logAccent.bundle {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(246, 198, 107, 0.14);
+  color: var(--gold);
 }
 
 .logAccent.error {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--err-bg);
+  color: var(--err);
 }
 
+/* ---------- Status badges ---------- */
 .badge.ready {
-  background: #e0f2fe;
-  color: #036580;
+  background: rgba(95, 243, 246, 0.12);
+  border-color: rgba(95, 243, 246, 0.3);
+  color: var(--cyan);
 }
 
 .badge.patched {
-  background: #dfeee7;
-  color: #17633d;
+  background: var(--ok-bg);
+  border-color: rgba(103, 232, 160, 0.3);
+  color: var(--ok);
 }
 
 .injectionBadge.injected {
-  background: #dfeee7;
-  color: #17633d;
+  background: var(--ok-bg);
+  border-color: rgba(103, 232, 160, 0.3);
+  color: var(--ok);
 }
 
 .injectionBadge.notInjected {
-  background: #fde7e7;
-  color: #9f1d1d;
+  background: var(--err-bg);
+  border-color: rgba(255, 122, 138, 0.3);
+  color: var(--err);
 }
 
 .badge.restored {
-  background: #ede9fe;
-  color: #6d28d9;
+  background: var(--conflict-bg);
+  border-color: rgba(199, 155, 255, 0.3);
+  color: var(--conflict);
 }
 
 .badge.missing_json,
@@ -1133,8 +1319,9 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 .badge.conflict,
 .badge.skipped,
 .badge.changed {
-  background: #fff1d6;
-  color: #875300;
+  background: var(--warn-bg);
+  border-color: rgba(255, 206, 106, 0.3);
+  color: var(--warn);
 }
 
 .badge.bundle_not_found,
@@ -1143,8 +1330,9 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 .badge.missing_skel,
 .badge.missing_texture,
 .badge.failed {
-  background: #fde7e7;
-  color: #9f1d1d;
+  background: var(--err-bg);
+  border-color: rgba(255, 122, 138, 0.3);
+  color: var(--err);
 }
 
 @media (max-width: 900px) {
@@ -1175,26 +1363,26 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
   }
 }
 
-/* Runtime mode additions */
+/* ---------- Pills ---------- */
 .errorPill {
-  padding: 10px 12px;
-  border: 1px solid #f1c9c9;
-  border-radius: 6px;
-  background: #fff7f7;
-  color: #9f1d1d;
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 122, 138, 0.3);
+  border-radius: 12px;
+  background: var(--err-bg);
+  color: var(--err);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.4;
 }
 
 .warningPill {
-  padding: 10px 12px;
-  border: 1px solid #f5c77f;
-  border-radius: 6px;
-  background: #fff7e6;
-  color: #8a4b09;
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 206, 106, 0.3);
+  border-radius: 12px;
+  background: var(--warn-bg);
+  color: var(--warn);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.4;
 }
 
@@ -1205,8 +1393,9 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 
 .panel > .errorPill,
 .panel > .warningPill {
-  margin: 14px;
+  margin: 16px;
 }
+
 .tableTitle {
   display: flex;
   flex-direction: column;
@@ -1222,12 +1411,24 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
   width: 100%;
 }
 
+/* primary action — Apply Changes is the hero button */
+.actionButtons button:first-child:not(:disabled) {
+  background: linear-gradient(160deg, var(--gold), var(--gold-deep));
+  border: none;
+  color: #1a1206;
+  box-shadow: 0 6px 18px rgba(246, 198, 107, 0.3);
+}
+
+.actionButtons button:first-child:not(:disabled):hover {
+  box-shadow: 0 8px 24px rgba(246, 198, 107, 0.42);
+}
+
 /* same-key conflict (cannot apply) */
 tr.pendingPatchChange.pendingPatchConflict td {
-  background: #e9d5ff;
-  box-shadow: inset 3px 0 0 #8b5cf6;
+  background: var(--conflict-bg);
+  box-shadow: inset 3px 0 0 var(--conflict);
 }
 
 tr.pendingPatchChange.pendingPatchConflict:hover td {
-  background: #ddc1ff;
+  background: rgba(199, 155, 255, 0.24);
 }
