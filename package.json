@@ -8,8 +8,9 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"tsc -p tsconfig.main.json --watch\" \"wait-on tcp:5173 dist/app/main/index.js dist/app/preload/index.cjs && electron .\"",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "tauri:clean": "node scripts/clean-appledouble.mjs",
+    "tauri:dev": "npm run tauri:clean && COPYFILE_DISABLE=1 CARGO_TARGET_DIR=\"${TMPDIR:-/tmp}/bd-spinex-tauri-target\" tauri dev",
+    "tauri:build": "npm run tauri:clean && COPYFILE_DISABLE=1 CARGO_TARGET_DIR=\"${TMPDIR:-/tmp}/bd-spinex-tauri-target\" tauri build",
     "build": "tsc -p tsconfig.main.json && vite build",
     "build:backends": "node scripts/build-backends.mjs",
     "build:loader": "node scripts/build-loader.mjs",
