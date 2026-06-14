@@ -15,6 +15,7 @@
     "build": "tsc -p tsconfig.main.json && vite build",
     "build:backends": "node scripts/build-backends.mjs",
     "build:loader": "node scripts/build-loader.mjs",
+    "gen:glass": "node scripts/gen-glass-maps.mjs",
     "release:prepare": "node scripts/prepare-release.mjs",
     "dist:mac": "npm run build:backends && npm run release:prepare && npm run build && COPYFILE_DISABLE=1 electron-builder --mac --arm64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.main.json",
