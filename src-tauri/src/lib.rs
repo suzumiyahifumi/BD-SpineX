@@ -116,18 +116,48 @@ fn disabled_marker_path() -> Result<PathBuf, String> {
 }
 
 fn resource_candidate(app: &AppHandle, relative: &str) -> Option<PathBuf> {
-    let resource_dir = app.path().resource_dir().ok()?;
-    for candidate in [
-        resource_dir.join(relative),
-        resource_dir.join("_up_").join(relative),
-    ] {
+    let relative_path = Path::new(relative);
+    if relative_path.exists() {
+        return Some(relative_path.to_path_buf());
+    }
+
+    let mut roots = Vec::new();
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        roots.push(resource_dir.clone());
+        roots.push(resource_dir.join("_up_"));
+    }
+    if let Ok(exe) = env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            roots.push(dir.to_path_buf());
+            roots.push(dir.join("_up_"));
+        }
+    }
+    if let Ok(cwd) = env::current_dir() {
+        roots.push(cwd.clone());
+        if let Some(parent) = cwd.parent() {
+            roots.push(parent.to_path_buf());
+        }
+    }
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    roots.push(manifest_dir.clone());
+    if let Some(parent) = manifest_dir.parent() {
+        roots.push(parent.to_path_buf());
+    }
+
+    for root in roots {
+        let candidate = root.join(relative);
         if candidate.exists() {
             return Some(candidate);
         }
+        let Some(file_name) = relative_path.file_name() else {
+            continue;
+        };
+        let flat = root.join(file_name);
+        if flat.exists() {
+            return Some(flat);
+        }
     }
-    let file_name = Path::new(relative).file_name()?;
-    let flat = resource_dir.join(file_name);
-    flat.exists().then_some(flat)
+    None
 }
 
 fn loader_source_path(app: &AppHandle) -> PathBuf {

@@ -318,7 +318,7 @@ export function App() {
         <div className="errorPill">Version mismatch: this manager supports {appInfo.supportedGameVersion}, but the detected game version is {gameVersionInfo?.version ?? "unknown"}. Use the matching BD-SpineX release.</div>
       )}
       {status && !status.appFound && (<div className="errorPill">Could not find BrownDust II in PlayCover.</div>)}
-      {status && !status.loaderAvailable && (<div className="errorPill">Runtime loader is missing. In development mode, run npm run build:loader first.</div>)}
+      {status && !status.loaderAvailable && (<div className="errorPill">Runtime loader is missing. In development mode, run npm run tauri:prepare first.</div>)}
       {gameRunning && (
         <div className="warningPill">BrownDust II is running. Close the game before installing or removing Runtime Injection.</div>
       )}

@@ -4,8 +4,8 @@
   "version": "2.27.19",
   "identifier": "com.bdspinex.manager",
   "build": {
-    "beforeDevCommand": "vite --host 127.0.0.1",
-    "devUrl": "http://127.0.0.1:5173",
+    "beforeDevCommand": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "devUrl": "http://127.0.0.1:5174",
     "beforeBuildCommand": "npm run build:loader && vite build",
     "frontendDist": "../dist/renderer"
   },
