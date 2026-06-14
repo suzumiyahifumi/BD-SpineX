@@ -3,6 +3,9 @@ import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../.
 import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
 
 // Runtime-based BD-SpineX. The interaction model follows the original offline patch UI.
+// Stage 3 of the liquid-glass redesign: the top toolbar is replaced by a left glass
+// rail with routed views (Library / Roster / Profiles / Preview / Stats / Settings).
+// All runtime logic and window.bd2 calls are unchanged.
 
 type LogEntry = { id: string; time: string; message: string; tone?: "ok" | "warn" | "err" };
 type ModSortKey = "folder" | "name" | "category" | "status";
@@ -10,6 +13,23 @@ type ModSort = { key: ModSortKey; direction: "asc" | "desc" };
 type ModCategory = "char" | "dating" | "cutscene" | "other";
 type PendingTone = "added" | "removed" | "conflict";
 type RuntimeChange = { folder: string; key: string; enabled: boolean; implicit?: boolean; conflict?: boolean };
+
+type ViewKey = "library" | "roster" | "profiles" | "preview" | "stats" | "settings";
+type NavItem = { key: ViewKey; label: string; icon: string; group: "collection" | "tools" | "system" };
+
+const NAV_ITEMS: NavItem[] = [
+  { key: "library", label: "Library", icon: "📚", group: "collection" },
+  { key: "roster", label: "Roster", icon: "🎭", group: "collection" },
+  { key: "profiles", label: "Profiles", icon: "💼", group: "collection" },
+  { key: "preview", label: "Preview", icon: "👁️", group: "tools" },
+  { key: "stats", label: "Stats", icon: "📊", group: "tools" },
+  { key: "settings", label: "Settings", icon: "⚙️", group: "system" }
+];
+const NAV_GROUPS: { id: NavItem["group"]; label: string }[] = [
+  { id: "collection", label: "收藏" },
+  { id: "tools", label: "工具" },
+  { id: "system", label: "系統" }
+];
 
 const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Runtime Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0", development: false };
 const MODSDIR_KEY = "bd-spinex:runtime-modsdir";
@@ -22,6 +42,7 @@ function typeToCategory(type: RuntimeMod["type"]): ModCategory {
 export function App() {
   const [appInfo, setAppInfo] = useState<AppInfo>(defaultAppInfo);
   const [gameVersionInfo, setGameVersionInfo] = useState<GameVersionInfo | null>(null);
+  const [view, setView] = useState<ViewKey>("library");
   const [modsDir, setModsDir] = useState<string>("");
   const [library, setLibrary] = useState<RuntimeMod[]>([]);
   const [status, setStatus] = useState<RuntimeStatus | null>(null);
@@ -281,36 +302,18 @@ export function App() {
     })();
   }, [modsDir, log, refreshStatus, scanLibrary]);
 
-  return (
-    <main className="shell">
-      <header className="topbar">
-        <div>
-          <h1>{appInfo.name}</h1>
-          <p className="appSubtitle">
-            <span>{appInfo.subtitle}</span>
-            <span className="versionBadge" title={formatVersionTitle(appInfo, gameVersionInfo)}>
-              {formatVersionBadge(appInfo, gameVersionInfo)}
-            </span>
-            <HelpButton title="Version lock">
-              BD-SpineX must match the BrownDust II game version because runtime hooks are bound to IL2CPP addresses. Mod operations are locked when versions differ.
-            </HelpButton>
-          </p>
-          <p>BrownDust II Runtime Mod Loader | Mac PlayCover</p>
-        </div>
-        <div className="statusPill" title={status?.injected ? "Loader installed" : "Loader not installed"}>
-          {status?.injected ? "Runtime installed" : "Not installed"} · {mountedMods.length} mounted{gameRunning ? " · game running" : ""}
-        </div>
-      </header>
+  // ===== view fragments =====
+  const activeNav = NAV_ITEMS.find((n) => n.key === view) ?? NAV_ITEMS[0];
 
+  const globalBanners = (
+    <div className="bannerStack">
       {versionLocked && (
-        <section className="panel"><div className="errorPill">Version mismatch: this manager supports {appInfo.supportedGameVersion}, but the detected game version is {gameVersionInfo?.version ?? "unknown"}. Use the matching BD-SpineX release.</div></section>
+        <div className="errorPill">Version mismatch: this manager supports {appInfo.supportedGameVersion}, but the detected game version is {gameVersionInfo?.version ?? "unknown"}. Use the matching BD-SpineX release.</div>
       )}
-      {status && !status.appFound && (<section className="panel"><div className="errorPill">Could not find BrownDust II in PlayCover.</div></section>)}
-      {status && !status.loaderAvailable && (<section className="panel"><div className="errorPill">Runtime loader is missing. In development mode, run npm run build:loader first.</div></section>)}
+      {status && !status.appFound && (<div className="errorPill">Could not find BrownDust II in PlayCover.</div>)}
+      {status && !status.loaderAvailable && (<div className="errorPill">Runtime loader is missing. In development mode, run npm run build:loader first.</div>)}
       {gameRunning && (
-        <section className="panel">
-          <div className="warningPill">BrownDust II is running. Close the game before installing or removing Runtime Injection.</div>
-        </section>
+        <div className="warningPill">BrownDust II is running. Close the game before installing or removing Runtime Injection.</div>
       )}
       {showMigrationPanel && migrationCheck && (
         <section className="panel migrationPanel">
@@ -336,7 +339,12 @@ export function App() {
           </div>
         </section>
       )}
-      <section className="panel settingsGrid">
+    </div>
+  );
+
+  const libraryView = (
+    <>
+      <section className="panel libraryBar">
         <PathField
           label="Mods Folder"
           helpTitle="Mods Folder"
@@ -346,35 +354,6 @@ export function App() {
           onBrowse={selectDir}
           invalid={missingModsDir}
         />
-        <div className="field">
-          <span className="fieldLabel">
-            <span>Runtime Injection (BepInEx)</span>
-            <HelpButton title="Runtime Injection">
-              Installs the loader into the game executable after backing up and re-signing it. Close BrownDust II before installing or removing injection. Mounted mods take effect the next time the game starts. Removing injection restores the original executable but keeps mounted mod files in place. Reinstall injection after a game update.
-            </HelpButton>
-          </span>
-          <div className="pathRow">
-            <span className={`badge injectionBadge ${status?.injected ? "injected" : "notInjected"}`} style={{ alignSelf: "center" }}>
-              {status?.injected ? "Injected" : "Not injected"}
-            </span>
-            <button
-              type="button"
-              disabled={injectionActionLocked || !appReady || Boolean(status?.injected)}
-              onClick={installLoader}
-              title={gameRunning ? "Close BrownDust II before changing injection" : ""}
-            >
-              Install Injection
-            </button>
-            <button
-              type="button"
-              disabled={injectionActionLocked || !status?.injected}
-              onClick={uninstallLoader}
-              title={gameRunning ? "Close BrownDust II before changing injection" : ""}
-            >
-              Remove Injection
-            </button>
-          </div>
-        </div>
       </section>
 
       <section className="scanGrid">
@@ -429,7 +408,7 @@ export function App() {
               </thead>
               <tbody>
                 {library.length === 0 ? (
-                  <tr><td colSpan={5} className="empty">{modsDir ? "No mods found." : "Choose a Mods Folder first."}</td></tr>
+                  <tr><td colSpan={5} className="empty">{modsDir ? "No mods found." : "Choose a Mods Folder above to load your cartridges."}</td></tr>
                 ) : visibleMods.length === 0 ? (
                   <tr><td colSpan={5} className="empty">No mods match this filter.</td></tr>
                 ) : visibleMods.map((mod) => {
@@ -550,7 +529,164 @@ export function App() {
           ))}
         </div>
       </section>
-    </main>
+    </>
+  );
+
+  const settingsView = (
+    <>
+      <section className="panel settingsGrid">
+        <div className="field">
+          <span className="fieldLabel">
+            <span>Runtime Injection (BepInEx)</span>
+            <HelpButton title="Runtime Injection">
+              Installs the loader into the game executable after backing up and re-signing it. Close BrownDust II before installing or removing injection. Mounted mods take effect the next time the game starts. Removing injection restores the original executable but keeps mounted mod files in place. Reinstall injection after a game update.
+            </HelpButton>
+          </span>
+          <div className="pathRow">
+            <span className={`badge injectionBadge ${status?.injected ? "injected" : "notInjected"}`} style={{ alignSelf: "center" }}>
+              {status?.injected ? "Injected" : "Not injected"}
+            </span>
+            <button
+              type="button"
+              disabled={injectionActionLocked || !appReady || Boolean(status?.injected)}
+              onClick={installLoader}
+              title={gameRunning ? "Close BrownDust II before changing injection" : ""}
+            >
+              Install Injection
+            </button>
+            <button
+              type="button"
+              disabled={injectionActionLocked || !status?.injected}
+              onClick={uninstallLoader}
+              title={gameRunning ? "Close BrownDust II before changing injection" : ""}
+            >
+              Remove Injection
+            </button>
+          </div>
+        </div>
+        <PathField
+          label="Mods Folder"
+          helpTitle="Mods Folder"
+          helpText="Choose the folder containing your mods. The Library view reads cartridges from here."
+          value={modsDir}
+          onChange={(v) => setModsDir(v)}
+          onBrowse={selectDir}
+          invalid={missingModsDir}
+        />
+      </section>
+
+      <section className="panel settingsGrid">
+        <div className="field">
+          <span className="fieldLabel"><span>App</span></span>
+          <div className="backendStatus">
+            <span>{appInfo.name} · {appInfo.subtitle}</span>
+            <strong>v{appInfo.version}</strong>
+          </div>
+        </div>
+        <div className="field">
+          <span className="fieldLabel"><span>Game</span></span>
+          <div className="backendStatus">
+            <span>Detected BrownDust II</span>
+            <strong>{gameVersionInfo?.version ?? "unknown"}</strong>
+          </div>
+        </div>
+        <div className="field">
+          <span className="fieldLabel"><span>Runtime</span></span>
+          <div className="backendStatus">
+            <span>{status?.injected ? "Injected" : "Not injected"} · {mountedMods.length} mounted</span>
+            <strong>{status?.loaderAvailable ? "loader ready" : "loader missing"}</strong>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+
+  const placeholderView = (key: ViewKey) => {
+    const copy: Record<string, { icon: string; title: string; body: string }> = {
+      roster: { icon: "🎭", title: "角色名冊 Roster", body: "把模組依角色聚合的牆面：每位角色顯示卡匣數量，點開可查看哪些作者為其製作模組（Discover），支援多 ID 角色與前 NPC。" },
+      profiles: { icon: "💼", title: "卡匣盒 Profiles", body: "建立多組掛載組合，一鍵切換並同步進遊戲，並可匯入舊版 profile。底部的卡匣播放器會顯示目前載入的組合。" },
+      preview: { icon: "👁️", title: "預覽 Preview", body: "內建 Spine 動畫檢視器，套用前先看模組的實際動作與外觀。" },
+      stats: { icon: "📊", title: "統計 Stats", body: "模組總數、作者數、分類分布與最近活動的儀表板。" }
+    };
+    const c = copy[key];
+    return (
+      <section className="panel comingSoon">
+        <div className="csIcon">{c.icon}</div>
+        <h2>{c.title}</h2>
+        <p>{c.body}</p>
+        <span className="csTag">✦ 規劃中 · 設計書第 6 階段</span>
+      </section>
+    );
+  };
+
+  return (
+    <div className="appShell">
+      <nav className="appRail">
+        <div className="railBrand">
+          <span className="railLogo">B</span>
+          <div>
+            <div className="railName">{appInfo.name}</div>
+            <div className="railSub">{appInfo.subtitle}</div>
+          </div>
+        </div>
+
+        <div className="railNav">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.id}>
+              <div className="railGroup">{group.label}</div>
+              {NAV_ITEMS.filter((item) => item.group === group.id).map((item) => {
+                const badge = item.key === "library" && pendingChanges.length > 0 ? pendingChanges.length : undefined;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={`railItem ${view === item.key ? "active" : ""}`}
+                    onClick={() => setView(item.key)}
+                    aria-current={view === item.key ? "page" : undefined}
+                  >
+                    <span className="railIco" aria-hidden="true">{item.icon}</span>
+                    <span className="railLabel">{item.label}</span>
+                    {badge ? <span className="railBadge">{badge}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        <div className="railFoot">
+          <div className="railStatus">
+            <span className={`statusDot ${status?.injected ? "ok" : ""}`} aria-hidden="true" />
+            <div>
+              <div className="railStatusMain">{status?.injected ? "Runtime installed" : "Not installed"}</div>
+              <div className="railStatusSub">{mountedMods.length} mounted{gameRunning ? " · running" : ""}</div>
+            </div>
+          </div>
+          <span className={`railVersion ${versionLocked ? "locked" : ""}`} title={formatVersionTitle(appInfo, gameVersionInfo)}>
+            {formatVersionBadge(appInfo, gameVersionInfo)}
+          </span>
+        </div>
+      </nav>
+
+      <main className="appMain">
+        <div className="viewHead">
+          <div>
+            <h1>{activeNav.label}</h1>
+            <div className="viewSub">BrownDust II Runtime Mod Loader · Mac PlayCover</div>
+          </div>
+          <div className="spacer" />
+          <span className="statusPill" title={status?.injected ? "Loader installed" : "Loader not installed"}>
+            {status?.injected ? "Runtime installed" : "Not installed"} · {mountedMods.length} mounted{gameRunning ? " · game running" : ""}
+          </span>
+        </div>
+
+        {globalBanners}
+
+        {view === "library" && libraryView}
+        {view === "settings" && settingsView}
+        {view !== "library" && view !== "settings" && placeholderView(view)}
+      </main>
+    </div>
   );
 }
 
