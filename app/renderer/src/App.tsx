@@ -979,38 +979,43 @@ function CartridgeRealistic(props: {
     tone === "removed" ? "is-remove" :
     have ? "is-mounted" : "";
   const tagLabel = meta.author ? `by ${meta.author}` : categoryGenre(category);
+  const pack = categoryPack(category);
+  const badge = category === "char" ? "C" : category === "dating" ? "D" : category === "cutscene" ? "S" : "N";
+  const runtimeLabel =
+    tone === "conflict" ? "CONFLICT" :
+    tone === "added" ? "STAGED MOUNT" :
+    tone === "removed" ? "STAGED UNMOUNT" :
+    have ? "MOUNTED" : "AVAILABLE";
   const title = `${folderName}\n${mod.key} · ${category}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}`;
   const coverStyle = meta.cover ? { backgroundImage: `url("${meta.cover}")` } : undefined;
   return (
     <button
       type="button"
-      className={`rcart cat-${category} ${stateClass} ${selected ? "is-selected" : ""}`}
+      className={`rcart cat-${category} ${stateClass} ${selected ? "is-on" : ""}`}
       disabled={locked}
       onClick={onToggle}
       aria-pressed={selected}
       title={title}
     >
       <span className="rcartShell">
-        <span className="rcartGripL" aria-hidden="true" />
-        <span className="rcartGripR" aria-hidden="true" />
         <span className="rcartLabel">
           <span className="rcartArt" style={coverStyle} aria-hidden="true" />
           <span className="rcartAged" aria-hidden="true" />
           <span className="rcartGloss" aria-hidden="true" />
-          <span className="rcartTrim" aria-hidden="true" />
-          <span className="rcartPlate">
-            <span className="rcartName">{folderName}</span>
-            <span className="rcartKey">{mod.key}</span>
+          <span className="rcartHead">
+            <span className="rcartNo" aria-hidden="true">{badge}</span>
+            <span className="rcartPack">{pack}</span>
+            <span className="rcartCode">{mod.key}</span>
           </span>
-          {have && !tone && <span className="rcartStamp" aria-hidden="true">INSERTED</span>}
-        </span>
-        <span className="rcartFoot">
-          <span className="rcartBrand">BD·SpineX</span>
-          <span className="rcartPins" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></span>
+          <span className="rcartTitle2">{folderName}</span>
+          <span className="rcartCredits" aria-hidden="true">
+            <span>ASSET · {mod.key}</span>
+            <span>RUNTIME · {runtimeLabel}</span>
+          </span>
         </span>
       </span>
       <span className="rcartTag" aria-hidden="true">{tagLabel}</span>
-      <span className="rcartCheck" aria-hidden="true">✓</span>
+      <span className={`rcartPlus ${selected ? "on" : ""}`} aria-hidden="true">+</span>
       <span className="rcartSlot" aria-hidden="true" />
     </button>
   );
@@ -1018,6 +1023,9 @@ function CartridgeRealistic(props: {
 
 function categoryGenre(category: ModCategory) {
   return category === "char" ? "Standing" : category === "dating" ? "Dating" : category === "cutscene" ? "Cutscene" : "NPC";
+}
+function categoryPack(category: ModCategory) {
+  return category === "char" ? "CHARACTER PACK" : category === "dating" ? "DATING PACK" : category === "cutscene" ? "CUTSCENE PACK" : "NPC PACK";
 }
 
 function PathField(props: { label: string; value: string; onChange: (v: string) => void; onBrowse?: () => void; invalid?: boolean; helpTitle?: string; helpText?: string }) {
