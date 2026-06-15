@@ -978,7 +978,6 @@ function CartridgeRealistic(props: {
     tone === "added" ? "is-add" :
     tone === "removed" ? "is-remove" :
     have ? "is-mounted" : "";
-  const tagLabel = meta.author ? `by ${meta.author}` : categoryGenre(category);
   const pack = categoryPack(category);
   const badge = category === "char" ? "C" : category === "dating" ? "D" : category === "cutscene" ? "S" : "N";
   const runtimeLabel =
@@ -1009,21 +1008,19 @@ function CartridgeRealistic(props: {
           </span>
           <span className="rcartTitle2">{folderName}</span>
           <span className="rcartCredits" aria-hidden="true">
-            <span>ASSET · {mod.key}</span>
-            <span>RUNTIME · {runtimeLabel}</span>
+            <span>ASSET {mod.key}</span>
+            <span>{meta.author ? `MOD BY ${meta.author.toUpperCase()}` : "AUTHOR UNKNOWN"}</span>
+            <span>RUNTIME {runtimeLabel}</span>
           </span>
         </span>
+        <span className="rcartNotches" aria-hidden="true"><i /><i /></span>
       </span>
-      <span className="rcartTag" aria-hidden="true">{tagLabel}</span>
-      <span className={`rcartPlus ${selected ? "on" : ""}`} aria-hidden="true">+</span>
+      <span className={`rcartPod ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPlus">+</span></span>
       <span className="rcartSlot" aria-hidden="true" />
     </button>
   );
 }
 
-function categoryGenre(category: ModCategory) {
-  return category === "char" ? "Standing" : category === "dating" ? "Dating" : category === "cutscene" ? "Cutscene" : "NPC";
-}
 function categoryPack(category: ModCategory) {
   return category === "char" ? "CHARACTER PACK" : category === "dating" ? "DATING PACK" : category === "cutscene" ? "CUTSCENE PACK" : "NPC PACK";
 }
