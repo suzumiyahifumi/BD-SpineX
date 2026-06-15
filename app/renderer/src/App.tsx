@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
 import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
 
@@ -13,8 +13,10 @@ type ModSort = { key: ModSortKey; direction: "asc" | "desc" };
 type ModCategory = "char" | "dating" | "cutscene" | "other";
 type PendingTone = "added" | "removed" | "conflict";
 type RuntimeChange = { folder: string; key: string; enabled: boolean; implicit?: boolean; conflict?: boolean };
+type AuthorRule = { id: string; name: string; color: string; keywords: string[]; custom?: boolean };
+type DetectedAuthor = { id: string; name: string; color: string };
 
-type ViewKey = "library" | "roster" | "profiles" | "preview" | "stats" | "settings";
+type ViewKey = "library" | "roster" | "profiles" | "preview" | "stats" | "logs" | "settings";
 type NavItem = { key: ViewKey; label: string; icon: string; group: "collection" | "tools" | "system" };
 
 const NAV_ITEMS: NavItem[] = [
@@ -23,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "profiles", label: "Profiles", icon: "💼", group: "collection" },
   { key: "preview", label: "Preview", icon: "👁️", group: "tools" },
   { key: "stats", label: "Stats", icon: "📊", group: "tools" },
+  { key: "logs", label: "Logs", icon: "🧾", group: "tools" },
   { key: "settings", label: "Settings", icon: "⚙️", group: "system" }
 ];
 const NAV_GROUPS: { id: NavItem["group"]; label: string }[] = [
@@ -36,8 +39,43 @@ const MODSDIR_KEY = "bd-spinex:runtime-modsdir";
 const MIGRATION_DISMISSED_KEY = "bd-spinex:legacy-runtime-migration-dismissed";
 const MODVIEW_KEY = "bd-spinex:mod-view";
 const CARTSKIN_KEY = "bd-spinex:cart-skin";
+const AUTHOR_RULES_KEY = "bd-spinex:author-rules";
 type ModView = "grid" | "list";
 type CartSkin = "realistic" | "arcade";
+
+const AUTHOR_COLORS = [
+  "#d98a22",
+  "#5f8fb9",
+  "#8c6bb1",
+  "#4f9c7a",
+  "#bf5f57",
+  "#b49a45",
+  "#6f88c7",
+  "#c46d9b",
+  "#5f9fa8",
+  "#9a7551",
+  "#7c8a59",
+  "#a7664b",
+  "#6d78a8",
+  "#9298a6"
+];
+
+const DEFAULT_AUTHOR_RULES: AuthorRule[] = [
+  makeAuthorRule("anextra", "AnExtra", AUTHOR_COLORS[0]),
+  makeAuthorRule("hardcracker", "HardCracker", AUTHOR_COLORS[1]),
+  makeAuthorRule("hcoel", "H.Coel", AUTHOR_COLORS[2]),
+  makeAuthorRule("linr", "linr熊", AUTHOR_COLORS[3]),
+  makeAuthorRule("mr_miagi", "Mr. Miagi", AUTHOR_COLORS[4]),
+  makeAuthorRule("mr_phaps", "Mr. Phaps", AUTHOR_COLORS[5]),
+  makeAuthorRule("na0h", "Na0h", AUTHOR_COLORS[6]),
+  makeAuthorRule("nimloth", "Nimloth", AUTHOR_COLORS[7]),
+  makeAuthorRule("qi", "Qi齊", AUTHOR_COLORS[8]),
+  makeAuthorRule("sloth", "Sloth", AUTHOR_COLORS[9]),
+  makeAuthorRule("synae", "Synae", AUTHOR_COLORS[10]),
+  makeAuthorRule("yuk11sh1d4", "Yuk11sh1d4", AUTHOR_COLORS[11]),
+  makeAuthorRule("tazmanyakk", "Tazmanyakk", AUTHOR_COLORS[12]),
+  makeAuthorRule("xian", "XiAn", AUTHOR_COLORS[13])
+];
 
 function typeToCategory(type: RuntimeMod["type"]): ModCategory {
   return type === "skillcut" ? "cutscene" : type === "dating" ? "dating" : type === "standing" ? "char" : "other";
@@ -57,6 +95,8 @@ export function App() {
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
   const [cartSkin, setCartSkin] = useState<CartSkin>(() => (localStorage.getItem(CARTSKIN_KEY) === "arcade" ? "arcade" : "realistic"));
+  const [authorRules, setAuthorRules] = useState<AuthorRule[]>(readAuthorRules);
+  const [newAuthorName, setNewAuthorName] = useState("");
   const [migrationCheck, setMigrationCheck] = useState<LegacyRuntimeMigrationCheck | null>(null);
   const [migrationRunning, setMigrationRunning] = useState(false);
   const [migrationDismissed, setMigrationDismissed] = useState(false);
@@ -169,6 +209,36 @@ export function App() {
   function updateCartSkin(next: CartSkin) {
     setCartSkin(next);
     localStorage.setItem(CARTSKIN_KEY, next);
+  }
+  function updateAuthorColor(id: string, color: string) {
+    setAuthorRules((cur) => {
+      const next = cur.map((rule) => rule.id === id ? { ...rule, color } : rule);
+      persistAuthorRules(next);
+      return next;
+    });
+  }
+  function addAuthorRule() {
+    const name = newAuthorName.trim();
+    if (!name) return;
+    setAuthorRules((cur) => {
+      const id = normalizeAuthorId(name) || `author_${cur.length + 1}`;
+      if (cur.some((rule) => rule.id === id || normalizeForMatch(rule.name) === normalizeForMatch(name))) return cur;
+      const next = [...cur, makeAuthorRule(id, name, AUTHOR_COLORS[cur.length % AUTHOR_COLORS.length], true)];
+      persistAuthorRules(next);
+      return next;
+    });
+    setNewAuthorName("");
+  }
+  function removeAuthorRule(id: string) {
+    setAuthorRules((cur) => {
+      const next = cur.filter((rule) => rule.id !== id || !rule.custom);
+      persistAuthorRules(next);
+      return next;
+    });
+  }
+  function resetAuthorRules() {
+    setAuthorRules(DEFAULT_AUTHOR_RULES);
+    persistAuthorRules(DEFAULT_AUTHOR_RULES);
   }
 
   const runTask = useCallback(
@@ -356,24 +426,43 @@ export function App() {
     </div>
   );
 
+  const pendingDiffDock = pendingChanges.length > 0 ? (
+    <aside className={`pendingDiffDock ${hasConflict ? "has-conflict" : ""}`} role="status" aria-live="polite" aria-label="Pending changes">
+      <div className="pendingDiffHead">
+        <span>Pending Changes</span>
+        <strong>{pendingChanges.length}</strong>
+      </div>
+      <div className="pendingDiffList">
+        {pendingChanges.map((c) => (
+          <div key={c.folder} className={`pendingDiffItem ${formatPendingToneClass(tones[c.folder])}`} title={c.folder}>
+            <span className="pendingDiffColor" aria-hidden="true" />
+            <span className="pendingDiffName">{formatFolderName(c.folder)}</span>
+          </div>
+        ))}
+      </div>
+    </aside>
+  ) : null;
+
+  const logView = (
+    <section className="panel logPanel logPage">
+      <h2>Log</h2>
+      <div className="logStream" role="log" aria-live="polite">
+        {logs.map((entry) => (
+          <div key={entry.id} className="logLine">
+            <span className="logTime">{entry.time}</span>
+            <span className={`logMessage ${entry.tone ? `logAccent ${entry.tone}` : ""}`}>{entry.message}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
   const libraryView = (
     <>
-      <section className="panel libraryBar">
-        <PathField
-          label="Mods Folder"
-          helpTitle="Mods Folder"
-          helpText="Choose the folder containing your mods. Check a mod to mount it, or uncheck a mounted mod to unmount it. If a newly selected mod shares a key with an already mounted one, the old mount is automatically staged for removal."
-          value={modsDir}
-          onChange={(v) => setModsDir(v)}
-          onBrowse={selectDir}
-          invalid={missingModsDir}
-        />
-      </section>
-
-      <section className="scanGrid">
-        <div className="panel tablePanel modsPanel">
-          <div className="modsHeader">
-            <div>
+      <section className="scanGrid libraryFlow">
+        <div className="panel tablePanel modsPanel cartridgePanel">
+          <div className="modsHeader cartridgeToolbar">
+            <div className="cartridgeToolbarIntro">
               <div className="panelTitle titleWithHelp">
                 <span>Cartridges</span>
                 <HelpButton title="Mod cartridges">
@@ -381,28 +470,32 @@ export function App() {
                 </HelpButton>
               </div>
               <div className="tableHint">{visibleMods.length} shown / {library.length} scanned</div>
-              <div className="modToggleRow">
-                <div className="modViewToggle segmentedControl" role="tablist" aria-label="Mod view">
-                  <button className={modView === "grid" ? "active" : ""} onClick={() => updateModView("grid")} type="button" aria-pressed={modView === "grid"}>
-                    <span>Cartridges</span>
+            </div>
+            <div className="cartridgeToolbarModes">
+              <div className="modViewToggle segmentedControl" role="tablist" aria-label="Mod view">
+                <button className={modView === "grid" ? "active" : ""} onClick={() => updateModView("grid")} type="button" aria-pressed={modView === "grid"}>
+                  <span>Cartridges</span>
+                </button>
+                <button className={modView === "list" ? "active" : ""} onClick={() => updateModView("list")} type="button" aria-pressed={modView === "list"}>
+                  <span>List</span>
+                </button>
+              </div>
+              {modView === "grid" && (
+                <div className="cartSkinToggle segmentedControl" role="tablist" aria-label="Cartridge style">
+                  <button className={cartSkin === "realistic" ? "active" : ""} onClick={() => updateCartSkin("realistic")} type="button" aria-pressed={cartSkin === "realistic"}>
+                    <span>Collector</span>
                   </button>
-                  <button className={modView === "list" ? "active" : ""} onClick={() => updateModView("list")} type="button" aria-pressed={modView === "list"}>
-                    <span>List</span>
+                  <button className={cartSkin === "arcade" ? "active" : ""} onClick={() => updateCartSkin("arcade")} type="button" aria-pressed={cartSkin === "arcade"}>
+                    <span>Arcade</span>
                   </button>
                 </div>
-                {modView === "grid" && (
-                  <div className="cartSkinToggle segmentedControl" role="tablist" aria-label="Cartridge style">
-                    <button className={cartSkin === "realistic" ? "active" : ""} onClick={() => updateCartSkin("realistic")} type="button" aria-pressed={cartSkin === "realistic"}>
-                      <span>Collector</span>
-                    </button>
-                    <button className={cartSkin === "arcade" ? "active" : ""} onClick={() => updateCartSkin("arcade")} type="button" aria-pressed={cartSkin === "arcade"}>
-                      <span>Arcade</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-            <div className="modsHeaderControls">
+            <div className="modsHeaderControls cartridgeToolbarActions">
+              <label className="modFilterField">
+                <span>Filter</span>
+                <input value={modFilter} onChange={(e) => setModFilter(e.target.value)} placeholder="Search folder, key, category, status" />
+              </label>
               <button disabled={modsLocked || selectableVisibleMods.length === 0} onClick={toggleVisible} title={allVisibleModsSelected ? "Clear all visible" : "Select all visible"} type="button">
                 {allVisibleModsSelected ? "Clear All" : "Select All"}
               </button>
@@ -412,18 +505,14 @@ export function App() {
               <button disabled={busy || modsLocked || !hasChanges} onClick={resetChanges} title="Reset staged changes before applying" type="button">
                 Reset Changes
               </button>
-              <label className="modFilterField">
-                <span>Filter</span>
-                <input value={modFilter} onChange={(e) => setModFilter(e.target.value)} placeholder="Search folder, key, category, status" />
-              </label>
             </div>
           </div>
 
-          <div className={`modsTableFrame ${modsLocked ? "locked" : ""}`}>
+          <div className={`modsTableFrame ${modView === "grid" ? "is-grid" : "is-list"} ${modsLocked ? "locked" : ""}`}>
             {modView === "grid" ? (
               <div className={`cartShelf ${cartSkin === "realistic" ? "cartShelf--collector" : ""}`}>
                 {library.length === 0 ? (
-                  <div className="cartEmpty">{modsDir ? "No mods found." : "Choose a Mods Folder above to load your cartridges."}</div>
+                  <div className="cartEmpty">{modsDir ? "No mods found." : "Choose a Mods Folder in Settings to load your cartridges."}</div>
                 ) : visibleMods.length === 0 ? (
                   <div className="cartEmpty">No mods match this filter.</div>
                 ) : visibleMods.map((mod) => {
@@ -437,6 +526,7 @@ export function App() {
                       tone={tones[mod.folder]}
                       locked={modsLocked}
                       onToggle={() => updateDesired(mod.folder, !isDesired(mod.folder))}
+                      authorRules={authorRules}
                     />
                   );
                 })}
@@ -467,7 +557,7 @@ export function App() {
               </thead>
               <tbody>
                 {library.length === 0 ? (
-                  <tr><td colSpan={5} className="empty">{modsDir ? "No mods found." : "Choose a Mods Folder above to load your cartridges."}</td></tr>
+                  <tr><td colSpan={5} className="empty">{modsDir ? "No mods found." : "Choose a Mods Folder in Settings to load your cartridges."}</td></tr>
                 ) : visibleMods.length === 0 ? (
                   <tr><td colSpan={5} className="empty">No mods match this filter.</td></tr>
                 ) : visibleMods.map((mod) => {
@@ -504,46 +594,6 @@ export function App() {
               </div>
             )}
           </div>
-        </div>
-      </section>
-
-      <section className="contentGrid singleCol">
-        <div className="panel tablePanel">
-          <div className="panelTitle titleWithHelp">
-            <span>Pending Changes</span>
-            <HelpButton title="Pending Changes">
-              This table shows what will change when Apply Changes is pressed. Rows marked (auto) are removals staged because they share the same asset key as a newly selected mod. Nothing is changed before you apply. Apply, Launch, and Mod Power live in the cartridge player dock below.
-            </HelpButton>
-          </div>
-          <table>
-            <thead>
-              <tr><th>Mod</th><th>Mode</th><th>Current</th><th>Desired</th></tr>
-            </thead>
-            <tbody>
-              {pendingChanges.length === 0 ? (
-                <tr><td colSpan={4} className="empty">Check a mod or uncheck a mounted mod to stage changes.</td></tr>
-              ) : pendingChanges.map((c) => (
-                <tr key={c.folder} className={`pendingPatchChange ${formatPendingToneClass(tones[c.folder])}`}>
-                  <td title={c.folder}>{formatFolderName(c.folder)}{c.implicit ? " (auto)" : ""}</td>
-                  <td>Mount</td>
-                  <td>{formatBool(mountedFolders.has(c.folder))}</td>
-                  <td>{formatBool(c.enabled)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="panel logPanel">
-        <h2>Log</h2>
-        <div className="logStream" role="log" aria-live="polite">
-          {logs.map((entry) => (
-            <div key={entry.id} className="logLine">
-              <span className="logTime">{entry.time}</span>
-              <span className={`logMessage ${entry.tone ? `logAccent ${entry.tone}` : ""}`}>{entry.message}</span>
-            </div>
-          ))}
         </div>
       </section>
     </>
@@ -590,6 +640,36 @@ export function App() {
           onBrowse={selectDir}
           invalid={missingModsDir}
         />
+      </section>
+
+      <section className="panel authorSettingsPanel">
+        <div className="authorSettingsHead">
+          <div className="panelTitle titleWithHelp">
+            <span>Author Labels</span>
+            <HelpButton title="Author Labels">
+              Cartridge author stickers are detected from the mod path, folder, or key. Default names come from BD2ModManager's author index; add aliases here when your local folder names use a different author keyword.
+            </HelpButton>
+          </div>
+          <button type="button" onClick={resetAuthorRules}>Reset Authors</button>
+        </div>
+        <form className="authorAddRow" onSubmit={(e) => { e.preventDefault(); addAuthorRule(); }}>
+          <input value={newAuthorName} onChange={(e) => setNewAuthorName(e.target.value)} placeholder="Add author name" />
+          <button type="submit" disabled={!newAuthorName.trim()}>Add Author</button>
+        </form>
+        <div className="authorRuleGrid">
+          {authorRules.map((rule) => (
+            <div className="authorRuleRow" key={rule.id}>
+              <span className="authorRuleSwatch" style={{ "--author-color": rule.color } as CSSProperties} aria-hidden="true" />
+              <span className="authorRuleName" title={rule.keywords.join(", ")}>{rule.name}</span>
+              <input type="color" value={rule.color} onChange={(e) => updateAuthorColor(rule.id, e.target.value)} aria-label={`Color for ${rule.name}`} />
+              {rule.custom ? (
+                <button type="button" className="authorRuleRemove" onClick={() => removeAuthorRule(rule.id)} title={`Remove ${rule.name}`}>×</button>
+              ) : (
+                <span className="authorRuleLock" title="Default author">Default</span>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="panel settingsGrid">
@@ -776,10 +856,12 @@ export function App() {
         {globalBanners}
 
         {view === "library" && libraryView}
+        {view === "logs" && logView}
         {view === "settings" && settingsView}
-        {view !== "library" && view !== "settings" && placeholderView(view)}
+        {view !== "library" && view !== "logs" && view !== "settings" && placeholderView(view)}
 
         {playerDock}
+        {pendingDiffDock}
       </main>
     </div>
   );
@@ -850,7 +932,6 @@ function createLogEntry(message: string, tone?: LogEntry["tone"]): LogEntry {
   }).format(new Date());
   return { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, time, message, tone };
 }
-function formatBool(v: boolean) { return v ? "On" : "Off"; }
 function formatFolderName(folder: string) {
   const normalized = folder.replace(/\\/g, "/").replace(/\/+$/, "");
   return normalized.split("/").filter(Boolean).pop() ?? folder;
@@ -865,6 +946,117 @@ function formatModsLockReason(versionLocked: boolean, appReady: boolean, injecti
 }
 function formatPendingToneClass(tone?: PendingTone) {
   return tone === "conflict" ? "pendingPatchConflict" : tone === "added" ? "pendingPatchAdd" : tone === "removed" ? "pendingPatchRemove" : "";
+}
+
+function makeAuthorRule(id: string, name: string, color: string, custom = false): AuthorRule {
+  return {
+    id,
+    name,
+    color,
+    keywords: buildAuthorKeywords(id, name),
+    custom
+  };
+}
+
+function buildAuthorKeywords(id: string, name: string, extra: string[] = []) {
+  const source = [
+    id,
+    name,
+    id.replace(/[_-]+/g, " "),
+    name.replace(/[._-]+/g, " "),
+    compactForMatch(id),
+    compactForMatch(name),
+    ...extra
+  ];
+  return Array.from(new Set(source.map((value) => value.trim()).filter(Boolean)));
+}
+
+function normalizeAuthorId(name: string) {
+  return name
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}_-]+/gu, "");
+}
+
+function normalizeForMatch(value: string) {
+  return value.normalize("NFKC").toLowerCase();
+}
+
+function compactForMatch(value: string) {
+  return normalizeForMatch(value).replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function readAuthorRules(): AuthorRule[] {
+  try {
+    const raw = localStorage.getItem(AUTHOR_RULES_KEY);
+    if (!raw) return DEFAULT_AUTHOR_RULES;
+    const stored = JSON.parse(raw) as AuthorRule[];
+    if (!Array.isArray(stored)) return DEFAULT_AUTHOR_RULES;
+
+    const byId = new Map(stored.filter((rule) => rule && typeof rule.id === "string").map((rule) => [rule.id, rule]));
+    const merged = DEFAULT_AUTHOR_RULES.map((base) => sanitizeAuthorRule({ ...base, ...byId.get(base.id), custom: false }, base));
+    for (const rule of stored) {
+      if (rule?.custom && !DEFAULT_AUTHOR_RULES.some((base) => base.id === rule.id)) {
+        merged.push(sanitizeAuthorRule(rule));
+      }
+    }
+    return merged;
+  } catch {
+    return DEFAULT_AUTHOR_RULES;
+  }
+}
+
+function sanitizeAuthorRule(rule: Partial<AuthorRule>, fallback?: AuthorRule): AuthorRule {
+  const name = (rule.name || fallback?.name || "Unknown").trim();
+  const id = normalizeAuthorId(rule.id || fallback?.id || name) || "unknown";
+  const color = /^#[0-9a-f]{6}$/i.test(rule.color || "") ? rule.color as string : fallback?.color || "#8d97aa";
+  const keywords = buildAuthorKeywords(id, name, [...(fallback?.keywords ?? []), ...(Array.isArray(rule.keywords) ? rule.keywords : [])]);
+  return { id, name, color, keywords, custom: Boolean(rule.custom) };
+}
+
+function persistAuthorRules(rules: AuthorRule[]) {
+  localStorage.setItem(AUTHOR_RULES_KEY, JSON.stringify(rules));
+}
+
+function detectModAuthor(mod: RuntimeMod, authorRules: AuthorRule[]): DetectedAuthor {
+  const meta = mod as RuntimeMod & { author?: string };
+  if (meta.author) {
+    const exact = authorRules.find((rule) => normalizeForMatch(rule.name) === normalizeForMatch(meta.author || "") || rule.id === normalizeAuthorId(meta.author || ""));
+    return exact ? { id: exact.id, name: exact.name, color: exact.color } : { id: normalizeAuthorId(meta.author), name: meta.author, color: "#8d97aa" };
+  }
+
+  const target = `${mod.path} ${mod.folder} ${mod.key}`;
+  const haystack = normalizeForMatch(target);
+  const compactHaystack = compactForMatch(target);
+  for (const rule of authorRules) {
+    for (const keyword of rule.keywords) {
+      if (matchesAuthorKeyword(haystack, compactHaystack, keyword)) {
+        return { id: rule.id, name: rule.name, color: rule.color };
+      }
+    }
+  }
+  return { id: "unknown", name: "Unknown", color: "#8d97aa" };
+}
+
+function matchesAuthorKeyword(haystack: string, compactHaystack: string, keyword: string) {
+  const normalized = normalizeForMatch(keyword);
+  const compact = compactForMatch(keyword);
+  if (!normalized && !compact) return false;
+  if (/^[a-z0-9]{1,2}$/.test(compact)) {
+    return haystack.split(/[^\p{L}\p{N}]+/u).includes(compact);
+  }
+  return (normalized && haystack.includes(normalized)) || (compact.length >= 3 && compactHaystack.includes(compact));
+}
+
+function categoryTypeIconPath(category: ModCategory) {
+  const icon = category === "char" ? "standing" : category === "dating" ? "dating" : category === "cutscene" ? "cutscene" : "npc";
+  return `/bd2modmanager-icons/${icon}.png`;
+}
+
+function categoryTypeLabel(category: ModCategory) {
+  return category === "char" ? "Standing" : category === "dating" ? "Dating" : category === "cutscene" ? "Cutscene" : "NPC";
 }
 
 function normalizeVersionForCompare(version?: string) {
@@ -913,6 +1105,7 @@ function Cartridge(props: {
   tone?: PendingTone;
   locked: boolean;
   onToggle: () => void;
+  authorRules?: AuthorRule[];
 }) {
   const { mod, have, selected, tone, locked, onToggle } = props;
   const category = typeToCategory(mod.type);
@@ -956,11 +1149,9 @@ function Cartridge(props: {
   );
 }
 
-// Skeuomorphic "collector" cartridge inspired by the BrownDust II in-game
-// cartridge case: dark plastic shell, a full-bleed printed character-art
-// label with an aged/vintage finish, a handwritten price-tag sticker for the
-// author/metadata, and lit contact pins. A future mod.cover image drops into
-// the label art; mod.author drops onto the price tag.
+// Skeuomorphic collector cartridge: type-colored handheld-game plastic with a
+// printed mod label, top-left issue badge, optional wrapper/warning overlays,
+// molded ridges, and a shallow bottom groove.
 function CartridgeRealistic(props: {
   mod: RuntimeMod;
   have: boolean;
@@ -968,60 +1159,102 @@ function CartridgeRealistic(props: {
   tone?: PendingTone;
   locked: boolean;
   onToggle: () => void;
+  authorRules?: AuthorRule[];
 }) {
-  const { mod, have, selected, tone, locked, onToggle } = props;
+  const { mod, have, selected, tone, locked, onToggle, authorRules = DEFAULT_AUTHOR_RULES } = props;
   const meta = mod as RuntimeMod & { author?: string; cover?: string };
   const category = typeToCategory(mod.type);
   const folderName = formatFolderName(mod.folder);
+  const hasIssue = tone === "conflict" || mod.skeleton === "unknown";
+  const mountBlocked = !have && mod.skeleton === "unknown";
   const stateClass =
-    tone === "conflict" ? "is-conflict" :
+    hasIssue ? "is-warning" :
     tone === "added" ? "is-add" :
     tone === "removed" ? "is-remove" :
     have ? "is-mounted" : "";
+  const skinClass = `${hasIssue ? "is-problem" : ""} ${!have ? "is-wrapped" : ""}`;
   const pack = categoryPack(category);
-  const badge = category === "char" ? "C" : category === "dating" ? "D" : category === "cutscene" ? "S" : "N";
+  const typeIcon = categoryTypeIconPath(category);
+  const typeLabel = categoryTypeLabel(category);
+  const detectedAuthor = detectModAuthor(mod, authorRules);
+  const showAuthorSticker = detectedAuthor.id !== "unknown";
+  const authorStyle = { "--author-color": detectedAuthor.color } as CSSProperties;
+  const displayTitle = cartridgeHeadline(folderName, mod.key);
   const runtimeLabel =
     tone === "conflict" ? "CONFLICT" :
+    mod.skeleton === "unknown" ? "CHECK FILES" :
     tone === "added" ? "STAGED MOUNT" :
     tone === "removed" ? "STAGED UNMOUNT" :
     have ? "MOUNTED" : "AVAILABLE";
-  const title = `${folderName}\n${mod.key} · ${category}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}`;
-  const coverStyle = meta.cover ? { backgroundImage: `url("${meta.cover}")` } : undefined;
+  const title = `${folderName}\n${mod.key} · ${category}\nAuthor: ${detectedAuthor.name}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}${mod.skeleton === "unknown" ? "\nMissing .json or .skel skeleton file" : ""}`;
+  const coverStyle = meta.cover ? ({ "--rcart-cover": `url("${meta.cover}")` } as CSSProperties) : undefined;
+  const podTone = tone === "removed" ? "minus" : have ? "check" : "plus";
+  const podMark = podTone === "minus" ? "-" : podTone === "check" ? "✓" : "+";
   return (
     <button
       type="button"
-      className={`rcart cat-${category} ${stateClass} ${selected ? "is-on" : ""}`}
-      disabled={locked}
+      className={`rcart cat-${category} ${stateClass} ${skinClass} ${selected ? "is-on" : ""}`}
+      disabled={locked || mountBlocked}
       onClick={onToggle}
       aria-pressed={selected}
       title={title}
     >
       <span className="rcartShell">
+        <span className="rcartRidges" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+        <span className={`rcartNo rcartTypeBadge is-${category}`} aria-hidden="true" title={typeLabel}>
+          <img src={typeIcon} alt="" draggable={false} />
+        </span>
         <span className="rcartLabel">
           <span className="rcartArt" style={coverStyle} aria-hidden="true" />
           <span className="rcartAged" aria-hidden="true" />
           <span className="rcartGloss" aria-hidden="true" />
           <span className="rcartHead">
-            <span className="rcartNo" aria-hidden="true">{badge}</span>
             <span className="rcartPack">{pack}</span>
             <span className="rcartCode">{mod.key}</span>
           </span>
-          <span className="rcartTitle2">{folderName}</span>
+          <span className="rcartTitle2">{displayTitle}</span>
           <span className="rcartCredits" aria-hidden="true">
             <span>ASSET {mod.key}</span>
-            <span>{meta.author ? `MOD BY ${meta.author.toUpperCase()}` : "AUTHOR UNKNOWN"}</span>
+            <span>{`MOD BY ${detectedAuthor.name.toUpperCase()}`}</span>
             <span>RUNTIME {runtimeLabel}</span>
           </span>
         </span>
-        <span className="rcartNotches" aria-hidden="true"><i /><i /></span>
+        {showAuthorSticker ? (
+          <span className="rcartAuthorSticker" style={authorStyle} aria-hidden="true">
+            <span className="rcartAuthorLabel">Author</span>
+            <strong><span className="rcartAuthorName">{detectedAuthor.name}</span></strong>
+          </span>
+        ) : null}
+        <span className="rcartPlastic" aria-hidden="true"><i /><i /><i /><i /></span>
+        <span className="rcartWarningSticker" aria-hidden="true">
+          <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
+            <path className="rcartWarningTriangle" d="M32 5 L59 52 H5 Z" />
+            <path className="rcartWarningBang" d="M32 20 L32 36" />
+            <circle className="rcartWarningDot" cx="32" cy="44" r="3" />
+          </svg>
+        </span>
+        <span className="rcartBottomGroove" aria-hidden="true" />
       </span>
-      <span className={`rcartPod ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPlus">+</span></span>
+      <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
+      <span className="rcartNamePlate" aria-hidden="true">
+        <span className="rcartNameKind">{pack}</span>
+        <strong>{displayTitle}</strong>
+      </span>
     </button>
   );
 }
 
 function categoryPack(category: ModCategory) {
   return category === "char" ? "CHARACTER PACK" : category === "dating" ? "DATING PACK" : category === "cutscene" ? "CUTSCENE PACK" : "NPC PACK";
+}
+
+function cartridgeHeadline(folderName: string, fallback: string) {
+  const cleaned = folderName
+    .replace(/[_-]+/g, " ")
+    .replace(/\b(?:rc|v)\s*\d+[a-z0-9.-]*\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return (cleaned || fallback).split(" ").slice(0, 4).join(" ");
 }
 
 function PathField(props: { label: string; value: string; onChange: (v: string) => void; onBrowse?: () => void; invalid?: boolean; helpTitle?: string; helpText?: string }) {
