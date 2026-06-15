@@ -1016,7 +1016,6 @@ function CartridgeRealistic(props: {
         <span className="rcartNotches" aria-hidden="true"><i /><i /></span>
       </span>
       <span className={`rcartPod ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPlus">+</span></span>
-      <span className="rcartSlot" aria-hidden="true" />
     </button>
   );
 }

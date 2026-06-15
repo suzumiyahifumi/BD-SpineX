@@ -18,18 +18,23 @@ const repo = path.resolve(__dirname, "..");
 const pub = path.join(repo, "app/renderer/public");
 
 // ---- which maps to bake in ------------------------------------------------
-const SOURCE = "kube"; // "kube" | "generated"
+// The dock is a responsive element; Chromium's feImage does not stretch a
+// raster to the element inside backdrop-filter (it draws at the map's own
+// pixel size from the top-left). So the displacement map must be authored at
+// the dock's size or the lens only covers part of it / is offset. We use the
+// procedural rounded-rect lens sized to the dock.
+const SOURCE = "generated"; // "kube" | "generated"
 const KUBE_DISP = "displacement-map-yr2eh1.png";
 const KUBE_SPEC = "specular-map-yr2eh1.png";
 
-// ---- filter parameters (kube's published values) --------------------------
-const BLUR = 1;        // feGaussianBlur stdDeviation
-const SCALE = 74.65;   // feDisplacementMap scale (refraction strength)
-const SATURATE = 6;    // feColorMatrix saturate
-const SPEC_OPACITY = 0.4; // feComponentTransfer specular alpha slope
+// ---- filter parameters ----------------------------------------------------
+const BLUR = 1;          // feGaussianBlur stdDeviation
+const SCALE = 44;        // feDisplacementMap scale (refraction strength)
+const SATURATE = 4.5;    // feColorMatrix saturate
+const SPEC_OPACITY = 0.5; // feComponentTransfer specular alpha slope
 
-// ---- procedural fallback (only used when SOURCE === "generated") -----------
-const W = 1000, H = 88, R = 22, BEZEL = 34, GAIN = 1.0, SIGN = 1, EDGE_EXP = 1.0;
+// ---- procedural map, sized to the dock ------------------------------------
+const W = 1080, H = 84, R = 22, BEZEL = 26, GAIN = 1.0, SIGN = 1, EDGE_EXP = 1.0;
 const LIGHT = norm(-1, -1.1);
 function norm(x, y) { const m = Math.hypot(x, y) || 1; return [x / m, y / m]; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }

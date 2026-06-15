@@ -2308,16 +2308,16 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 /* ============================================================
    Realistic "Collector" cartridge — game-shelf cartridge
-   Generic Famicom-style cartridge industrial design: grey
-   plastic shell with a recessed rounded "+" pod at the top
-   right, a light-framed printed label biased left, three lines
-   of printed credits, and two bottom grip notches. Procedural
-   art only (no third-party artwork/titles/logos).
+   Generic Famicom-style cartridge as a solid 3D box: grey plastic
+   shell with crisp corners, faux z-depth (stacked bottom faces),
+   molded panel grooves, a recessed "+" pod top-right, a smaller
+   left-biased printed label, printed credits, and bottom notches.
+   Procedural art only (no third-party artwork/titles/logos).
    ============================================================ */
 
 .cartShelf--collector {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 34px 30px;
 }
 
 .rcart {
@@ -2325,57 +2325,75 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 1.2 / 1;
+  aspect-ratio: 1.22 / 1;
   align-self: start;
+  margin-bottom: 8px;             /* room for the 3D bottom faces */
   border: 0;
   background: transparent;
   cursor: pointer;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  transition: transform 0.26s cubic-bezier(.2,.7,.2,1);
+  transition: transform 0.24s cubic-bezier(.2,.7,.2,1);
 }
-.rcart:hover:not(:disabled) { transform: translateY(-6px); }
+.rcart:hover:not(:disabled) { transform: translateY(-5px); }
 .rcart:disabled { cursor: not-allowed; opacity: 0.92; }
 
-/* rack slot beneath the cartridge */
-.rcartSlot {
-  position: absolute;
-  left: 8%; right: 8%; bottom: 0;
-  height: 11px;
-  border-radius: 0 0 6px 6px / 0 0 10px 10px;
-  background: linear-gradient(180deg, #14151d, #06070b);
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.75);
-}
-
-/* grey plastic shell with corrected rounded corners */
+/* grey plastic shell — crisp corners + 3D box thickness */
 .rcartShell {
   position: absolute;
-  inset: 0 0 6px 0;
-  border-radius: 16px;
+  inset: 0;
+  border-radius: 9px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 18%),
-    linear-gradient(180deg, #d0d3d8 0%, #b4b9c1 56%, #9ba1aa 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 16%),
+    linear-gradient(180deg, #d2d5da 0%, #b6bbc3 56%, #9ca2ab 100%);
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.75),
-    inset 0 -3px 7px rgba(0, 0, 0, 0.22),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.22),
-    0 14px 26px rgba(0, 0, 0, 0.5);
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -7px 9px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 5px 0 #9aa0aa,            /* box thickness face 1 */
+    0 8px 0 #82889433,
+    0 8px 0 #828894,            /* box thickness face 2 */
+    0 11px 2px rgba(0, 0, 0, 0.4),
+    0 18px 24px rgba(0, 0, 0, 0.5);
+}
+/* top molded seam */
+.rcartShell::before {
+  content: "";
+  position: absolute;
+  left: 12px; right: 12px; top: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(255, 255, 255, 0.5));
+}
+/* molded panel groove around the face (edge lines / 凹槽) */
+.rcartShell::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 6px;
+  pointer-events: none;
+  box-shadow:
+    inset 1px 1px 0 rgba(0, 0, 0, 0.16),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-/* printed label, biased to the left (grey strip on the right holds the +) */
+/* state ring (outline keeps the 3D box-shadow intact) */
+.rcart.is-mounted .rcartShell { outline: 2px solid rgba(246, 198, 107, 0.8); outline-offset: 1px; }
+.rcart.is-add .rcartShell { outline: 2px solid rgba(103, 232, 160, 0.85); outline-offset: 1px; }
+.rcart.is-remove .rcartShell { outline: 2px solid rgba(255, 122, 138, 0.85); outline-offset: 1px; }
+.rcart.is-conflict .rcartShell { outline: 2px solid rgba(199, 155, 255, 0.9); outline-offset: 1px; }
+
+/* printed label — smaller, left-biased (grey strip on the right holds the +) */
 .rcartLabel {
   position: absolute;
-  inset: 14px 56px 26px 14px;
-  border-radius: 3px;
+  inset: 22px 64px 34px 20px;
+  border-radius: 2px;
   overflow: hidden;
-  background: #efe9da;                 /* cream label frame */
+  background: #efe9da;
   padding: 3px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.3);
 }
-/* inner art clip */
-.rcartLabel > .rcartArt,
-.rcartLabel > .rcartAged,
-.rcartLabel > .rcartGloss { border-radius: 2px; }
 
 .rcartArt {
   position: absolute;
@@ -2384,10 +2402,10 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background-position: center 26%;
   background-repeat: no-repeat;
   background-image:
-    radial-gradient(85% 80% at 72% 32%, var(--trim), transparent 56%),
+    radial-gradient(82% 78% at 70% 32%, var(--trim), transparent 56%),
     radial-gradient(120% 100% at 16% 98%, rgba(120, 130, 160, 0.5), transparent 55%),
     linear-gradient(160deg, #2b3346, #11151d);
-  filter: sepia(0.22) contrast(1.04) saturate(0.95) brightness(0.99);
+  filter: sepia(0.2) contrast(1.04) saturate(0.95) brightness(0.99);
 }
 
 .rcartAged {
@@ -2395,14 +2413,14 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   inset: 3px;
   pointer-events: none;
   background:
-    radial-gradient(130% 120% at 50% 32%, transparent 58%, rgba(18, 11, 3, 0.42) 100%),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.045) 0 1px, transparent 1px 3px);
+    radial-gradient(130% 120% at 50% 32%, transparent 58%, rgba(18, 11, 3, 0.4) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.04) 0 1px, transparent 1px 3px);
 }
 .rcartAged::after {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.32;
+  opacity: 0.3;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -2414,7 +2432,6 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background: linear-gradient(118deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 26%, rgba(255, 255, 255, 0) 74%, rgba(255, 255, 255, 0.05) 100%);
 }
 
-/* label header strip */
 .rcartHead {
   position: absolute;
   top: 3px; left: 3px; right: 3px;
@@ -2422,26 +2439,26 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
-  background: linear-gradient(180deg, rgba(8, 10, 16, 0.7), rgba(8, 10, 16, 0));
+  background: linear-gradient(180deg, rgba(8, 10, 16, 0.72), rgba(8, 10, 16, 0));
 }
 .rcartNo {
   flex: none;
   display: grid;
   place-items: center;
-  width: 17px; height: 17px;
+  width: 16px; height: 16px;
   border-radius: 2px;
-  background: rgba(245, 247, 252, 0.92);
+  background: rgba(245, 247, 252, 0.94);
   color: var(--trim);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 .rcartPack {
   flex: 1;
   min-width: 0;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
   color: rgba(245, 247, 252, 0.95);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   overflow: hidden;
@@ -2451,9 +2468,9 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rcartCode {
   flex: none;
   font-family: var(--mono, ui-monospace, monospace);
-  font-size: 8px;
+  font-size: 7.5px;
   color: rgba(245, 247, 252, 0.6);
-  max-width: 34%;
+  max-width: 32%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2461,10 +2478,9 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .rcartTitle2 {
   position: absolute;
-  left: 9px; right: 9px; top: 38%;
-  font-size: 16px;
+  left: 8px; right: 8px; top: 40%;
+  font-size: 14px;
   font-weight: 900;
-  letter-spacing: 0.01em;
   color: #f6f3ea;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
   overflow: hidden;
@@ -2472,19 +2488,18 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   white-space: nowrap;
 }
 
-/* three lines of printed credits, bottom-left */
 .rcartCredits {
   position: absolute;
-  left: 9px; bottom: 7px;
+  left: 8px; bottom: 6px;
   display: grid;
   gap: 1px;
   font-family: var(--mono, ui-monospace, monospace);
-  font-size: 7.5px;
+  font-size: 7px;
   line-height: 1.3;
   letter-spacing: 0.03em;
   color: rgba(236, 240, 248, 0.72);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9);
-  max-width: 80%;
+  max-width: 84%;
 }
 .rcartCredits span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -2494,56 +2509,50 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   left: 0; right: 0; bottom: 0;
   display: flex;
   justify-content: center;
-  gap: 26px;
+  gap: 30px;
+  z-index: 2;
 }
 .rcartNotches i {
-  width: 30px; height: 7px;
+  width: 32px; height: 7px;
   border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, #5b606b, #2c2f37);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #565b66, #2a2d35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.65);
 }
 
-/* recessed rounded "+" pod, top-right corner */
+/* recessed rounded "+" pod, top-right */
 .rcartPod {
   position: absolute;
-  top: 13px; right: 12px;
+  top: 16px; right: 16px;
   z-index: 3;
-  width: 36px; height: 36px;
-  border-radius: 12px;
+  width: 34px; height: 34px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #c2c6cc, #aab0b8);
+  background: linear-gradient(180deg, #c4c8ce, #acb2ba);
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.42),
     inset 0 -1px 0 rgba(255, 255, 255, 0.5),
-    0 1px 0 rgba(255, 255, 255, 0.4);
+    0 1px 0 rgba(255, 255, 255, 0.45);
   transition: background 0.2s, transform 0.2s cubic-bezier(.3,1.4,.5,1);
 }
 .rcart:hover:not(:disabled) .rcartPod { transform: scale(1.06); }
 .rcartPlus {
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 21px;
   line-height: 1;
-  color: #4a4f59;
+  color: #474c56;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .rcart.is-on .rcartPod {
   background: linear-gradient(160deg, var(--gold), var(--gold-deep));
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.5), 0 2px 8px rgba(246, 198, 107, 0.5);
 }
-.rcart.is-on .rcartPlus { color: #2a1d06; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4); }
+.rcart.is-on .rcartPlus { color: #2a1d06; }
 
-/* category accent (only the badge ink + art tint; shell stays grey) */
+/* category accent (badge ink + art tint; shell stays grey) */
 .rcart.cat-char     { --trim: #3f6fb0; }
 .rcart.cat-dating   { --trim: #c25b8e; }
 .rcart.cat-cutscene { --trim: #7a63b8; }
 .rcart.cat-other    { --trim: #4f9472; }
-
-/* states: a coloured ring around the shell */
-.rcart.is-mounted .rcartShell { box-shadow: inset 0 2px 0 rgba(255,255,255,0.75), inset 0 -3px 7px rgba(0,0,0,0.22), 0 14px 26px rgba(0,0,0,0.5), 0 0 0 2px rgba(246,198,107,0.7); }
-.rcart.is-add .rcartShell { box-shadow: inset 0 2px 0 rgba(255,255,255,0.75), 0 14px 26px rgba(0,0,0,0.5), 0 0 0 2px rgba(103,232,160,0.85); }
-.rcart.is-remove .rcartShell { box-shadow: inset 0 2px 0 rgba(255,255,255,0.75), 0 14px 26px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,122,138,0.85); }
-.rcart.is-conflict .rcartShell { box-shadow: inset 0 2px 0 rgba(255,255,255,0.75), 0 14px 26px rgba(0,0,0,0.5), 0 0 0 2px rgba(199,155,255,0.9); }
 
 @media (prefers-reduced-motion: reduce) {
   .rcart:hover:not(:disabled) { transform: none; }
