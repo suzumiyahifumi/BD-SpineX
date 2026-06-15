@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
 import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
+import characterAssetsJson from "./data/bd2-characters.json";
 
 // Runtime-based BD-SpineX. The interaction model follows the original offline patch UI.
 // Stage 3 of the liquid-glass redesign: the top toolbar is replaced by a left glass
@@ -15,6 +16,23 @@ type PendingTone = "added" | "removed" | "conflict";
 type RuntimeChange = { folder: string; key: string; enabled: boolean; implicit?: boolean; conflict?: boolean };
 type AuthorRule = { id: string; name: string; color: string; keywords: string[]; custom?: boolean };
 type DetectedAuthor = { id: string; name: string; color: string };
+type CharacterAsset = {
+  id: string | string[];
+  character: string;
+  costume: string;
+  dating_id?: string | null;
+  npc_id?: string | null;
+};
+type CharacterAssetsJson = {
+  characters: CharacterAsset[];
+  dating: Record<string, string>;
+};
+type DetectedCharacter = {
+  id: string;
+  imageId: string;
+  character: string;
+  costume: string;
+};
 
 type ViewKey = "library" | "roster" | "profiles" | "preview" | "stats" | "logs" | "settings";
 type NavItem = { key: ViewKey; label: string; icon: string; group: "collection" | "tools" | "system" };
@@ -44,6 +62,23 @@ type ModView = "grid" | "list";
 type CartSkin = "realistic" | "arcade";
 
 const AUTHOR_COLORS = [
+  "#3f5365",
+  "#7a3f3c",
+  "#836a3a",
+  "#46665d",
+  "#5e5276",
+  "#795b3f",
+  "#4b6686",
+  "#81506a",
+  "#63714c",
+  "#7a6548",
+  "#56617c",
+  "#8a6145",
+  "#6d5870",
+  "#6c7473"
+];
+
+const LEGACY_AUTHOR_COLORS = [
   "#d98a22",
   "#5f8fb9",
   "#8c6bb1",
@@ -76,6 +111,33 @@ const DEFAULT_AUTHOR_RULES: AuthorRule[] = [
   makeAuthorRule("tazmanyakk", "Tazmanyakk", AUTHOR_COLORS[12]),
   makeAuthorRule("xian", "XiAn", AUTHOR_COLORS[13])
 ];
+
+const LEGACY_AUTHOR_COLORS_BY_ID = new Map(DEFAULT_AUTHOR_RULES.map((rule, index) => [rule.id, LEGACY_AUTHOR_COLORS[index]?.toLowerCase()]));
+
+const CHARACTER_ASSETS = characterAssetsJson as CharacterAssetsJson;
+const CHARACTER_BY_ID = new Map<string, DetectedCharacter>();
+const CHARACTER_BY_NPC_ID = new Map<string, DetectedCharacter>();
+
+for (const character of CHARACTER_ASSETS.characters) {
+  const ids = Array.isArray(character.id) ? character.id : [character.id];
+  for (const id of ids) {
+    CHARACTER_BY_ID.set(id, {
+      id,
+      imageId: id,
+      character: character.character,
+      costume: character.costume
+    });
+  }
+  if (character.npc_id) {
+    const imageId = ids[0];
+    CHARACTER_BY_NPC_ID.set(character.npc_id, {
+      id: character.npc_id,
+      imageId,
+      character: character.character,
+      costume: character.costume
+    });
+  }
+}
 
 function typeToCategory(type: RuntimeMod["type"]): ModCategory {
   return type === "skillcut" ? "cutscene" : type === "dating" ? "dating" : type === "standing" ? "char" : "other";
@@ -996,7 +1058,13 @@ function readAuthorRules(): AuthorRule[] {
     if (!Array.isArray(stored)) return DEFAULT_AUTHOR_RULES;
 
     const byId = new Map(stored.filter((rule) => rule && typeof rule.id === "string").map((rule) => [rule.id, rule]));
-    const merged = DEFAULT_AUTHOR_RULES.map((base) => sanitizeAuthorRule({ ...base, ...byId.get(base.id), custom: false }, base));
+    const merged = DEFAULT_AUTHOR_RULES.map((base) => {
+      const storedRule = byId.get(base.id);
+      const storedColor = storedRule?.color?.toLowerCase();
+      const legacyColor = LEGACY_AUTHOR_COLORS_BY_ID.get(base.id);
+      const color = !storedColor || storedColor === legacyColor ? base.color : storedRule?.color;
+      return sanitizeAuthorRule({ ...base, ...storedRule, color, custom: false }, base);
+    });
     for (const rule of stored) {
       if (rule?.custom && !DEFAULT_AUTHOR_RULES.some((base) => base.id === rule.id)) {
         merged.push(sanitizeAuthorRule(rule));
@@ -1038,6 +1106,38 @@ function detectModAuthor(mod: RuntimeMod, authorRules: AuthorRule[]): DetectedAu
     }
   }
   return { id: "unknown", name: "Unknown", color: "#8d97aa" };
+}
+
+function detectModCharacter(mod: RuntimeMod): DetectedCharacter | null {
+  const key = mod.key.toLowerCase();
+
+  if (mod.type === "skillcut") {
+    return lookupCharacterById(extractModAssetId(key, "cutscene_char"));
+  }
+
+  if (mod.type === "standing") {
+    return lookupCharacterById(extractModAssetId(key, "char"));
+  }
+
+  if (mod.type === "dating") {
+    const datingId = extractModAssetId(key, "illust_dating");
+    if (!datingId) return null;
+    const characterId = CHARACTER_ASSETS.dating[datingId] ?? CHARACTER_ASSETS.dating[String(Number(datingId))];
+    return lookupCharacterById(characterId ?? null);
+  }
+
+  const npcId = extractModAssetId(key, "npc");
+  return npcId ? CHARACTER_BY_NPC_ID.get(npcId) ?? null : null;
+}
+
+function lookupCharacterById(id: string | null | undefined) {
+  return id ? CHARACTER_BY_ID.get(id) ?? null : null;
+}
+
+function extractModAssetId(key: string, prefix: string) {
+  if (!key.startsWith(prefix)) return null;
+  const rest = key.slice(prefix.length);
+  return rest.match(/^(\d+)/)?.[1] ?? null;
 }
 
 function matchesAuthorKeyword(haystack: string, compactHaystack: string, keyword: string) {
@@ -1178,6 +1278,7 @@ function CartridgeRealistic(props: {
   const typeLabel = categoryTypeLabel(category);
   const detectedAuthor = detectModAuthor(mod, authorRules);
   const showAuthorSticker = detectedAuthor.id !== "unknown";
+  const detectedCharacter = detectModCharacter(mod);
   const authorStyle = { "--author-color": detectedAuthor.color } as CSSProperties;
   const displayTitle = cartridgeHeadline(folderName, mod.key);
   const runtimeLabel =
@@ -1208,6 +1309,11 @@ function CartridgeRealistic(props: {
           <span className="rcartArt" style={coverStyle} aria-hidden="true" />
           <span className="rcartAged" aria-hidden="true" />
           <span className="rcartGloss" aria-hidden="true" />
+          {detectedCharacter ? (
+            <span className="rcartPortrait" aria-hidden="true" title={`${detectedCharacter.character} - ${detectedCharacter.costume}`}>
+              <img src={`/characters/standing/${detectedCharacter.imageId}.png`} alt="" draggable={false} loading="lazy" />
+            </span>
+          ) : null}
           <span className="rcartHead">
             <span className="rcartPack">{pack}</span>
             <span className="rcartCode">{mod.key}</span>

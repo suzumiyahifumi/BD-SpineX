@@ -14,6 +14,7 @@ The installable BD-SpineX release package includes:
 - Electron/React/Vite runtime dependencies: mostly MIT/BSD/ISC/Apache-2.0
 - Rust native CLI prototype dependencies: MIT/Apache-2.0/BSD/0BSD/Unlicense-compatible licenses
 - BD2ModManager type icons: GPLv3
+- BD2ModManager character metadata and standing images: source/credit notice below
 - Bundled label fonts: SIL Open Font License 1.1
 
 Because `SpineSkeletonDataConverter` is bundled, the release package should be treated as **PolyForm Noncommercial License 1.0.0 for distribution/use of the bundled converter**, while BD-SpineX's own source code remains GPLv3.
@@ -50,6 +51,7 @@ https://polyformproject.org/licenses/noncommercial/1.0.0/
 - AssetRipper.TextureDecoder: MIT
 - Rust `unity-asset-binary` / `unity-asset-core`: MIT
 - BD2ModManager public type icons (`app/renderer/public/bd2modmanager-icons`): GPLv3, source https://github.com/bruhnn/BD2ModManager
+- BD2ModManager character metadata (`app/renderer/src/data/bd2-characters.json`) and public character standing images (`app/renderer/public/characters/standing`): sourced from https://github.com/bruhnn/BD2ModManager, which credits myssal/Brown-Dust-2-Asset for character assets
 - Barlow Condensed label font (`app/renderer/public/fonts/barlow-condensed-*.ttf`): SIL Open Font License 1.1, source https://fonts.google.com/specimen/Barlow+Condensed
 - Noto Sans TC label fallback (`app/renderer/public/fonts/noto-sans-tc-*.ttf`): SIL Open Font License 1.1, source https://fonts.google.com/noto/specimen/Noto+Sans+TC
 

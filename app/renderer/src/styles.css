@@ -2928,11 +2928,77 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0) 76%, rgba(255, 255, 255, 0.05) 100%);
 }
 
+.rcartPortrait {
+  position: absolute;
+  right: -10px;
+  bottom: -43px;
+  z-index: 1;
+  display: grid;
+  width: 78%;
+  align-items: end;
+  justify-items: end;
+  opacity: 0.9;
+  pointer-events: none;
+  mix-blend-mode: normal;
+  filter:
+    saturate(0.82)
+    contrast(0.96)
+    brightness(1.04)
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.58))
+    drop-shadow(0 0 12px rgba(255, 255, 255, 0.07));
+}
+
+.rcartPortrait::before,
+.rcartPortrait::after {
+  content: "";
+  position: absolute;
+  inset: 0 -2px 0 4px;
+  z-index: 1;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 0 74%, rgba(0, 0, 0, 0.9) 86%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0 74%, rgba(0, 0, 0, 0.9) 86%, transparent 100%);
+}
+
+.rcartPortrait::before {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 244, 0.13) 0 1px, transparent 1px 4px),
+    linear-gradient(90deg, rgba(247, 239, 216, 0.16), rgba(97, 92, 82, 0.08));
+  mix-blend-mode: screen;
+  opacity: 0.32;
+}
+
+.rcartPortrait::after {
+  background:
+    radial-gradient(1.2px 1.2px at 18% 26%, rgba(66, 54, 39, 0.26), transparent 70%),
+    radial-gradient(1px 1px at 72% 42%, rgba(78, 65, 44, 0.18), transparent 70%),
+    radial-gradient(1.4px 1.4px at 54% 78%, rgba(46, 43, 39, 0.16), transparent 72%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='82' height='82'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .38 0 0 0 0 .28 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+  opacity: 0.2;
+}
+
+.rcartPortrait img {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: 124px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
+  filter: sepia(0.08) saturate(0.78) contrast(0.94) brightness(1.05);
+  transform: translateX(1px);
+  transform-origin: right bottom;
+  -webkit-mask-image: linear-gradient(180deg, #000 0 74%, rgba(0, 0, 0, 0.9) 86%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0 74%, rgba(0, 0, 0, 0.9) 86%, transparent 100%);
+}
+
 .rcartHead {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+  z-index: 2;
   height: 34px;
   background: linear-gradient(180deg, rgba(5, 6, 9, 0.72), rgba(5, 6, 9, 0));
 }
@@ -2977,23 +3043,71 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rcartTypeBadge img {
   position: relative;
   z-index: 1;
-  width: 25px;
-  height: 25px;
+  width: 31px;
+  height: 31px;
   object-fit: contain;
-  opacity: 0.72;
-  filter: brightness(0) saturate(100%) opacity(0.74) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.34));
+  opacity: 0.78;
+  filter:
+    brightness(0)
+    saturate(100%)
+    opacity(0.7)
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.3));
 }
 
-.rcartTypeBadge.is-dating {
+.rcartTypeBadge.is-char img {
   filter:
-    drop-shadow(0 1px 1px rgba(24, 20, 15, 0.28))
-    drop-shadow(0 4px 5px rgba(0, 0, 0, 0.2));
+    brightness(0)
+    saturate(100%)
+    invert(23%)
+    sepia(17%)
+    saturate(936%)
+    hue-rotate(174deg)
+    brightness(92%)
+    contrast(82%)
+    opacity(0.72)
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.28));
 }
 
-.rcartTypeBadge.is-cutscene {
+.rcartTypeBadge.is-dating img {
   filter:
-    drop-shadow(0 1px 1px rgba(24, 20, 15, 0.28))
-    drop-shadow(0 4px 5px rgba(0, 0, 0, 0.2));
+    brightness(0)
+    saturate(100%)
+    invert(24%)
+    sepia(31%)
+    saturate(1164%)
+    hue-rotate(326deg)
+    brightness(90%)
+    contrast(82%)
+    opacity(0.72)
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.28));
+}
+
+.rcartTypeBadge.is-cutscene img {
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(40%)
+    sepia(25%)
+    saturate(985%)
+    hue-rotate(9deg)
+    brightness(93%)
+    contrast(78%)
+    opacity(0.72)
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.28));
+}
+
+.rcartTypeBadge.is-other img {
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(30%)
+    sepia(10%)
+    saturate(830%)
+    hue-rotate(124deg)
+    brightness(92%)
+    contrast(76%)
+    opacity(0.68)
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.28));
 }
 
 .rcartPack {
@@ -3008,7 +3122,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   font-weight: 850;
   letter-spacing: 0;
   line-height: 1.1;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.88);
   text-transform: uppercase;
   white-space: nowrap;
@@ -3024,7 +3138,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 6.6px;
   line-height: 1.1;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -3033,7 +3147,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   top: 35px;
   left: 11px;
   z-index: 2;
-  display: -webkit-box;
+  display: block;
   width: 52%;
   max-height: 40px;
   overflow: hidden;
@@ -3047,8 +3161,6 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     0 2px 5px rgba(0, 0, 0, 0.96),
     0 0 2px rgba(0, 0, 0, 0.9);
   text-transform: uppercase;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .rcartCredits {
@@ -3069,7 +3181,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .rcartCredits span {
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -3453,6 +3565,15 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     linear-gradient(108deg, transparent 0 47%, rgba(205, 211, 211, 0.36) 47% 64%, transparent 64%),
     var(--rcart-cover, linear-gradient(142deg, #f0efe9 0 35%, #96a0a2 35% 100%));
   filter: grayscale(0.28) contrast(0.95) saturate(0.78) brightness(1.08);
+}
+
+.rcart.cat-char .rcartPortrait {
+  opacity: 0.82;
+  filter:
+    saturate(0.68)
+    contrast(0.9)
+    brightness(1.06)
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.42));
 }
 
 .rcart.cat-char .rcartArt::before {
