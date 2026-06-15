@@ -421,7 +421,7 @@ export function App() {
 
           <div className={`modsTableFrame ${modsLocked ? "locked" : ""}`}>
             {modView === "grid" ? (
-              <div className="cartShelf">
+              <div className={`cartShelf ${cartSkin === "realistic" ? "cartShelf--collector" : ""}`}>
                 {library.length === 0 ? (
                   <div className="cartEmpty">{modsDir ? "No mods found." : "Choose a Mods Folder above to load your cartridges."}</div>
                 ) : visibleMods.length === 0 ? (
@@ -991,10 +991,12 @@ function CartridgeRealistic(props: {
       title={title}
     >
       <span className="rcartShell">
-        <span className="rcartTop" aria-hidden="true"><i /><i /><i /></span>
+        <span className="rcartGripL" aria-hidden="true" />
+        <span className="rcartGripR" aria-hidden="true" />
         <span className="rcartLabel">
           <span className="rcartArt" style={coverStyle} aria-hidden="true" />
           <span className="rcartAged" aria-hidden="true" />
+          <span className="rcartGloss" aria-hidden="true" />
           <span className="rcartTrim" aria-hidden="true" />
           <span className="rcartPlate">
             <span className="rcartName">{folderName}</span>
@@ -1002,7 +1004,10 @@ function CartridgeRealistic(props: {
           </span>
           {have && !tone && <span className="rcartStamp" aria-hidden="true">INSERTED</span>}
         </span>
-        <span className="rcartPins" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+        <span className="rcartFoot">
+          <span className="rcartBrand">BD·SpineX</span>
+          <span className="rcartPins" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></span>
+        </span>
       </span>
       <span className="rcartTag" aria-hidden="true">{tagLabel}</span>
       <span className="rcartCheck" aria-hidden="true">✓</span>

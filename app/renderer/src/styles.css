@@ -2303,112 +2303,103 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   margin-bottom: 18px;
 }
 
+
 /* ============================================================
-   Realistic "Collector" cartridge
-   Skeuomorphic cartridge inspired by the BrownDust II in-game
-   cartridge case: dark plastic shell, full-bleed printed
-   character-art label with an aged finish, handwritten price-tag
-   sticker for author/metadata, lit contact pins, sitting in a
-   rack slot. Toggle between this and the arcade skin in Library.
+   Realistic "Collector" cartridge — Super Famicom style
+   Wide (landscape) cartridge with angled top shoulders, a big
+   printed character-art label, side grip ridges, a brand/pins
+   foot, and a rack slot. Inspired by the BrownDust II in-game
+   cartridge case. Toggle vs the arcade skin in Library.
    ============================================================ */
-.modToggleRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+
+/* wider grid columns when the collector skin is active */
+.cartShelf--collector {
+  grid-template-columns: repeat(auto-fill, minmax(256px, 1fr));
+  gap: 22px;
 }
-.modToggleRow .modViewToggle { margin-top: 0; }
 
 .rcart {
   --trim: #6f7bdc;
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 3 / 4.15;
-  padding: 0 10px 16px;
+  aspect-ratio: 3 / 2;
+  padding: 0 4px 13px;
   border: 0;
   background: transparent;
   cursor: pointer;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  transition: transform 0.26s cubic-bezier(.2,.7,.2,1), filter 0.26s;
+  transition: transform 0.26s cubic-bezier(.2,.7,.2,1);
 }
-.rcart:hover:not(:disabled) { transform: translateY(-7px) rotate(-0.5deg); }
+.rcart:hover:not(:disabled) { transform: translateY(-6px); }
 .rcart:disabled { cursor: not-allowed; opacity: 0.9; }
 
-/* the rack slot the cartridge stands in */
+/* rack slot the cartridge is inserted into */
 .rcartSlot {
   position: absolute;
-  left: 2px; right: 2px; bottom: 0;
-  height: 16px;
-  border-radius: 0 0 8px 8px / 0 0 14px 14px;
-  background: linear-gradient(180deg, #14151c, #07080c);
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  left: 8%; right: 8%; bottom: 0;
+  height: 14px;
+  border-radius: 0 0 7px 7px / 0 0 12px 12px;
+  background: linear-gradient(180deg, #15161d, #06070b);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .rcartSlot::before {
   content: "";
   position: absolute;
-  left: 10%; right: 10%; top: 4px; height: 4px;
+  left: 6%; right: 6%; top: 3px; height: 4px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.6);
 }
 
-/* plastic shell */
+/* plastic shell with SFC angled top shoulders */
 .rcartShell {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  height: calc(100% - 8px);
-  padding: 9px 9px 0;
-  border-radius: 13px 13px 7px 7px;
+  height: calc(100% - 7px);
+  padding: 12px 16px 0;
+  /* angled top shoulders + squared bottom (sits in the slot) */
+  clip-path: polygon(0% 16%, 9% 0%, 91% 0%, 100% 16%, 100% 100%, 0% 100%);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 14%),
-    linear-gradient(180deg, #2a2b33, #15161c 62%, #0e0f14);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
-    0 14px 26px rgba(0, 0, 0, 0.55);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 12%),
+    linear-gradient(180deg, #30313a 0%, #1b1c23 40%, #101116 100%);
+  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.55));
 }
-/* side screw dimples */
-.rcartShell::before,
+/* inner bevel line that follows the shell silhouette */
 .rcartShell::after {
   content: "";
   position: absolute;
-  bottom: 12px;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #3a3b44, #0c0d12);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-.rcartShell::before { left: 11px; }
-.rcartShell::after { right: 11px; }
-
-/* top grip ridges */
-.rcartTop {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 2px 30px 7px;
-}
-.rcartTop i {
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.4));
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  inset: 2px;
+  clip-path: polygon(0% 16%, 9% 0%, 91% 0%, 100% 16%, 100% 100%, 0% 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  pointer-events: none;
 }
 
-/* printed label window */
+/* side grip ridges near the top */
+.rcartGripL,
+.rcartGripR {
+  position: absolute;
+  top: 16%;
+  width: 9px;
+  height: 34%;
+  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0 2px, rgba(255, 255, 255, 0.06) 2px 4px);
+  border-radius: 2px;
+  opacity: 0.8;
+}
+.rcartGripL { left: 4px; }
+.rcartGripR { right: 4px; }
+
+/* big landscape printed label */
 .rcartLabel {
   position: relative;
   flex: 1;
   min-height: 0;
-  margin: 0 2px;
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
   background: #0c1018;
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.7), 0 2px 5px rgba(0, 0, 0, 0.55);
 }
 
 /* character cover art (mod.cover drops in here) */
@@ -2416,61 +2407,65 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center 22%;
+  background-position: center 30%;
   background-repeat: no-repeat;
-  /* procedural poster when no cover image is supplied */
   background-image:
-    radial-gradient(90% 70% at 70% 12%, var(--trim), transparent 60%),
-    radial-gradient(120% 90% at 20% 95%, rgba(255, 92, 168, 0.5), transparent 55%),
-    linear-gradient(160deg, #243049, #0c1018);
-  filter: sepia(0.32) contrast(1.06) saturate(0.92) brightness(0.96);
+    radial-gradient(80% 90% at 78% 18%, var(--trim), transparent 60%),
+    radial-gradient(120% 100% at 16% 96%, rgba(255, 92, 168, 0.5), transparent 55%),
+    linear-gradient(160deg, #233048, #0c1018);
+  filter: sepia(0.3) contrast(1.05) saturate(0.94) brightness(0.98);
 }
 
-/* aged / vintage finish: vignette + scanlines + film grain */
+/* aged / vintage finish */
 .rcartAged {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 130% at 50% 28%, transparent 52%, rgba(20, 12, 4, 0.62) 100%),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, rgba(255, 240, 210, 0.06), rgba(40, 20, 0, 0.12));
+    radial-gradient(130% 120% at 50% 26%, transparent 54%, rgba(20, 12, 4, 0.6) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(255, 240, 210, 0.05), rgba(40, 20, 0, 0.12));
 }
 .rcartAged::after {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.5;
+  opacity: 0.45;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* colored category trim around the label */
+/* glossy reflection sweep across the label */
+.rcartGloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 26%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, 0.06) 100%);
+}
+
+/* colored category trim */
 .rcartTrim {
   position: absolute;
   inset: 4px;
-  border-radius: 4px;
+  border-radius: 3px;
   pointer-events: none;
   box-shadow: inset 0 0 0 1.5px var(--trim), inset 0 0 0 3px rgba(0, 0, 0, 0.5);
-  opacity: 0.85;
+  opacity: 0.82;
 }
 
 /* printed title plate */
 .rcartPlate {
   position: absolute;
-  left: 6px; right: 6px; bottom: 6px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  background: linear-gradient(180deg, rgba(7, 9, 14, 0.55), rgba(7, 9, 14, 0.88));
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  left: 7px; right: 7px; bottom: 7px;
+  padding: 5px 9px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(7, 9, 14, 0.5), rgba(7, 9, 14, 0.9));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 .rcartName {
   display: block;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 0.01em;
   color: #f4f1e6;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   overflow: hidden;
@@ -2481,7 +2476,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   display: block;
   margin-top: 1px;
   font-family: var(--mono, ui-monospace, monospace);
-  font-size: 9.5px;
+  font-size: 10px;
   color: rgba(244, 241, 230, 0.62);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2491,25 +2486,38 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 /* "INSERTED" rubber stamp (mounted) */
 .rcartStamp {
   position: absolute;
-  top: 16px; left: 50%;
-  transform: translateX(-50%) rotate(-11deg);
-  padding: 2px 8px;
+  top: 12px; right: 12px;
+  transform: rotate(-9deg);
+  padding: 2px 9px;
   border: 2px solid rgba(246, 198, 107, 0.85);
   border-radius: 4px;
-  color: rgba(246, 198, 107, 0.9);
+  color: rgba(246, 198, 107, 0.92);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
-  opacity: 0.92;
   mix-blend-mode: screen;
 }
 
-/* contact pins */
+/* brand + contact pins foot */
+.rcartFoot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px 9px;
+}
+.rcartBrand {
+  flex: none;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.42);
+  text-transform: uppercase;
+}
 .rcartPins {
   display: flex;
   gap: 3px;
-  padding: 8px 14px 9px;
+  flex: 1;
 }
 .rcartPins i {
   flex: 1;
@@ -2522,26 +2530,25 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 /* handwritten price-tag sticker (author / metadata) */
 .rcartTag {
   position: absolute;
-  top: 4px; right: 4px;
+  top: -2px; right: 14px;
   z-index: 3;
-  transform: rotate(7deg);
+  transform: rotate(6deg);
   padding: 3px 9px 3px 15px;
   border-radius: 3px;
   background: linear-gradient(180deg, #f6edd4, #e7d9b4);
   border: 1px solid rgba(0, 0, 0, 0.18);
   color: #b3261e;
   font-family: "Bradley Hand", "Marker Felt", "Comic Neue", "Comic Sans MS", cursive;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.1;
-  letter-spacing: 0.02em;
   box-shadow: 0 4px 9px rgba(0, 0, 0, 0.45);
-  max-width: 78%;
+  max-width: 60%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rcartTag::before { /* punch hole */
+.rcartTag::before {
   content: "";
   position: absolute;
   left: 5px; top: 50%;
@@ -2551,7 +2558,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background: #0c0d12;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
-.rcartTag::after { /* string */
+.rcartTag::after {
   content: "";
   position: absolute;
   left: 3px; top: -9px;
@@ -2563,7 +2570,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 /* selection check */
 .rcartCheck {
   position: absolute;
-  top: 6px; left: 16px;
+  top: 8px; left: 18px;
   z-index: 3;
   width: 22px; height: 22px;
   border-radius: 50%;
@@ -2587,12 +2594,12 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rcart.cat-cutscene { --trim: #9b7bff; }
 .rcart.cat-other    { --trim: #f6c66b; }
 
-/* states */
-.rcart.is-mounted .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(246,198,107,0.4), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(246,198,107,0.35); }
+/* states (drop-shadow follows the clipped silhouette) */
+.rcart.is-mounted .rcartShell { filter: drop-shadow(0 12px 22px rgba(0,0,0,0.55)) drop-shadow(0 0 3px rgba(246,198,107,0.75)); }
 .rcart.is-mounted .rcartPins i { background: linear-gradient(180deg, #f6c66b, #9c7426); opacity: 1; box-shadow: 0 0 7px rgba(246, 198, 107, 0.75); }
-.rcart.is-add .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 2px rgba(103,232,160,0.6); }
-.rcart.is-remove .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 2px rgba(255,122,138,0.6); }
-.rcart.is-conflict .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 2px rgba(199,155,255,0.7); }
+.rcart.is-add .rcartShell { filter: drop-shadow(0 12px 22px rgba(0,0,0,0.55)) drop-shadow(0 0 3px rgba(103,232,160,0.85)); }
+.rcart.is-remove .rcartShell { filter: drop-shadow(0 12px 22px rgba(0,0,0,0.55)) drop-shadow(0 0 3px rgba(255,122,138,0.85)); }
+.rcart.is-conflict .rcartShell { filter: drop-shadow(0 12px 22px rgba(0,0,0,0.55)) drop-shadow(0 0 4px rgba(199,155,255,0.9)); }
 
 @media (prefers-reduced-motion: reduce) {
   .rcart:hover:not(:disabled) { transform: none; }
