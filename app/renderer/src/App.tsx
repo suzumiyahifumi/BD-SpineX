@@ -35,7 +35,9 @@ const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Runtime Mod Mana
 const MODSDIR_KEY = "bd-spinex:runtime-modsdir";
 const MIGRATION_DISMISSED_KEY = "bd-spinex:legacy-runtime-migration-dismissed";
 const MODVIEW_KEY = "bd-spinex:mod-view";
+const CARTSKIN_KEY = "bd-spinex:cart-skin";
 type ModView = "grid" | "list";
+type CartSkin = "realistic" | "arcade";
 
 function typeToCategory(type: RuntimeMod["type"]): ModCategory {
   return type === "skillcut" ? "cutscene" : type === "dating" ? "dating" : type === "standing" ? "char" : "other";
@@ -54,6 +56,7 @@ export function App() {
   const [modFilter, setModFilter] = useState("");
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
+  const [cartSkin, setCartSkin] = useState<CartSkin>(() => (localStorage.getItem(CARTSKIN_KEY) === "arcade" ? "arcade" : "realistic"));
   const [migrationCheck, setMigrationCheck] = useState<LegacyRuntimeMigrationCheck | null>(null);
   const [migrationRunning, setMigrationRunning] = useState(false);
   const [migrationDismissed, setMigrationDismissed] = useState(false);
@@ -162,6 +165,10 @@ export function App() {
   function updateModView(next: ModView) {
     setModView(next);
     localStorage.setItem(MODVIEW_KEY, next);
+  }
+  function updateCartSkin(next: CartSkin) {
+    setCartSkin(next);
+    localStorage.setItem(CARTSKIN_KEY, next);
   }
 
   const runTask = useCallback(
@@ -374,13 +381,25 @@ export function App() {
                 </HelpButton>
               </div>
               <div className="tableHint">{visibleMods.length} shown / {library.length} scanned</div>
-              <div className="modViewToggle segmentedControl" role="tablist" aria-label="Mod view">
-                <button className={modView === "grid" ? "active" : ""} onClick={() => updateModView("grid")} type="button" aria-pressed={modView === "grid"}>
-                  <span>Cartridges</span>
-                </button>
-                <button className={modView === "list" ? "active" : ""} onClick={() => updateModView("list")} type="button" aria-pressed={modView === "list"}>
-                  <span>List</span>
-                </button>
+              <div className="modToggleRow">
+                <div className="modViewToggle segmentedControl" role="tablist" aria-label="Mod view">
+                  <button className={modView === "grid" ? "active" : ""} onClick={() => updateModView("grid")} type="button" aria-pressed={modView === "grid"}>
+                    <span>Cartridges</span>
+                  </button>
+                  <button className={modView === "list" ? "active" : ""} onClick={() => updateModView("list")} type="button" aria-pressed={modView === "list"}>
+                    <span>List</span>
+                  </button>
+                </div>
+                {modView === "grid" && (
+                  <div className="cartSkinToggle segmentedControl" role="tablist" aria-label="Cartridge style">
+                    <button className={cartSkin === "realistic" ? "active" : ""} onClick={() => updateCartSkin("realistic")} type="button" aria-pressed={cartSkin === "realistic"}>
+                      <span>Collector</span>
+                    </button>
+                    <button className={cartSkin === "arcade" ? "active" : ""} onClick={() => updateCartSkin("arcade")} type="button" aria-pressed={cartSkin === "arcade"}>
+                      <span>Arcade</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modsHeaderControls">
@@ -407,17 +426,20 @@ export function App() {
                   <div className="cartEmpty">{modsDir ? "No mods found." : "Choose a Mods Folder above to load your cartridges."}</div>
                 ) : visibleMods.length === 0 ? (
                   <div className="cartEmpty">No mods match this filter.</div>
-                ) : visibleMods.map((mod) => (
-                  <Cartridge
-                    key={mod.path}
-                    mod={mod}
-                    have={mountedFolders.has(mod.folder)}
-                    selected={isDesired(mod.folder)}
-                    tone={tones[mod.folder]}
-                    locked={modsLocked}
-                    onToggle={() => updateDesired(mod.folder, !isDesired(mod.folder))}
-                  />
-                ))}
+                ) : visibleMods.map((mod) => {
+                  const CartComp = cartSkin === "realistic" ? CartridgeRealistic : Cartridge;
+                  return (
+                    <CartComp
+                      key={mod.path}
+                      mod={mod}
+                      have={mountedFolders.has(mod.folder)}
+                      selected={isDesired(mod.folder)}
+                      tone={tones[mod.folder]}
+                      locked={modsLocked}
+                      onToggle={() => updateDesired(mod.folder, !isDesired(mod.folder))}
+                    />
+                  );
+                })}
               </div>
             ) : (
             <table>
@@ -932,6 +954,65 @@ function Cartridge(props: {
       </span>
     </button>
   );
+}
+
+// Skeuomorphic "collector" cartridge inspired by the BrownDust II in-game
+// cartridge case: dark plastic shell, a full-bleed printed character-art
+// label with an aged/vintage finish, a handwritten price-tag sticker for the
+// author/metadata, and lit contact pins. A future mod.cover image drops into
+// the label art; mod.author drops onto the price tag.
+function CartridgeRealistic(props: {
+  mod: RuntimeMod;
+  have: boolean;
+  selected: boolean;
+  tone?: PendingTone;
+  locked: boolean;
+  onToggle: () => void;
+}) {
+  const { mod, have, selected, tone, locked, onToggle } = props;
+  const meta = mod as RuntimeMod & { author?: string; cover?: string };
+  const category = typeToCategory(mod.type);
+  const folderName = formatFolderName(mod.folder);
+  const stateClass =
+    tone === "conflict" ? "is-conflict" :
+    tone === "added" ? "is-add" :
+    tone === "removed" ? "is-remove" :
+    have ? "is-mounted" : "";
+  const tagLabel = meta.author ? `by ${meta.author}` : categoryGenre(category);
+  const title = `${folderName}\n${mod.key} · ${category}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}`;
+  const coverStyle = meta.cover ? { backgroundImage: `url("${meta.cover}")` } : undefined;
+  return (
+    <button
+      type="button"
+      className={`rcart cat-${category} ${stateClass} ${selected ? "is-selected" : ""}`}
+      disabled={locked}
+      onClick={onToggle}
+      aria-pressed={selected}
+      title={title}
+    >
+      <span className="rcartShell">
+        <span className="rcartTop" aria-hidden="true"><i /><i /><i /></span>
+        <span className="rcartLabel">
+          <span className="rcartArt" style={coverStyle} aria-hidden="true" />
+          <span className="rcartAged" aria-hidden="true" />
+          <span className="rcartTrim" aria-hidden="true" />
+          <span className="rcartPlate">
+            <span className="rcartName">{folderName}</span>
+            <span className="rcartKey">{mod.key}</span>
+          </span>
+          {have && !tone && <span className="rcartStamp" aria-hidden="true">INSERTED</span>}
+        </span>
+        <span className="rcartPins" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+      </span>
+      <span className="rcartTag" aria-hidden="true">{tagLabel}</span>
+      <span className="rcartCheck" aria-hidden="true">✓</span>
+      <span className="rcartSlot" aria-hidden="true" />
+    </button>
+  );
+}
+
+function categoryGenre(category: ModCategory) {
+  return category === "char" ? "Standing" : category === "dating" ? "Dating" : category === "cutscene" ? "Cutscene" : "NPC";
 }
 
 function PathField(props: { label: string; value: string; onChange: (v: string) => void; onBrowse?: () => void; invalid?: boolean; helpTitle?: string; helpText?: string }) {

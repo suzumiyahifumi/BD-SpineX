@@ -2302,3 +2302,298 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .panel.logPanel {
   margin-bottom: 18px;
 }
+
+/* ============================================================
+   Realistic "Collector" cartridge
+   Skeuomorphic cartridge inspired by the BrownDust II in-game
+   cartridge case: dark plastic shell, full-bleed printed
+   character-art label with an aged finish, handwritten price-tag
+   sticker for author/metadata, lit contact pins, sitting in a
+   rack slot. Toggle between this and the arcade skin in Library.
+   ============================================================ */
+.modToggleRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.modToggleRow .modViewToggle { margin-top: 0; }
+
+.rcart {
+  --trim: #6f7bdc;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4.15;
+  padding: 0 10px 16px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: transform 0.26s cubic-bezier(.2,.7,.2,1), filter 0.26s;
+}
+.rcart:hover:not(:disabled) { transform: translateY(-7px) rotate(-0.5deg); }
+.rcart:disabled { cursor: not-allowed; opacity: 0.9; }
+
+/* the rack slot the cartridge stands in */
+.rcartSlot {
+  position: absolute;
+  left: 2px; right: 2px; bottom: 0;
+  height: 16px;
+  border-radius: 0 0 8px 8px / 0 0 14px 14px;
+  background: linear-gradient(180deg, #14151c, #07080c);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.rcartSlot::before {
+  content: "";
+  position: absolute;
+  left: 10%; right: 10%; top: 4px; height: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* plastic shell */
+.rcartShell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 8px);
+  padding: 9px 9px 0;
+  border-radius: 13px 13px 7px 7px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 14%),
+    linear-gradient(180deg, #2a2b33, #15161c 62%, #0e0f14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 14px 26px rgba(0, 0, 0, 0.55);
+}
+/* side screw dimples */
+.rcartShell::before,
+.rcartShell::after {
+  content: "";
+  position: absolute;
+  bottom: 12px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3b44, #0c0d12);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.rcartShell::before { left: 11px; }
+.rcartShell::after { right: 11px; }
+
+/* top grip ridges */
+.rcartTop {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 2px 30px 7px;
+}
+.rcartTop i {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.4));
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* printed label window */
+.rcartLabel {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 0 2px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0c1018;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* character cover art (mod.cover drops in here) */
+.rcartArt {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 22%;
+  background-repeat: no-repeat;
+  /* procedural poster when no cover image is supplied */
+  background-image:
+    radial-gradient(90% 70% at 70% 12%, var(--trim), transparent 60%),
+    radial-gradient(120% 90% at 20% 95%, rgba(255, 92, 168, 0.5), transparent 55%),
+    linear-gradient(160deg, #243049, #0c1018);
+  filter: sepia(0.32) contrast(1.06) saturate(0.92) brightness(0.96);
+}
+
+/* aged / vintage finish: vignette + scanlines + film grain */
+.rcartAged {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 130% at 50% 28%, transparent 52%, rgba(20, 12, 4, 0.62) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(255, 240, 210, 0.06), rgba(40, 20, 0, 0.12));
+}
+.rcartAged::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* colored category trim around the label */
+.rcartTrim {
+  position: absolute;
+  inset: 4px;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1.5px var(--trim), inset 0 0 0 3px rgba(0, 0, 0, 0.5);
+  opacity: 0.85;
+}
+
+/* printed title plate */
+.rcartPlate {
+  position: absolute;
+  left: 6px; right: 6px; bottom: 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(7, 9, 14, 0.55), rgba(7, 9, 14, 0.88));
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.rcartName {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #f4f1e6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rcartKey {
+  display: block;
+  margin-top: 1px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  color: rgba(244, 241, 230, 0.62);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "INSERTED" rubber stamp (mounted) */
+.rcartStamp {
+  position: absolute;
+  top: 16px; left: 50%;
+  transform: translateX(-50%) rotate(-11deg);
+  padding: 2px 8px;
+  border: 2px solid rgba(246, 198, 107, 0.85);
+  border-radius: 4px;
+  color: rgba(246, 198, 107, 0.9);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+  opacity: 0.92;
+  mix-blend-mode: screen;
+}
+
+/* contact pins */
+.rcartPins {
+  display: flex;
+  gap: 3px;
+  padding: 8px 14px 9px;
+}
+.rcartPins i {
+  flex: 1;
+  height: 6px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #6b5a32, #3a2f18);
+  opacity: 0.5;
+}
+
+/* handwritten price-tag sticker (author / metadata) */
+.rcartTag {
+  position: absolute;
+  top: 4px; right: 4px;
+  z-index: 3;
+  transform: rotate(7deg);
+  padding: 3px 9px 3px 15px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f6edd4, #e7d9b4);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  color: #b3261e;
+  font-family: "Bradley Hand", "Marker Felt", "Comic Neue", "Comic Sans MS", cursive;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 9px rgba(0, 0, 0, 0.45);
+  max-width: 78%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rcartTag::before { /* punch hole */
+  content: "";
+  position: absolute;
+  left: 5px; top: 50%;
+  transform: translateY(-50%);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #0c0d12;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.rcartTag::after { /* string */
+  content: "";
+  position: absolute;
+  left: 3px; top: -9px;
+  width: 1.5px; height: 13px;
+  background: rgba(255, 255, 255, 0.55);
+  transform: rotate(18deg);
+}
+
+/* selection check */
+.rcartCheck {
+  position: absolute;
+  top: 6px; left: 16px;
+  z-index: 3;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: transparent;
+}
+.rcart.is-selected .rcartCheck {
+  background: linear-gradient(160deg, var(--gold), var(--gold-deep));
+  border-color: transparent;
+  color: #1a1206;
+}
+
+/* category trims */
+.rcart.cat-char     { --trim: #3aa8ff; }
+.rcart.cat-dating   { --trim: #ff5ca8; }
+.rcart.cat-cutscene { --trim: #9b7bff; }
+.rcart.cat-other    { --trim: #f6c66b; }
+
+/* states */
+.rcart.is-mounted .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(246,198,107,0.4), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(246,198,107,0.35); }
+.rcart.is-mounted .rcartPins i { background: linear-gradient(180deg, #f6c66b, #9c7426); opacity: 1; box-shadow: 0 0 7px rgba(246, 198, 107, 0.75); }
+.rcart.is-add .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 2px rgba(103,232,160,0.6); }
+.rcart.is-remove .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 2px rgba(255,122,138,0.6); }
+.rcart.is-conflict .rcartShell { box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 14px 30px rgba(0,0,0,0.55), 0 0 0 2px rgba(199,155,255,0.7); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rcart:hover:not(:disabled) { transform: none; }
+}
