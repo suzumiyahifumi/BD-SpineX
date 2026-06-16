@@ -58,8 +58,16 @@ const MIGRATION_DISMISSED_KEY = "bd-spinex:legacy-runtime-migration-dismissed";
 const MODVIEW_KEY = "bd-spinex:mod-view";
 const CARTSKIN_KEY = "bd-spinex:cart-skin";
 const AUTHOR_RULES_KEY = "bd-spinex:author-rules";
+const THEME_KEY = "bd-spinex:theme";
 type ModView = "grid" | "list";
 type CartSkin = "realistic" | "arcade";
+type Theme = "classic" | "night" | "riso" | "mono";
+const THEMES: { key: Theme; label: string }[] = [
+  { key: "classic", label: "Classic" },
+  { key: "night", label: "Night Press" },
+  { key: "riso", label: "Risograph" },
+  { key: "mono", label: "Constructivist" }
+];
 
 const AUTHOR_COLORS = [
   "#3f5365",
@@ -157,6 +165,14 @@ export function App() {
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
   const [cartSkin, setCartSkin] = useState<CartSkin>(() => (localStorage.getItem(CARTSKIN_KEY) === "arcade" ? "arcade" : "realistic"));
+  const [theme, setTheme] = useState<Theme>(() => {
+    const t = localStorage.getItem(THEME_KEY);
+    return t === "night" || t === "riso" || t === "mono" ? t : "classic";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
   const [authorRules, setAuthorRules] = useState<AuthorRule[]>(readAuthorRules);
   const [newAuthorName, setNewAuthorName] = useState("");
   const [migrationCheck, setMigrationCheck] = useState<LegacyRuntimeMigrationCheck | null>(null);
@@ -271,6 +287,10 @@ export function App() {
   function updateCartSkin(next: CartSkin) {
     setCartSkin(next);
     localStorage.setItem(CARTSKIN_KEY, next);
+  }
+  function updateTheme(next: Theme) {
+    setTheme(next);
+    localStorage.setItem(THEME_KEY, next);
   }
   function updateAuthorColor(id: string, color: string) {
     setAuthorRules((cur) => {
@@ -734,6 +754,24 @@ export function App() {
         </div>
       </section>
 
+      <section className="panel settingsGrid appearancePanel">
+        <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <span className="fieldLabel">
+            <span>Appearance · Theme</span>
+            <HelpButton title="Theme">
+              Switch the interface skin. Classic is the original dark glass look; Night Press / Risograph / Constructivist are Soviet-print poster themes (warm ink, condensed type, flat-print buttons that turn to glass on hover). The cartridge artwork stays the same in every theme.
+            </HelpButton>
+          </span>
+          <div className="themeSwitch segmentedControl" role="tablist" aria-label="Theme">
+            {THEMES.map((t) => (
+              <button key={t.key} type="button" className={theme === t.key ? "active" : ""} onClick={() => updateTheme(t.key)} aria-pressed={theme === t.key}>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="panel settingsGrid">
         <div className="field">
           <span className="fieldLabel"><span>App</span></span>
@@ -910,6 +948,9 @@ export function App() {
             <div className="viewSub">BrownDust II Runtime Mod Loader · Mac PlayCover</div>
           </div>
           <div className="spacer" />
+          <div className="viewCount" aria-hidden="true">
+            <b>{mountedMods.length}</b><span>Mounted</span>
+          </div>
           <span className="statusPill" title={status?.injected ? "Loader installed" : "Loader not installed"}>
             {status?.injected ? "Runtime installed" : "Not installed"} · {mountedMods.length} mounted{gameRunning ? " · game running" : ""}
           </span>

@@ -346,6 +346,27 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
   <p class="tc" style="margin-top:16px">變動檔案：<code>styles.css</code>（token＋按鈕＋側欄／標題印刷化）、<code>App.tsx</code>（主題切換、巨數、把綠勾換成蓋章勾）。<strong style="color:var(--amber)">卡帶元件不動。</strong></p>
 </section>
 
+<hr class="rule red wrap" />
+
+<!-- DESIGN PRINCIPLES SUMMARY (shipped) -->
+<section id="shipped" class="wrap reveal">
+  <div class="secnum">07 — 設計重點總結（已落地）</div>
+  <h2 style="font-size:34px;margin:6px 0 10px">十條原則 · 已實作</h2>
+  <p class="tc" style="max-width:64ch">A Night Press 已做成 app 可切換主題（Classic／Night Press／Risograph／Constructivist，設定頁切換、localStorage 記憶）。以下是貫穿這次落地的設計判斷，當作日後維護與擴充的準則。</p>
+  <div class="grid4" style="margin-top:24px">
+    <div class="note"><span class="n">1</span><h3 class="tc">深色印刷台優先</h3><p class="tc">工作區（卡帶牆、dock）維持深色，玻璃與卡帶才有對比；亮色主題（Riso/Mono）則「紙張側欄 + 深色 tray 主畫面」分區，用 <code>.appMain</code> 局部變數翻成深色。</p></div>
+    <div class="note"><span class="n">2</span><h3 class="tc">暖色位移</h3><p class="tc">冷藍黑 → 暖近黑 <code>#0E0D0C</code>、白字 → 奶油 <code>#EDE0C4</code>、藍灰玻璃 → 暖調。識別度最大、結構不動。</p></div>
+    <div class="note"><span class="n">3</span><h3 class="tc">單一主墨 + 一輔</h3><p class="tc">紅為主墨（rail active／標題底線／stamp／Apply），琥珀為輔（巨數／徽章／左側 tab），黃極少量。紅橘黃不等重並陳。</p></div>
+    <div class="note"><span class="n">4</span><h3 class="tc">壓縮字 + 全大寫</h3><p class="tc">標題／側欄／按鈕／徽章用 <code>BD Label Condensed</code> 全大寫加字距；中文 <code>BD Label TC</code>；內文維持 SF。</p></div>
+    <div class="note"><span class="n">5</span><h3 class="tc">巨數即海報</h3><p class="tc">把掛載計數做成琥珀巨數＋紅色套色偏移陰影，當標題列的視覺主角（僅海報主題顯示）。</p></div>
+    <div class="note"><span class="n">6</span><h3 class="tc">按鈕：印刷 ↔ 玻璃</h3><p class="tc">靜止＝平面印刷（實色填充、1.5px 硬描邊、方角、<code>3px 3px 0</code> 套色偏移）；hover＝下沉 1px＋液態玻璃。dock 與工具鈕維持原玻璃。</p></div>
+    <div class="note"><span class="n">7</span><h3 class="tc">斜切 / 紅帶 / 星</h3><p class="tc">標題底厚紅線、rail logo 斜切、區段紅規線；幾何與斜切是印刷感的骨架。</p></div>
+    <div class="note"><span class="n">8</span><h3 class="tc">綠勾 → 紅蓋章</h3><p class="tc">選取記號從綠勾改成紅色「蓋章」勾——只改顏色，<strong style="color:var(--amber)">卡帶造型與封面完全不動</strong>。</p></div>
+    <div class="note"><span class="n">9</span><h3 class="tc">zero-specificity 主題層</h3><p class="tc">用 <code>:where([data-theme=…])</code> 覆寫，不會誤蓋 <code>.dockBtn</code> 等高權重元件；Classic 為預設 <code>:root</code>，可無痕切回。</p></div>
+    <div class="note"><span class="n">10</span><h3 class="tc">卡帶神聖不可侵</h3><p class="tc">擬物卡帶（形狀、3D 厚度、角色封面、廠牌、接觸點）在所有主題完全一致；主題只動 chrome。</p></div>
+  </div>
+</section>
+
 <footer class="wrap">
   <hr class="thinrule" style="margin-bottom:18px">
   <div class="tc">BD-SpineX 印刷海報風格設計書 · 蘇聯宣傳印刷 × 液態玻璃並置主義。配色／元件為原創設計，僅取建構主義「風格」（幾何、油墨、斜切），未複製任何特定海報作品。</div>
