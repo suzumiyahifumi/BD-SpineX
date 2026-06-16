@@ -4011,3 +4011,185 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 /* theme switch swatch in settings */
 .appearancePanel .themeSwitch { flex-wrap:wrap; }
+
+/* ============================================================
+   Night Press — poster polish
+   Empty states · dividers · badges get the poster motifs
+   (thick rules / halftone dots / stars); the remaining buttons,
+   the dock + toolbar shape, and List mode are brought onto the
+   print system. All gated to poster themes via :where() so
+   Classic stays untouched, and the dock/toolbar keep their
+   liquid-glass refraction — only the "chrome" is reshaped.
+   ============================================================ */
+
+/* ---------- empty states → poster placard (star + halftone) ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartEmpty,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td.empty {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.1em;
+  font-weight:700; color:var(--text-dim); text-align:center;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartEmpty::before,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td.empty::before {
+  content:""; display:block; width:30px; height:30px; margin:0 auto 14px;
+  background:var(--red);
+  clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartEmpty::after,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td.empty::after {
+  content:""; display:block; width:min(190px,55%); height:16px; margin:16px auto 0;
+  border-top:3px solid var(--red);            /* 厚規線 */
+  background-image:                            /* 半色調網點 */
+    radial-gradient(var(--red) 22%, transparent 23%),
+    radial-gradient(var(--red) 22%, transparent 23%);
+  background-size:9px 9px, 9px 9px;
+  background-position:0 7px, 4.5px 11.5px;
+  background-repeat:repeat-x;
+}
+
+/* ---------- dividers → thick print rules ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockDivider {
+  width:3px; height:30px; background:var(--red);
+}
+/* a press rule under the cartridge toolbar */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modsHeader.cartridgeToolbar {
+  border-bottom:3px solid var(--red);
+}
+
+/* ---------- badges → square print chips & red "stamps" ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge {
+  border-radius:0; border-width:1.5px;
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
+}
+/* mounted / injected = solid red stamp with a hard set-off shadow */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.patched,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionBadge.injected {
+  background:var(--red); color:var(--paper); border-color:var(--red-deep);
+  box-shadow:2px 2px 0 rgba(0,0,0,0.35);
+}
+/* available / not-injected = outline chip */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.ready {
+  background:transparent; color:var(--text); border-color:var(--stroke-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionBadge.notInjected {
+  background:transparent; color:var(--red); border-color:var(--red);
+}
+/* warn-ish states → amber ink; error states → red ink */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.restored,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_json,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_png,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.conflict,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.skipped,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.changed {
+  background:transparent; color:var(--amber); border-color:var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.bundle_not_found,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_skeleton,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_atlas,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_skel,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_texture,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.failed {
+  background:transparent; color:var(--red); border-color:var(--red);
+}
+/* category chips → flat warm-ink outlines */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.char {
+  background:transparent; color:var(--amber); border-color:var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.cutscene {
+  background:transparent; color:var(--red); border-color:var(--red);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.dating {
+  background:transparent; color:var(--red-deep); border-color:var(--red-deep);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.other {
+  background:transparent; color:var(--text-dim); border-color:var(--stroke-2);
+}
+
+/* ---------- remaining buttons: help & sort ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpButton {
+  border-radius:3px; border:1px solid var(--stroke-2); background:var(--glass-2);
+  font-family:var(--cond);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpButton:hover {
+  border-color:var(--amber); color:var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .sortButton {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .sortButton:hover,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .sortButton.active {
+  color:var(--amber);
+}
+
+/* ---------- toolbar shape: square the glass blocks like cartridge/list ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbarActions > button {
+  border-radius:5px; border:1.5px solid var(--stroke-2);
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbar .modFilterField input {
+  border-radius:5px; border:1.5px solid var(--stroke-2);
+}
+
+/* ---------- dock shape: print panels that still host the glass ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockNow,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockTrack {
+  border-radius:5px; border:1px solid var(--stroke-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn {
+  border-radius:5px; border:1px solid var(--stroke-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn.on {
+  border-color:var(--amber); color:var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn.apply {
+  border-radius:5px;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockFill {
+  background:linear-gradient(90deg, var(--amber), var(--red));
+}
+
+/* ---------- List mode → onto the print system ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modsTableFrame.is-list {
+  border-radius:5px; border:1.5px solid var(--stroke-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) table th {
+  background:rgba(0,0,0,0.28); color:var(--text); border-bottom:2px solid var(--red);
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) table td {
+  border-bottom:1px solid var(--stroke);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td code {
+  color:var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) input[type="checkbox"] {
+  accent-color:var(--red);
+}
+/* pending-row tones recolored to the poster palette */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) tr.pendingPatchChange.pendingPatchAdd td {
+  background:rgba(232,162,44,0.10); box-shadow:inset 3px 0 0 var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) tr.pendingPatchChange.pendingPatchRemove td {
+  background:rgba(226,64,42,0.10); box-shadow:inset 3px 0 0 var(--red);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) tr.pendingPatchChange.pendingPatchRepair td {
+  background:rgba(158,35,23,0.12); box-shadow:inset 3px 0 0 var(--red-deep);
+}
+
+/* ---------- "coming soon" empty pages ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .comingSoon .csIcon {
+  border-radius:0; border:2px solid var(--stroke-2); box-shadow:4px 4px 0 rgba(0,0,0,0.35);
+  background-image:
+    radial-gradient(var(--red) 20%, transparent 21%),
+    radial-gradient(var(--red) 20%, transparent 21%);
+  background-size:10px 10px, 10px 10px;
+  background-position:0 0, 5px 5px;
+  background-color:var(--glass-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .comingSoon h2 {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .comingSoon .csTag {
+  border-radius:0; background:transparent; border:1.5px solid var(--amber); color:var(--amber);
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.08em;
+}
