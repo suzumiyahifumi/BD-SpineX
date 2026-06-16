@@ -120,6 +120,13 @@ const DEFAULT_AUTHOR_RULES: AuthorRule[] = [
   makeAuthorRule("xian", "XiAn", AUTHOR_COLORS[13])
 ];
 
+const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL || "/";
+
+function publicAssetPath(path: string) {
+  const normalizedBase = PUBLIC_ASSET_BASE.endsWith("/") ? PUBLIC_ASSET_BASE : `${PUBLIC_ASSET_BASE}/`;
+  return `${normalizedBase}${path.replace(/^\/+/, "")}`;
+}
+
 const LEGACY_AUTHOR_COLORS_BY_ID = new Map(DEFAULT_AUTHOR_RULES.map((rule, index) => [rule.id, LEGACY_AUTHOR_COLORS[index]?.toLowerCase()]));
 
 const CHARACTER_ASSETS = characterAssetsJson as CharacterAssetsJson;
@@ -1194,7 +1201,7 @@ function matchesAuthorKeyword(haystack: string, compactHaystack: string, keyword
 
 function categoryTypeIconPath(category: ModCategory) {
   const icon = category === "char" ? "standing" : category === "dating" ? "dating" : category === "cutscene" ? "cutscene" : "npc";
-  return `/bd2modmanager-icons/${icon}.png`;
+  return publicAssetPath(`bd2modmanager-icons/${icon}.png`);
 }
 
 function categoryTypeLabel(category: ModCategory) {
@@ -1353,7 +1360,7 @@ function CartridgeRealistic(props: {
           <span className="rcartGloss" aria-hidden="true" />
           {detectedCharacter ? (
             <span className="rcartPortrait" aria-hidden="true" title={`${detectedCharacter.character} - ${detectedCharacter.costume}`}>
-              <img src={`/characters/standing/${detectedCharacter.imageId}.png`} alt="" draggable={false} loading="lazy" />
+              <img src={publicAssetPath(`characters/standing/${detectedCharacter.imageId}.png`)} alt="" draggable={false} loading="lazy" />
             </span>
           ) : null}
           <span className="rcartHead">
