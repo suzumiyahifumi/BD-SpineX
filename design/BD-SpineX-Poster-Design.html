@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BD-SpineX · 印刷海報風格設計書 (Soviet Print)</title>
+<style>
+/* fonts the app already ships (relative to /design) */
+@font-face { font-family:"BD Cond"; font-weight:700; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-700.ttf") format("truetype"); }
+@font-face { font-family:"BD Cond"; font-weight:800; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-800.ttf") format("truetype"); }
+@font-face { font-family:"BD Cond"; font-weight:600; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-600.ttf") format("truetype"); }
+@font-face { font-family:"BD TC"; font-weight:700; font-display:swap; src:url("../app/renderer/public/fonts/noto-sans-tc-700.ttf") format("truetype"); }
+@font-face { font-family:"BD TC"; font-weight:500; font-display:swap; src:url("../app/renderer/public/fonts/noto-sans-tc-500.ttf") format("truetype"); }
+
+/* ============== page = "Night Press" environment ============== */
+:root{
+  --ink:#0E0D0C; --ink-2:#17150F; --ink-3:#211d14;
+  --paper:#EDE0C4; --paper-dim:#B9AD8E; --paper-2:#E4D3AC;
+  --red:#E2402A; --red-deep:#9E2317; --amber:#E8A22C; --gold:#F2C14E;
+  --glass:rgba(237,224,196,0.08); --stroke:rgba(237,224,196,0.16);
+  --cond:"BD Cond","Oswald","Archivo Narrow","Helvetica Neue",sans-serif;
+  --tc:"BD TC","PingFang TC","Noto Sans TC",sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,var(--tc),sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--ink); color:var(--paper);
+  font-family:var(--body); -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(1000px 700px at 8% -8%, #241a10 0%, transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, #2a120b 0%, transparent 55%);
+  background-attachment:fixed;
+}
+/* halftone / riso grain overlay */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 26px}
+section{padding:54px 0}
+h1,h2,h3,h4{font-family:var(--cond);font-weight:800;letter-spacing:.01em;margin:0;text-transform:uppercase;line-height:.98}
+.tc{font-family:var(--tc);text-transform:none;letter-spacing:0}
+p{color:var(--paper-dim);line-height:1.7;font-size:15px}
+.kicker{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.28em;font-size:12px;color:var(--red)}
+code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;color:var(--gold)}
+.rule{height:0;border:0;border-top:3px solid var(--paper);opacity:.85}
+.rule.red{border-top-color:var(--red)}
+.thinrule{height:1px;background:var(--stroke);border:0}
+
+/* star + arrow motifs */
+.star{display:inline-block;width:1em;height:1em;background:var(--red);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);vertical-align:-.12em}
+
+/* ===== top bar ===== */
+.top{position:sticky;top:0;z-index:40;background:rgba(14,13,12,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:2px solid var(--red)}
+.top .wrap{display:flex;align-items:center;gap:16px;padding-top:12px;padding-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--cond);font-weight:800;font-size:20px;text-transform:uppercase}
+.brand .mark{width:30px;height:30px;background:var(--red);color:var(--paper);display:grid;place-items:center;font-weight:800;clip-path:polygon(0 0,100% 0,100% 100%,18% 100%)}
+.top nav{margin-left:auto;display:flex;gap:2px;flex-wrap:wrap}
+.top nav a{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--paper-dim);text-decoration:none;padding:7px 11px}
+.top nav a:hover{color:var(--paper);background:var(--glass)}
+
+/* ===== hero poster ===== */
+.hero{position:relative;overflow:hidden;border:2px solid var(--paper);background:var(--ink-2);margin-top:26px}
+.hero .band{position:absolute;inset:0;background:
+  linear-gradient(115deg, transparent 38%, var(--red) 38% 52%, transparent 52%),
+  linear-gradient(115deg, transparent 54%, var(--red-deep) 54% 60%, transparent 60%);opacity:.9}
+.hero .grid{position:absolute;inset:0;background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);background-size:34px 34px;opacity:.5}
+.hero .inner{position:relative;padding:46px 40px;display:grid;grid-template-columns:1.4fr .9fr;gap:20px;align-items:center}
+.hero h1{font-size:clamp(40px,8vw,92px);color:var(--paper)}
+.hero h1 .o{color:var(--red)}
+.hero .sub{margin-top:14px;max-width:42ch}
+.hero .big{font-family:var(--cond);font-weight:800;font-size:clamp(90px,18vw,200px);line-height:.8;color:var(--amber);text-align:right;text-shadow:6px 6px 0 var(--red-deep)}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.tag{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;padding:6px 11px;border:1.5px solid var(--paper);color:var(--paper)}
+.tag.red{background:var(--red);border-color:var(--red);color:var(--paper)}
+
+/* ===== thesis cards ===== */
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:760px){.grid4{grid-template-columns:1fr}.hero .inner{grid-template-columns:1fr}.hero .big{text-align:left}}
+.note{border:2px solid var(--paper);background:var(--ink-2);padding:18px 18px 16px;position:relative}
+.note .n{position:absolute;top:-14px;left:14px;background:var(--red);color:var(--paper);font-family:var(--cond);font-weight:800;font-size:18px;width:30px;height:30px;display:grid;place-items:center}
+.note h3{font-size:19px;color:var(--paper);margin:6px 0 8px}
+.note p{margin:0;font-size:14px}
+
+/* ===== scheme tiles ===== */
+.schemes{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:900px){.schemes{grid-template-columns:1fr}}
+.scheme{border:2px solid var(--paper);background:var(--surface,#17150F)}
+.scheme .hd{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--red);color:var(--paper)}
+.scheme .hd .id{font-family:var(--cond);font-weight:800;font-size:20px}
+.scheme .hd .rec{margin-left:auto;font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.1em;border:1.5px solid var(--paper);padding:2px 7px}
+
+/* mini app mock — reads scheme tokens */
+.mock{--bg:#0E0D0C;--surface:#17150F;--ink:#0E0D0C;--paper:#EDE0C4;--paper-dim:#a99e84;--red:#E2402A;--red-deep:#9E2317;--amber:#E8A22C;--tray:#0b0a08;--glass:rgba(237,224,196,.08);--mstroke:rgba(237,224,196,.18)}
+.mock{background:var(--bg);color:var(--paper);font-family:var(--body);display:grid;grid-template-columns:96px 1fr;min-height:320px;border-top:1px solid var(--mstroke)}
+.mock .rail{background:var(--surface);border-right:1px solid var(--mstroke);padding:12px 8px;display:flex;flex-direction:column;gap:3px}
+.mock .rail .b{font-family:var(--cond);font-weight:800;text-transform:uppercase;font-size:13px;color:var(--paper);padding:6px 8px}
+.mock .rail a{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:11.5px;color:var(--paper-dim);padding:6px 8px;border-left:3px solid transparent}
+.mock .rail a.on{color:var(--paper);background:var(--red);border-left-color:var(--amber)}
+.mock .main{padding:12px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.mock .titleband{position:relative;padding:8px 12px;background:linear-gradient(100deg,var(--red) 0 70%,transparent 70%);color:var(--paper);overflow:hidden}
+.mock .titleband h4{font-size:22px;color:var(--paper)}
+.mock .titleband .big{position:absolute;right:10px;top:-8px;font-family:var(--cond);font-weight:800;font-size:46px;color:var(--paper);opacity:.9}
+.mock .btns{display:flex;gap:8px;flex-wrap:wrap}
+.mock .tray{margin-top:auto;background:var(--tray);border:1px solid var(--mstroke);padding:8px;display:flex;gap:8px;align-items:center}
+.mock .cart{width:74px;height:58px;border-radius:6px;background:linear-gradient(180deg,#d2d5da,#9ca2ab);box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 3px 0 #828894,0 6px 8px rgba(0,0,0,.5);position:relative;flex:none}
+.mock .cart::after{content:"原樣";font-family:var(--tc);position:absolute;inset:auto 0 3px;text-align:center;font-size:8px;color:#3a3f48}
+.dock{flex:1;height:46px;border-radius:10px;border:1px solid rgba(237,224,196,.18);background:var(--glass);-webkit-backdrop-filter:blur(6px) saturate(1.4);backdrop-filter:blur(6px) saturate(1.4);display:flex;align-items:center;gap:8px;padding:0 12px;overflow:hidden}
+@supports(backdrop-filter:url(#lens)){.dock{backdrop-filter:blur(3px) url(#lens) saturate(1.5)}}
+.dock .disc{width:30px;height:30px;border-radius:8px;background:conic-gradient(from 210deg,#6a5bff,#33e0e6,#ff5ca8,#6a5bff);flex:none}
+.dock .nl{font-family:var(--cond);font-weight:700;text-transform:uppercase;font-size:11px;color:var(--amber)}
+.dock .nl b{display:block;color:var(--paper);font-size:14px}
+.dock .apply{margin-left:auto}
+
+/* ===== print↔glass buttons ===== */
+.pbtn{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;border:1.5px solid var(--ink,#0E0D0C);border-radius:5px;padding:9px 15px;cursor:pointer;transition:.16s;position:relative}
+.pbtn.primary{background:var(--red);color:var(--paper);border-color:var(--red-deep);box-shadow:3px 3px 0 var(--red-deep)}
+.pbtn.primary:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--red-deep);background:var(--red);-webkit-backdrop-filter:blur(6px) saturate(1.5);backdrop-filter:blur(6px) saturate(1.5)}
+.pbtn.paper{background:var(--paper);color:var(--ink,#0E0D0C);border-color:var(--ink,#0E0D0C);box-shadow:3px 3px 0 rgba(0,0,0,.35)}
+.pbtn.paper:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 rgba(0,0,0,.35)}
+.pbtn.ghost{background:transparent;color:var(--paper);border-color:var(--paper)}
+.pbtn.ghost:hover{background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.pbtn.sm{font-size:11px;padding:6px 10px;box-shadow:2px 2px 0 var(--red-deep)}
+
+/* swatches */
+.sw{display:flex;flex-wrap:wrap;gap:0;border:2px solid var(--paper)}
+.sw i{flex:1 1 0;min-width:34px;height:42px;position:relative}
+.sw i b{position:absolute;left:3px;bottom:2px;font-family:ui-monospace,monospace;font-size:8px;color:#0009;mix-blend-mode:hard-light}
+
+/* element library */
+.lib{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:760px){.lib{grid-template-columns:1fr}}
+.demo{border:2px solid var(--paper);background:var(--ink-2);padding:16px}
+.demo h4{color:var(--paper);font-size:16px;margin-bottom:12px}
+.giant{font-family:var(--cond);font-weight:800;font-size:74px;line-height:.85;color:var(--amber);text-shadow:4px 4px 0 var(--red-deep)}
+.giant small{font-family:var(--cond);font-weight:700;font-size:15px;letter-spacing:.18em;color:var(--paper-dim);display:block;text-transform:uppercase}
+.halftone{height:60px;border:1px solid var(--stroke);background:radial-gradient(var(--red) 22%,transparent 23%) 0 0/9px 9px,radial-gradient(var(--red) 22%,transparent 23%) 4.5px 4.5px/9px 9px;background-color:var(--ink)}
+.typescale div{font-family:var(--cond);text-transform:uppercase;color:var(--paper);line-height:1.05}
+
+/* keep/change map */
+.map{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.map{grid-template-columns:1fr}}
+.map .col{border:2px solid var(--paper);padding:14px}
+.map .col.keep{border-color:var(--amber)}
+.map .col h4{color:var(--paper);margin-bottom:8px}
+.map ul{margin:0;padding-left:18px;color:var(--paper-dim);font-size:14px;line-height:1.7}
+.tagline{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+.keep .tagline{color:var(--amber)} .change .tagline{color:var(--red)}
+
+/* code */
+.code{border:2px solid var(--paper);background:#0a0908}
+.code .bar{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:11px;color:var(--paper-dim);padding:7px 12px;border-bottom:1px solid var(--stroke)}
+.code pre{margin:0;padding:13px 15px;overflow:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.65;color:#d9cda8}
+.code .k{color:var(--amber)} .code .v{color:#e98}
+
+footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
+.reveal{opacity:0;transform:translateY(16px);transition:.6s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
+.secnum{font-family:var(--cond);font-weight:800;color:var(--red);font-size:14px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+
+<!-- liquid lens for the dock demos -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="lens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.01 0.014" numOctaves="2" seed="7" result="n"/>
+    <feGaussianBlur in="n" stdDeviation="2" result="s"/>
+    <feDisplacementMap in="SourceGraphic" in2="s" scale="40" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand"><span class="mark">B</span> BD-SpineX · 印刷局</div>
+    <nav>
+      <a href="#thesis">主張</a><a href="#schemes">配色</a><a href="#buttons">按鈕</a>
+      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a>
+    </nav>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="wrap reveal">
+  <div class="hero">
+    <div class="band"></div><div class="grid"></div>
+    <div class="inner">
+      <div>
+        <div class="kicker">Soviet Print · Retro-Futurism Mod Manager</div>
+        <h1>印刷<span class="o">／</span>玻璃<br>並置主義</h1>
+        <p class="sub tc">把蘇聯宣傳海報的油墨、粗壓縮字體、斜切與巨數，套在「深色印刷台」之上——讓你既有的液態玻璃與卡帶照常發光，外框則整面換成印刷感。</p>
+        <div class="tags">
+          <span class="tag red">紅 · 主墨</span><span class="tag">琥珀 · 輔</span>
+          <span class="tag">奶油紙</span><span class="tag">暖近黑</span>
+        </div>
+      </div>
+      <div class="big">2<span style="color:var(--paper)">.</span>0</div>
+    </div>
+  </div>
+</header>
+
+<!-- THESIS -->
+<section id="thesis" class="wrap reveal">
+  <div class="secnum">01 — 設計主張</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">四個判斷</h2>
+  <p class="tc" style="max-width:62ch">在動手配色前，先講清楚「印刷感」和你現有資產（玻璃、卡帶）的真實取捨。</p>
+  <div class="grid4" style="margin-top:26px">
+    <div class="note"><span class="n">1</span><h3 class="tc">印刷感 ≠ 背景變米黃</h3><p class="tc">真正的海報感來自油墨、粗壓縮字體、全大寫字距、斜切紅帶、巨大數字、厚規線與半色調網點。顏色只是其一。</p></div>
+    <div class="note"><span class="n">2</span><h3 class="tc">玻璃需要深色</h3><p class="tc">液態玻璃靠深色高對比背景才折射出立體；疊在米黃紙上會變平變髒。你的灰塑膠卡帶在大片米黃上對比也會散掉。</p></div>
+    <div class="note"><span class="n">3</span><h3 class="tc">深色印刷台 + 紙張外框</h3><p class="tc">工作區（卡帶牆、dock）維持深色讓玻璃發揮；印刷感集中在側欄、標題、按鈕、空狀態、徽章等 chrome。</p></div>
+    <div class="note"><span class="n">4</span><h3 class="tc">暖色位移：CP 值最高</h3><p class="tc">把冷藍黑 <code>#06070d</code> 換成暖近黑、白字換奶油色、藍灰玻璃換暖調。幾乎不動結構，識別度立刻跳一階。</p></div>
+  </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- SCHEMES -->
+<section id="schemes" class="wrap reveal">
+  <div class="secnum">02 — 三套配色</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">配色方案（可直接比較）</h2>
+  <p class="tc" style="max-width:62ch">每套都套在同一個迷你介面上：側欄、斜切標題＋巨數、印刷按鈕、深色 tray 上的<strong>真實玻璃 dock</strong> 與「原樣」卡帶。</p>
+
+  <div class="schemes" style="margin-top:24px">
+    <!-- Night Press -->
+    <div class="scheme">
+      <div class="hd"><span class="id">A</span> Night Press <span class="rec">★ 首選</span></div>
+      <div class="mock" style="--bg:#0E0D0C;--surface:#17150F;--ink:#0E0D0C;--paper:#EDE0C4;--paper-dim:#a99e84;--red:#E2402A;--red-deep:#9E2317;--amber:#E8A22C;--tray:#0a0907;--glass:rgba(237,224,196,.08);--mstroke:rgba(237,224,196,.18)">
+        <div class="rail"><div class="b">BD</div><a class="on">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Library</h4><span class="big">31</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Now Loading<b>31 mounted</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Risograph Day -->
+    <div class="scheme">
+      <div class="hd" style="background:#C8372A"><span class="id">B</span> Risograph Day</div>
+      <div class="mock" style="--bg:#F0E3C6;--surface:#E4D3AC;--ink:#1B1714;--paper:#1B1714;--paper-dim:#6b5e49;--red:#C8372A;--red-deep:#8E1E15;--amber:#D9772A;--tray:#14120E;--glass:rgba(255,255,255,.10);--mstroke:rgba(27,23,20,.2)">
+        <div class="rail" style="background:#E4D3AC"><div class="b">BD</div><a class="on" style="color:#F0E3C6">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband" style="color:#F0E3C6"><h4 style="color:#F0E3C6">Library</h4><span class="big" style="color:#F0E3C6">31</span></div>
+          <div class="btns"><button class="pbtn primary sm" style="color:#F0E3C6">Apply</button><button class="pbtn paper sm" style="background:#F0E3C6">Refresh</button><button class="pbtn ghost sm" style="color:#1B1714;border-color:#1B1714">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock" style="border-color:rgba(255,255,255,.2)"><div class="disc"></div><div class="nl" style="color:#D9772A">Now Loading<b style="color:#F0E3C6">31 mounted</b></div><button class="pbtn primary sm apply" style="color:#F0E3C6">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Constructivist Mono -->
+    <div class="scheme">
+      <div class="hd" style="background:#C4382B"><span class="id">C</span> Constructivist Mono</div>
+      <div class="mock" style="--bg:#F2E7C9;--surface:#E8DBB6;--ink:#161616;--paper:#161616;--paper-dim:#5a533f;--red:#C4382B;--red-deep:#8D1E16;--amber:#E0AE2E;--tray:#1a1812;--glass:rgba(255,255,255,.08);--mstroke:rgba(22,22,22,.22)">
+        <div class="rail" style="background:#E8DBB6"><div class="b">BD</div><a class="on" style="color:#F2E7C9">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband" style="background:linear-gradient(100deg,#C4382B 0 64%,transparent 64%);color:#F2E7C9"><h4 style="color:#F2E7C9">Library</h4><span class="big" style="color:#F2E7C9">31</span></div>
+          <div class="btns"><button class="pbtn primary sm" style="color:#F2E7C9">Apply</button><button class="pbtn paper sm" style="background:#F2E7C9">Refresh</button><button class="pbtn ghost sm" style="color:#161616;border-color:#161616">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl" style="color:#E0AE2E">Now Loading<b style="color:#F2E7C9">31 mounted</b></div><button class="pbtn primary sm apply" style="color:#F2E7C9">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- palettes -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px">
+    <div><div class="tagline" style="color:var(--amber);margin-bottom:6px">A · NIGHT PRESS</div>
+      <div class="sw"><i style="background:#0E0D0C"><b>0E0D0C</b></i><i style="background:#EDE0C4"><b>EDE0C4</b></i><i style="background:#E2402A"><b>E2402A</b></i><i style="background:#9E2317"><b>9E2317</b></i><i style="background:#E8A22C"><b>E8A22C</b></i></div></div>
+    <div><div class="tagline" style="color:var(--amber);margin-bottom:6px">B · RISOGRAPH DAY</div>
+      <div class="sw"><i style="background:#F0E3C6"><b>F0E3C6</b></i><i style="background:#1B1714"><b>1B1714</b></i><i style="background:#C8372A"><b>C8372A</b></i><i style="background:#D9772A"><b>D9772A</b></i><i style="background:#14120E"><b>14120E</b></i></div></div>
+    <div><div class="tagline" style="color:var(--amber);margin-bottom:6px">C · CONSTRUCTIVIST MONO</div>
+      <div class="sw"><i style="background:#F2E7C9"><b>F2E7C9</b></i><i style="background:#161616"><b>161616</b></i><i style="background:#C4382B"><b>C4382B</b></i><i style="background:#8D1E16"><b>8D1E16</b></i><i style="background:#E0AE2E"><b>E0AE2E</b></i></div></div>
+  </div>
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">我的排序：</strong>A Night Press（預設）＞ B Risograph Day（當 light mode）＞ C Mono（啟動／關於頁）。方向與 ChatGPT 的 C/A3 一致，但我把<strong style="color:var(--amber)">暖色位移</strong>與<strong style="color:var(--amber)">深色 press-tray 承載玻璃</strong>當成必做——這是讓印刷感與玻璃／卡帶共存的關鍵。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- BUTTONS -->
+<section id="buttons" class="wrap reveal">
+  <div class="secnum">03 — 按鈕</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">平面印刷 × 液態玻璃</h2>
+  <p class="tc" style="max-width:62ch">靜止＝印刷（實色填充、1.5px 硬油墨描邊、方角、套色偏移陰影）；hover／active＝玻璃（backdrop 模糊＋透鏡）。把滑鼠移上去看它從印刷「翻成」玻璃。</p>
+  <div class="demo" style="margin-top:22px;display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+    <button class="pbtn primary">Apply Changes</button>
+    <button class="pbtn paper">Refresh Mods</button>
+    <button class="pbtn ghost">Reset</button>
+    <span class="tc" style="color:var(--paper-dim);font-size:13px">← 靜止是印刷；hover 變玻璃＋下沉 1px（像被按進紙裡）</span>
+  </div>
+  <p class="tc" style="margin-top:14px;font-size:13.5px"><code>box-shadow:3px 3px 0 var(--red-deep)</code> 是模仿印刷「套色沒對準」的硬偏移，取代柔光暈；hover 時加上 <code>backdrop-filter: blur() url(#lens)</code> 才出現玻璃。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- ELEMENTS -->
+<section id="elements" class="wrap reveal">
+  <div class="secnum">04 — 海報元件庫</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">非顏色的印刷槓桿</h2>
+  <div class="lib" style="margin-top:22px">
+    <div class="demo"><h4 class="tc">巨大數字（狀態＝海報）</h4><div class="giant">31<small>Cartridges Mounted</small></div></div>
+    <div class="demo"><h4 class="tc">壓縮字級階層</h4><div class="typescale" style="display:grid;gap:4px">
+      <div style="font-size:40px;font-weight:800">LIBRARY</div>
+      <div style="font-size:22px;font-weight:800;color:var(--red)">CARTRIDGES · 75</div>
+      <div style="font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--paper-dim)">CHARACTER PACK · RUNTIME MOUNTED</div>
+    </div></div>
+    <div class="demo"><h4 class="tc">斜切紅帶 + 星</h4>
+      <div style="position:relative;height:54px;background:linear-gradient(100deg,var(--red) 0 64%,transparent 64%);display:flex;align-items:center;padding:0 14px;color:var(--paper);font-family:var(--cond);font-weight:800;font-size:24px;text-transform:uppercase">LIBRARY <span class="star" style="margin-left:auto;font-size:22px"></span></div>
+    </div>
+    <div class="demo"><h4 class="tc">半色調網點 / 厚規線</h4><div class="halftone"></div><hr class="rule" style="margin-top:10px"><hr class="rule red" style="margin-top:6px"></div>
+  </div>
+  <p class="tc" style="margin-top:16px"><strong style="color:var(--paper)">字體：</strong>標題與標籤用你已加的 <code>BD Cond</code>（Barlow Condensed）全大寫＋字距；中文用 <code>BD TC</code>（Noto Sans TC）；內文維持 SF。<strong style="color:var(--paper)">克制：</strong>紅為主墨、琥珀為輔、黃極少量——紅橘黃等重一起上會糊。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- MAP -->
+<section id="map" class="wrap reveal">
+  <div class="secnum">05 — 保留 vs 改變</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">動哪裡、不動哪裡</h2>
+  <div class="map" style="margin-top:22px">
+    <div class="col keep change-keep"><div class="tagline">KEEP · 原樣保留</div><h4 class="tc">擬物 / 玻璃資產</h4>
+      <ul class="tc"><li>卡帶造型、角色封面、3D 厚度（完全不動）</li><li>dock 的液態玻璃（剛修好）</li><li>按鈕 hover 的玻璃態</li><li>卡帶牆／dock 維持深色 tray</li></ul></div>
+    <div class="col change"><div class="tagline">CHANGE · 換成印刷</div><h4 class="tc">Chrome / 外框</h4>
+      <ul class="tc"><li>暖色位移：冷黑→暖近黑、白→奶油</li><li>側欄、標題列、徽章 → 印刷紅／斜切</li><li>按鈕靜止態 → 平面印刷＋套色偏移</li><li>選取的綠勾 → 朱紅／琥珀「蓋章」勾或星</li><li>空狀態、分隔、計數 → 巨數＋厚規線＋網點</li></ul></div>
+  </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- BUILD -->
+<section id="build" class="wrap reveal">
+  <div class="secnum">06 — 落地</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">怎麼蓋</h2>
+  <p class="tc" style="max-width:62ch">三套配色全用 CSS 變數，掛在 <code>:root[data-theme]</code>，加一個切換就能即時換。卡帶／dock 的深色 tray 用獨立變數，不被主題的亮底影響。</p>
+  <div class="code" style="margin-top:18px">
+    <div class="bar">app/renderer/src/styles.css — theme tokens</div>
+<pre><span class="k">:root[data-theme="night"]</span> {
+  <span class="k">--ink</span>:<span class="v">#0E0D0C</span>; <span class="k">--paper</span>:<span class="v">#EDE0C4</span>;
+  <span class="k">--red</span>:<span class="v">#E2402A</span>; <span class="k">--red-deep</span>:<span class="v">#9E2317</span>; <span class="k">--amber</span>:<span class="v">#E8A22C</span>;
+  <span class="k">--tray</span>:<span class="v">#0a0907</span>;  <span class="k">--glass</span>:<span class="v">rgba(237,224,196,.08)</span>;
+}
+<span class="k">:root[data-theme="riso"]</span> {  <span class="k">--ink</span>:<span class="v">#1B1714</span>; <span class="k">--paper</span>:<span class="v">#F0E3C6</span>;
+  <span class="k">--red</span>:<span class="v">#C8372A</span>; <span class="k">--amber</span>:<span class="v">#D9772A</span>; <span class="k">--tray</span>:<span class="v">#14120E</span>; }
+
+<span class="k">.btn</span> { <span class="k">background</span>:<span class="v">var(--red)</span>; <span class="k">border</span>:<span class="v">1.5px solid var(--red-deep)</span>;
+       <span class="k">border-radius</span>:<span class="v">5px</span>; <span class="k">box-shadow</span>:<span class="v">3px 3px 0 var(--red-deep)</span>; }
+<span class="k">.btn:hover</span> { <span class="k">backdrop-filter</span>:<span class="v">blur(6px) url(#liquid-lens) saturate(1.5)</span>; }</pre>
+  </div>
+  <p class="tc" style="margin-top:16px">變動檔案：<code>styles.css</code>（token＋按鈕＋側欄／標題印刷化）、<code>App.tsx</code>（主題切換、巨數、把綠勾換成蓋章勾）。<strong style="color:var(--amber)">卡帶元件不動。</strong></p>
+</section>
+
+<footer class="wrap">
+  <hr class="thinrule" style="margin-bottom:18px">
+  <div class="tc">BD-SpineX 印刷海報風格設計書 · 蘇聯宣傳印刷 × 液態玻璃並置主義。配色／元件為原創設計，僅取建構主義「風格」（幾何、油墨、斜切），未複製任何特定海報作品。</div>
+</footer>
+
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.06});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
