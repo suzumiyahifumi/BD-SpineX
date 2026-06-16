@@ -4125,9 +4125,21 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbarActions > button {
   border-radius:5px; border:1.5px solid var(--stroke-2);
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
+  color:var(--text);   /* light ink on the dark glass (not the paper-button dark ink) */
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbar .modFilterField input {
   border-radius:5px; border:1.5px solid var(--stroke-2);
+}
+
+/* These controls are glass, not paper: keep light text and a glassy hover
+   instead of the paper-print flip (which left dark text on dark glass). */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn {
+  color:var(--text);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbarActions > button:hover:not(:disabled),
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn:not(.apply):hover:not(:disabled) {
+  background:var(--glass-3); border-color:var(--red);
+  box-shadow:var(--liquid-shadow); transform:none;
 }
 
 /* ---------- dock shape: print panels that still host the glass ---------- */
@@ -4314,21 +4326,51 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --pending-diff-color:var(--red-deep); background:rgba(158,35,23,0.12);
 }
 
-/* ---------- settings → print labels & blocks ---------- */
+/* ---------- settings → frameless sections, print/glass detail elements ----------
+   No outer frame on the settings blocks themselves; the print/glass
+   juxtaposition lives in the detail elements (printed labels + ink swatches
+   vs. glass status/author cards). */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panel.settingsGrid,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panel.authorSettingsPanel {
+  border:0; border-radius:0; background:transparent; box-shadow:none;
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+}
+
+/* PRINT — field labels are printed headings with a red ink tick */
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .field > .fieldLabel,
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modFilterField span {
-  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em;
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
+  color:var(--text); font-weight:700;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus {
-  border-radius:0; border:1.5px solid var(--stroke-2);
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .field > .fieldLabel {
+  position:relative; padding-left:13px;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .field > .fieldLabel::before {
+  content:""; position:absolute; left:0; top:50%; transform:translateY(-50%);
+  width:4px; height:13px; background:var(--red);
+}
+
+/* GLASS — status/version blocks and author cards sit on liquid glass */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRow {
+  border-radius:8px; border:1px solid var(--liquid-border); background:var(--liquid-surface);
+  -webkit-backdrop-filter:blur(6px) saturate(1.5); backdrop-filter:blur(6px) saturate(1.5);
+  box-shadow:var(--liquid-shadow);
+}
+@supports (backdrop-filter: url(#liquid-lens)) {
+  :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus,
+  :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRow {
+    -webkit-backdrop-filter:blur(2.5px) url(#liquid-lens) saturate(1.55);
+    backdrop-filter:blur(2.5px) url(#liquid-lens) saturate(1.55);
+  }
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus strong {
   font-family:var(--cond); letter-spacing:0.02em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRow {
-  border-radius:0; border:1.5px solid var(--stroke-2);
+/* PRINT inside the glass card — square ink swatch + printed name */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleSwatch {
+  border-radius:0; border:1.5px solid var(--ink);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleSwatch { border-radius:0; }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleName {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
