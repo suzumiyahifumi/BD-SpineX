@@ -4193,3 +4193,159 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   border-radius:0; background:transparent; border:1.5px solid var(--amber); color:var(--amber);
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.08em;
 }
+
+/* ============================================================
+   Night Press — poster polish, pass 2
+   Cartridge selection/stage marks become red/amber "stamps"
+   (art & shape untouched), and the rest of the pages (logs,
+   settings, banners, the staged-changes manifest, help popups,
+   panels) are brought onto the print system.
+   ============================================================ */
+
+/* ---------- cartridge stage marks → rubber stamps ---------- */
+/* Collector pod: staged-mount = amber stamp, staged-unmount = red stamp.
+   (Mounted ✓ is already a red stamp from pass 1.) */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-plus.on {
+  background:var(--paper);
+  box-shadow:0 0 0 2px var(--amber), 0 5px 12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-plus.on .rcartPodMark {
+  color:var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-minus {
+  background:var(--paper);
+  box-shadow:0 0 0 3px var(--red), 0 5px 12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.85);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-minus .rcartPodMark {
+  color:var(--red);
+}
+/* collector frame outlines onto the palette */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-add .rcartShell { outline-color:var(--amber); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-remove .rcartShell { outline-color:var(--red); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-warning .rcartShell { outline-color:var(--amber); }
+
+/* Arcade cartridge: selection check → square red stamp, frames recolored */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-selected .cartCheck {
+  border-radius:4px; background:var(--paper); border:1.5px solid var(--red); color:var(--red);
+  box-shadow:2px 2px 0 rgba(0,0,0,0.35);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-mounted { border-color:var(--red); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-add { border-color:var(--amber); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-remove { border-color:var(--red); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-conflict { border-color:var(--red-deep); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-mounted .cartStatus { color:var(--amber); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-add .cartStatus { color:var(--amber); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-remove .cartStatus { color:var(--red); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-conflict .cartStatus { color:var(--red-deep); }
+
+/* ---------- panels → print frames (still host the glass) ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panel {
+  border-radius:8px; border:1.5px solid var(--stroke-2);
+  box-shadow:0 8px 26px var(--shadow);
+}
+
+/* ---------- inputs: red focus instead of gold ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) input:focus,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) select:focus {
+  border-color:var(--red); box-shadow:0 0 0 3px rgba(226,64,42,0.18);
+}
+
+/* ---------- logs → press readout ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logPanel h2,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logPage h2 {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em;
+  border-bottom:3px solid var(--red); padding-bottom:5px; display:inline-block;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent {
+  border-radius:0; font-family:var(--cond); text-transform:uppercase; letter-spacing:0.02em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.ok,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.warn,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.module,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.bundle {
+  background:transparent; color:var(--amber); box-shadow:inset 0 0 0 1px var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.err,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.error,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.action {
+  background:transparent; color:var(--red); box-shadow:inset 0 0 0 1px var(--red);
+}
+
+/* ---------- banners → print warning placards (thick left bar) ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .errorPill {
+  border-radius:0; background:transparent; border:1.5px solid var(--red); border-left-width:5px;
+  color:var(--red); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .warningPill {
+  border-radius:0; background:transparent; border:1.5px solid var(--amber); border-left-width:5px;
+  color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .migrationPanel,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .inheritHistoryPanel {
+  border-radius:0; border-color:var(--amber); border-left-width:5px;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .inheritHistoryTitle {
+  color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.04em;
+}
+
+/* ---------- staged-changes manifest (pending diff dock) ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffDock {
+  border-radius:8px; border:1.5px solid var(--stroke-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffHead span {
+  color:var(--amber); font-family:var(--cond);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffHead strong {
+  border-radius:0; background:var(--red); border-color:var(--red-deep); color:var(--paper);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem { border-radius:0; }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffColor { border-radius:0; box-shadow:none; }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffName {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchAdd {
+  --pending-diff-color:var(--amber); background:rgba(232,162,44,0.1);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchRemove {
+  --pending-diff-color:var(--red); background:rgba(226,64,42,0.1);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchRepair,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchConflict {
+  --pending-diff-color:var(--red-deep); background:rgba(158,35,23,0.12);
+}
+
+/* ---------- settings → print labels & blocks ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .field > .fieldLabel,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modFilterField span {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus {
+  border-radius:0; border:1.5px solid var(--stroke-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus strong {
+  font-family:var(--cond); letter-spacing:0.02em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRow {
+  border-radius:0; border:1.5px solid var(--stroke-2);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleSwatch { border-radius:0; }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleName {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleLock,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRemove { border-radius:3px; }
+
+/* ---------- help popup → print tooltip ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpPopup {
+  border-radius:0; border:1.5px solid var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpPopupTitle {
+  color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
+}
+
+/* ---------- view subtitle + rail sub → condensed ---------- */
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewHead .viewSub,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railSub,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusSub {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
+}

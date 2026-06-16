@@ -167,7 +167,8 @@ export function App() {
   const [cartSkin, setCartSkin] = useState<CartSkin>(() => (localStorage.getItem(CARTSKIN_KEY) === "arcade" ? "arcade" : "realistic"));
   const [theme, setTheme] = useState<Theme>(() => {
     const t = localStorage.getItem(THEME_KEY);
-    return t === "night" || t === "riso" || t === "mono" ? t : "classic";
+    // Night Press is the default; an explicit "classic" choice is still honored.
+    return t === "classic" || t === "night" || t === "riso" || t === "mono" ? t : "night";
   });
 
   useEffect(() => {
