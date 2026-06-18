@@ -2758,6 +2758,51 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   transition: transform 0.24s cubic-bezier(.2,.7,.2,1), filter 0.2s;
 }
 
+.rcart--canvas .rcartShell {
+  background: transparent;
+}
+
+.rcart--canvas .rcartShell::before,
+.rcart--canvas .rcartShell::after {
+  display: none;
+}
+
+.rcartCanvasBase,
+.rcartCanvasPlastic {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.rcartCanvasBase {
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 7px 7px 4px 4px;
+}
+
+.rcartCanvasPlastic {
+  inset: -8px -8.5px -14px;
+  z-index: 4;
+  width: calc(100% + 17px);
+  height: calc(100% + 22px);
+  border-radius: 10px 10px 8px 8px;
+  opacity: 0.95;
+  transform: translateY(2px);
+}
+
+.rcart.rcart--canvas .rcartLabel,
+.rcart.rcart--canvas.cat-char .rcartLabel {
+  z-index: 5;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rcart--canvas .rcartPod {
+  z-index: 10;
+}
+
 .rcart:hover:not(:disabled) {
   transform: translateY(-5px);
   filter: saturate(1.04);
@@ -2824,10 +2869,21 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   pointer-events: none;
 }
 
+.rcartRidges--right {
+  right: 0;
+  left: auto;
+}
+
 .rcartRidges i {
   border-radius: 0 3px 3px 0;
   background: linear-gradient(90deg, rgba(24, 51, 86, 0.76), rgba(70, 110, 165, 0.4));
   box-shadow: inset -1px 0 0 rgba(180, 207, 240, 0.14);
+}
+
+.rcartRidges--right i {
+  border-radius: 3px 0 0 3px;
+  background: linear-gradient(90deg, rgba(70, 110, 165, 0.4), rgba(24, 51, 86, 0.76));
+  box-shadow: inset 1px 0 0 rgba(180, 207, 240, 0.12);
 }
 
 .rcart.is-mounted .rcartShell { outline: 0; }
@@ -3535,8 +3591,16 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background: linear-gradient(90deg, rgba(77, 84, 93, 0.82), rgba(143, 153, 164, 0.38));
 }
 
+.rcart.cat-char .rcartRidges--right i {
+  background: linear-gradient(90deg, rgba(143, 153, 164, 0.38), rgba(77, 84, 93, 0.82));
+}
+
 .rcart.cat-cutscene .rcartRidges i {
   background: linear-gradient(90deg, rgba(16, 18, 25, 0.9), rgba(78, 84, 98, 0.36));
+}
+
+.rcart.cat-cutscene .rcartRidges--right i {
+  background: linear-gradient(90deg, rgba(78, 84, 98, 0.36), rgba(16, 18, 25, 0.9));
 }
 
 .rcart.cat-char .rcartLabel {
@@ -3729,8 +3793,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   transform: rotate(6deg);
   filter:
     drop-shadow(0 2px 0 rgba(94, 70, 22, 0.24))
-    drop-shadow(0 5px 6px rgba(0, 0, 0, 0.48))
-    drop-shadow(0 0 5px rgba(255, 224, 76, 0.22));
+    drop-shadow(0 5px 5px rgba(0, 0, 0, 0.46))
+    drop-shadow(0 0 4px rgba(255, 224, 76, 0.18));
 }
 
 .rcart.is-warning .rcartWarningSticker {
@@ -3748,12 +3812,12 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .rcartWarningSticker::before {
   z-index: 0;
-  border-radius: 11px;
   background:
     radial-gradient(18px 10px at 48% 8%, rgba(255, 255, 255, 0.45), transparent 68%),
     radial-gradient(26px 16px at 18% 78%, rgba(84, 74, 35, 0.12), transparent 72%),
-    linear-gradient(180deg, rgba(255, 229, 78, 0.32), rgba(190, 151, 42, 0.08));
+    linear-gradient(180deg, rgba(255, 229, 78, 0.18), rgba(190, 151, 42, 0.04));
   transform: translate(1px, 2px) rotate(-1deg);
+  opacity: 0.66;
 }
 
 .rcartWarningSticker::after {
@@ -3773,19 +3837,28 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   position: relative;
   z-index: 2;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 98%;
+  height: 98%;
 }
 
 .rcartWarningTriangle {
-  fill: #f5c824;
-  stroke: #16120a;
-  stroke-width: 7;
+  fill: #f2c127;
+  stroke: #c9961c;
+  stroke-width: 8;
   stroke-linejoin: round;
+  stroke-linecap: round;
   paint-order: stroke fill;
   filter:
-    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.28))
-    drop-shadow(0 1px 0 rgba(105, 67, 17, 0.12));
+    drop-shadow(0 -1px 0 rgba(255, 243, 133, 0.42))
+    drop-shadow(0 2px 0 rgba(93, 62, 18, 0.18));
+}
+
+.rcartWarningInnerLine {
+  fill: none;
+  stroke: #1e1a10;
+  stroke-width: 3.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .rcartWarningBang {
@@ -3854,88 +3927,116 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   .rcartNamePlate strong { transition: none; }
 }
 
-/* Tauri's WebKit renderer stutters on the cartridge's hover movement. Keep the
-   label expansion and filter work, but replace the physical lift with a grid
-   highlight. Electron keeps the full treatment. */
+/* Tauri's WebKit renderer stutters when hover invalidates the full cartridge.
+   Keep the expanded labels, but make hover a small opacity-only highlight.
+   Electron keeps the full treatment. */
 :root[data-runtime="tauri"] .cart {
-  transition: box-shadow 0.18s, border-color 0.16s;
+  transition: none;
 }
 
-:root[data-runtime="tauri"] .rcart {
-  transition: filter 0.2s;
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart {
+  transition: none;
 }
 
-:root[data-runtime="tauri"] .rcart:hover:not(:disabled) .rcartPod {
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartPod {
+  transition: none;
+}
+
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartPod {
   transform: none;
 }
 
-:root[data-runtime="tauri"] .rcart.is-wrapped:not(.is-add) .rcartPod,
-:root[data-runtime="tauri"] .rcart.is-problem .rcartPod {
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-wrapped:not(.is-add) .rcartPod,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-problem .rcartPod {
   transform: scale(0.86);
 }
 
-:root[data-runtime="tauri"] .rcartNamePlate,
-:root[data-runtime="tauri"] .rcart:hover:not(:disabled) .rcartNamePlate,
-:root[data-runtime="tauri"] .rcart:focus-visible .rcartNamePlate,
-:root[data-runtime="tauri"] .rcartNamePlate:hover {
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartNamePlate,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:focus-visible .rcartNamePlate,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate:hover {
   grid-template-rows: 14px minmax(32px, auto);
   width: min(104%, 224px);
   max-width: 224px;
   max-height: 106px;
   border-radius: 6px;
+  filter: none;
   transform: translateX(-50%);
+  transition: none;
 }
 
-:root[data-runtime="tauri"] .rcartNamePlate strong,
-:root[data-runtime="tauri"] .rcart:hover:not(:disabled) .rcartNamePlate strong,
-:root[data-runtime="tauri"] .rcart:focus-visible .rcartNamePlate strong,
-:root[data-runtime="tauri"] .rcartNamePlate:hover strong {
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate strong,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartNamePlate strong,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:focus-visible .rcartNamePlate strong,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate:hover strong {
   padding: 5px 12px 8px;
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
   overflow-wrap: anywhere;
+  transition: none;
 }
 
 :root[data-runtime="tauri"] .cart::after,
-:root[data-runtime="tauri"] .rcart::after {
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart::after {
   content: "";
   position: absolute;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.18s, border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  border: 1px solid rgba(246, 198, 107, 0.48);
+  background: rgba(246, 198, 107, 0.025);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.34);
+  transition: opacity 0.12s linear;
 }
 
 :root[data-runtime="tauri"] .cart::after {
   inset: -7px;
   z-index: 4;
-  border: 1px solid transparent;
   border-radius: 18px 18px 10px 10px;
 }
 
-:root[data-runtime="tauri"] .rcart::after {
-  inset: -12px -12px -126px;
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart::after {
+  inset: -8px;
   z-index: 9;
-  border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 :root[data-runtime="tauri"] .cart:hover:not(:disabled),
-:root[data-runtime="tauri"] .rcart:hover:not(:disabled) {
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) {
+  filter: none;
   transform: none;
 }
 
-:root[data-runtime="tauri"] .cart:hover:not(:disabled)::after,
-:root[data-runtime="tauri"] .rcart:hover:not(:disabled)::after,
-:root[data-runtime="tauri"] .cart:focus-visible::after,
-:root[data-runtime="tauri"] .rcart:focus-visible::after {
-  opacity: 1;
-  border-color: rgba(246, 198, 107, 0.48);
-  background: rgba(246, 198, 107, 0.025);
+:root[data-runtime="tauri"] .cart:hover:not(:disabled) {
+  border-color: var(--stroke);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(0, 0, 0, 0.34),
-    0 0 20px rgba(246, 198, 107, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-runtime="tauri"] .cart.is-mounted:hover:not(:disabled) {
+  border-color: rgba(246, 198, 107, 0.45);
+}
+
+:root[data-runtime="tauri"] .cart.is-add:hover:not(:disabled) {
+  border-color: rgba(103, 232, 160, 0.5);
+}
+
+:root[data-runtime="tauri"] .cart.is-remove:hover:not(:disabled) {
+  border-color: rgba(255, 122, 138, 0.5);
+}
+
+:root[data-runtime="tauri"] .cart.is-conflict:hover:not(:disabled) {
+  border-color: rgba(199, 155, 255, 0.55);
+}
+
+:root[data-runtime="tauri"] .cart:hover:not(:disabled)::after,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled)::after,
+:root[data-runtime="tauri"] .cart:focus-visible::after,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:focus-visible::after {
+  opacity: 1;
 }
 
 /* ============================================================

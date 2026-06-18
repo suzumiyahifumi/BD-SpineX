@@ -59,6 +59,8 @@ const MODVIEW_KEY = "bd-spinex:mod-view";
 const CARTSKIN_KEY = "bd-spinex:cart-skin";
 const AUTHOR_RULES_KEY = "bd-spinex:author-rules";
 const THEME_KEY = "bd-spinex:theme";
+const TAURI_CANVAS_CARTRIDGE_KEY = "bd-spinex:tauri-canvas-cartridge";
+const TAURI_CSS_CARTRIDGE_KEY = "bd-spinex:tauri-css-cartridge";
 type ModView = "grid" | "list";
 type CartSkin = "realistic" | "arcade";
 type Theme = "classic" | "night" | "riso" | "mono";
@@ -127,6 +129,8 @@ function publicAssetPath(path: string) {
   return `${normalizedBase}${path.replace(/^\/+/, "")}`;
 }
 
+const HEATSEAL_FILM_OVERLAY_URL = publicAssetPath("cartridge/heatseal-film-overlay.png");
+
 const LEGACY_AUTHOR_COLORS_BY_ID = new Map(DEFAULT_AUTHOR_RULES.map((rule, index) => [rule.id, LEGACY_AUTHOR_COLORS[index]?.toLowerCase()]));
 
 const CHARACTER_ASSETS = characterAssetsJson as CharacterAssetsJson;
@@ -172,6 +176,7 @@ export function App() {
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
   const [cartSkin, setCartSkin] = useState<CartSkin>(() => (localStorage.getItem(CARTSKIN_KEY) === "arcade" ? "arcade" : "realistic"));
+  const [tauriCanvasCartridges] = useState(readTauriCanvasCartridgeMode);
   const [theme, setTheme] = useState<Theme>(() => {
     const t = localStorage.getItem(THEME_KEY);
     // Night Press is the default; an explicit "classic" choice is still honored.
@@ -248,6 +253,7 @@ export function App() {
   const modsActionLocked = busy;
   const modsLocked = busy || versionLocked || !appReady || injectionMissing || missingModsDir;
   const showMigrationPanel = Boolean(migrationCheck?.needed && !migrationDismissed);
+  const useCanvasCartridges = cartSkin === "realistic" && tauriCanvasCartridges;
 
   const selectableVisibleMods = visibleMods;
   const allVisibleModsSelected = selectableVisibleMods.length > 0 && selectableVisibleMods.every((m) => isDesired(m.folder));
@@ -600,13 +606,13 @@ export function App() {
 
           <div className={`modsTableFrame ${modView === "grid" ? "is-grid" : "is-list"} ${modsLocked ? "locked" : ""}`}>
             {modView === "grid" ? (
-              <div className={`cartShelf ${cartSkin === "realistic" ? "cartShelf--collector" : ""}`}>
+              <div className={`cartShelf ${cartSkin === "realistic" ? "cartShelf--collector" : ""} ${useCanvasCartridges ? "cartShelf--canvas" : ""}`}>
                 {library.length === 0 ? (
                   <div className="cartEmpty">{modsDir ? "No mods found." : "Choose a Mods Folder in Settings to load your cartridges."}</div>
                 ) : visibleMods.length === 0 ? (
                   <div className="cartEmpty">No mods match this filter.</div>
                 ) : visibleMods.map((mod) => {
-                  const CartComp = cartSkin === "realistic" ? CartridgeRealistic : Cartridge;
+                  const CartComp = useCanvasCartridges ? CanvasCartridge : cartSkin === "realistic" ? CartridgeRealistic : Cartridge;
                   return (
                     <CartComp
                       key={mod.path}
@@ -1099,6 +1105,22 @@ function compactForMatch(value: string) {
   return normalizeForMatch(value).replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
+function readTauriCanvasCartridgeMode() {
+  const params = new URLSearchParams(window.location.search);
+  const requested = params.get("tauriCanvasCartridge");
+  if (requested === "1" || requested === "true") {
+    localStorage.setItem(TAURI_CANVAS_CARTRIDGE_KEY, "1");
+    localStorage.removeItem(TAURI_CSS_CARTRIDGE_KEY);
+  } else if (requested === "0" || requested === "false") {
+    localStorage.removeItem(TAURI_CANVAS_CARTRIDGE_KEY);
+    localStorage.setItem(TAURI_CSS_CARTRIDGE_KEY, "1");
+  }
+
+  if (document.documentElement.getAttribute("data-runtime") !== "tauri") return false;
+  if (localStorage.getItem(TAURI_CSS_CARTRIDGE_KEY) === "1") return false;
+  return true;
+}
+
 function readAuthorRules(): AuthorRule[] {
   try {
     const raw = localStorage.getItem(AUTHOR_RULES_KEY);
@@ -1159,34 +1181,39 @@ function detectModAuthor(mod: RuntimeMod, authorRules: AuthorRule[]): DetectedAu
 
 function detectModCharacter(mod: RuntimeMod): DetectedCharacter | null {
   const key = mod.key.toLowerCase();
+  const cutsceneCharacter = lookupCharacterById(extractModAssetId(key, "cutscene_char"));
+  const standingCharacter = lookupCharacterById(extractModAssetId(key, "char"));
+  const datingCharacter = lookupDatingCharacterById(extractModAssetId(key, "illust_dating"));
 
   if (mod.type === "skillcut") {
-    return lookupCharacterById(extractModAssetId(key, "cutscene_char"));
+    return cutsceneCharacter;
   }
 
   if (mod.type === "standing") {
-    return lookupCharacterById(extractModAssetId(key, "char"));
+    return standingCharacter;
   }
 
   if (mod.type === "dating") {
-    const datingId = extractModAssetId(key, "illust_dating");
-    if (!datingId) return null;
-    const characterId = CHARACTER_ASSETS.dating[datingId] ?? CHARACTER_ASSETS.dating[String(Number(datingId))];
-    return lookupCharacterById(characterId ?? null);
+    return datingCharacter;
   }
 
   const npcId = extractModAssetId(key, "npc");
-  return npcId ? CHARACTER_BY_NPC_ID.get(npcId) ?? null : null;
+  return cutsceneCharacter ?? standingCharacter ?? datingCharacter ?? (npcId ? CHARACTER_BY_NPC_ID.get(npcId) ?? null : null);
 }
 
 function lookupCharacterById(id: string | null | undefined) {
   return id ? CHARACTER_BY_ID.get(id) ?? null : null;
 }
 
+function lookupDatingCharacterById(datingId: string | null | undefined) {
+  if (!datingId) return null;
+  const characterId = CHARACTER_ASSETS.dating[datingId] ?? CHARACTER_ASSETS.dating[String(Number(datingId))];
+  return lookupCharacterById(characterId ?? null);
+}
+
 function extractModAssetId(key: string, prefix: string) {
-  if (!key.startsWith(prefix)) return null;
-  const rest = key.slice(prefix.length);
-  return rest.match(/^(\d+)/)?.[1] ?? null;
+  const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return key.match(new RegExp(`^${escapedPrefix}[\\s_.-]*(\\d+)`))?.[1] ?? null;
 }
 
 function matchesAuthorKeyword(haystack: string, compactHaystack: string, keyword: string) {
@@ -1350,7 +1377,8 @@ function CartridgeRealistic(props: {
       title={title}
     >
       <span className="rcartShell">
-        <span className="rcartRidges" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+        <span className="rcartRidges rcartRidges--left" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+        <span className="rcartRidges rcartRidges--right" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
         <span className={`rcartNo rcartTypeBadge is-${category}`} aria-hidden="true" title={typeLabel}>
           <img src={typeIcon} alt="" draggable={false} />
         </span>
@@ -1383,7 +1411,8 @@ function CartridgeRealistic(props: {
         <span className="rcartPlastic" aria-hidden="true"><i /><i /><i /><i /></span>
         <span className="rcartWarningSticker" aria-hidden="true">
           <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
-            <path className="rcartWarningTriangle" d="M32 5 L59 52 H5 Z" />
+            <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
+            <path className="rcartWarningInnerLine" d="M32 13 C33.4 13 34.1 14.1 35 15.6 L51.4 44.4 C52.2 45.9 51.3 47.7 49.6 47.7 H14.4 C12.7 47.7 11.8 45.9 12.6 44.4 L29 15.6 C29.9 14.1 30.6 13 32 13 Z" />
             <path className="rcartWarningBang" d="M32 20 L32 36" />
             <circle className="rcartWarningDot" cx="32" cy="44" r="3" />
           </svg>
@@ -1397,6 +1426,1064 @@ function CartridgeRealistic(props: {
       </span>
     </button>
   );
+}
+
+type CanvasImageEntry = {
+  image: HTMLImageElement;
+  loaded: boolean;
+  failed: boolean;
+  listeners: Set<() => void>;
+};
+
+type CanvasCartridgePaint = {
+  category: ModCategory;
+  have: boolean;
+  tone?: PendingTone;
+  hasIssue: boolean;
+  cover: HTMLImageElement | null;
+  portrait: HTMLImageElement | null;
+  plastic: HTMLImageElement | null;
+};
+
+const CANVAS_IMAGE_CACHE = new Map<string, CanvasImageEntry>();
+
+function CanvasCartridge(props: {
+  mod: RuntimeMod;
+  have: boolean;
+  selected: boolean;
+  tone?: PendingTone;
+  locked: boolean;
+  onToggle: () => void;
+  authorRules?: AuthorRule[];
+}) {
+  const { mod, have, selected, tone, locked, onToggle, authorRules = DEFAULT_AUTHOR_RULES } = props;
+  const meta = mod as RuntimeMod & { author?: string; cover?: string };
+  const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const plasticCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [imageVersion, setImageVersion] = useState(0);
+  const category = typeToCategory(mod.type);
+  const folderName = formatFolderName(mod.folder);
+  const hasIssue = tone === "conflict" || mod.skeleton === "unknown";
+  const mountBlocked = !have && mod.skeleton === "unknown";
+  const stateClass =
+    hasIssue ? "is-warning" :
+    tone === "added" ? "is-add" :
+    tone === "removed" ? "is-remove" :
+    have ? "is-mounted" : "";
+  const skinClass = `${hasIssue ? "is-problem" : ""} ${!have ? "is-wrapped" : ""}`;
+  const detectedAuthor = detectModAuthor(mod, authorRules);
+  const showAuthorSticker = detectedAuthor.id !== "unknown";
+  const detectedCharacter = detectModCharacter(mod);
+  const pack = categoryPack(category);
+  const displayTitle = cartridgeHeadline(folderName, mod.key);
+  const typeIcon = categoryTypeIconPath(category);
+  const typeLabel = categoryTypeLabel(category);
+  const authorStyle = { "--author-color": detectedAuthor.color } as CSSProperties;
+  const coverUrl = meta.cover || null;
+  const portraitUrl = detectedCharacter ? publicAssetPath(`characters/standing/${detectedCharacter.imageId}.png`) : null;
+  const runtimeLabel =
+    tone === "conflict" ? "CONFLICT" :
+    mod.skeleton === "unknown" ? "CHECK FILES" :
+    tone === "added" ? "STAGED MOUNT" :
+    tone === "removed" ? "STAGED UNMOUNT" :
+    have ? "MOUNTED" : "AVAILABLE";
+  const title = `${folderName}\n${mod.key} · ${category}\nAuthor: ${detectedAuthor.name}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}${mod.skeleton === "unknown" ? "\nMissing .json or .skel skeleton file" : ""}`;
+
+  useEffect(() => {
+    const urls = [coverUrl, portraitUrl, HEATSEAL_FILM_OVERLAY_URL].filter(Boolean) as string[];
+    const onReady = () => setImageVersion((value) => value + 1);
+    const cleanups = urls.map((url) => subscribeCanvasImage(url, onReady));
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, [coverUrl, portraitUrl]);
+
+  useLayoutEffect(() => {
+    const baseCanvas = baseCanvasRef.current;
+    const plasticCanvas = plasticCanvasRef.current;
+    if (!baseCanvas || !plasticCanvas) return;
+
+    let paintFrame = 0;
+    const paint = () => {
+      const paintModel: CanvasCartridgePaint = {
+        category,
+        have,
+        tone,
+        hasIssue,
+        cover: getReadyCanvasImage(coverUrl),
+        portrait: getReadyCanvasImage(portraitUrl),
+        plastic: getReadyCanvasImage(HEATSEAL_FILM_OVERLAY_URL)
+      };
+      paintMeasuredCanvas(baseCanvas, (ctx, width, height) => drawCanvasCartridgeBase(ctx, width, height, paintModel));
+      paintMeasuredCanvas(plasticCanvas, (ctx, width, height) => drawCanvasCartridgePlastic(ctx, width, height, paintModel));
+    };
+    const schedulePaint = () => {
+      window.cancelAnimationFrame(paintFrame);
+      paintFrame = window.requestAnimationFrame(paint);
+    };
+
+    schedulePaint();
+    const observer = new ResizeObserver(schedulePaint);
+    observer.observe(baseCanvas);
+    observer.observe(plasticCanvas);
+    return () => {
+      window.cancelAnimationFrame(paintFrame);
+      observer.disconnect();
+    };
+  }, [
+    category,
+    coverUrl,
+    hasIssue,
+    have,
+    imageVersion,
+    portraitUrl,
+    tone
+  ]);
+
+  const podTone = tone === "removed" ? "minus" : have ? "check" : "plus";
+  const podMark = podTone === "minus" ? "-" : podTone === "check" ? "✓" : "+";
+
+  return (
+    <button
+      type="button"
+      className={`rcart rcart--canvas cat-${category} ${stateClass} ${skinClass} ${selected ? "is-on" : ""}`}
+      disabled={locked || mountBlocked}
+      onClick={onToggle}
+      aria-pressed={selected}
+      title={title}
+    >
+      <span className="rcartShell">
+        <canvas className="rcartCanvasBase" ref={baseCanvasRef} aria-hidden="true" />
+        <span className={`rcartNo rcartTypeBadge is-${category}`} aria-hidden="true" title={typeLabel}>
+          <img src={typeIcon} alt="" draggable={false} />
+        </span>
+        <span className="rcartLabel">
+          <span className="rcartHead">
+            <span className="rcartPack">{pack}</span>
+            <span className="rcartCode">{mod.key}</span>
+          </span>
+          <span className="rcartTitle2">{displayTitle}</span>
+          <span className="rcartCredits" aria-hidden="true">
+            <span>ASSET {mod.key}</span>
+            <span>{`MOD BY ${detectedAuthor.name.toUpperCase()}`}</span>
+            <span>RUNTIME {runtimeLabel}</span>
+          </span>
+        </span>
+        {showAuthorSticker ? (
+          <span className="rcartAuthorSticker" style={authorStyle} aria-hidden="true">
+            <span className="rcartAuthorLabel">Author</span>
+            <strong><span className="rcartAuthorName">{detectedAuthor.name}</span></strong>
+          </span>
+        ) : null}
+        <canvas className="rcartCanvasPlastic" ref={plasticCanvasRef} aria-hidden="true" />
+        <span className="rcartWarningSticker" aria-hidden="true">
+          <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
+            <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
+            <path className="rcartWarningInnerLine" d="M32 13 C33.4 13 34.1 14.1 35 15.6 L51.4 44.4 C52.2 45.9 51.3 47.7 49.6 47.7 H14.4 C12.7 47.7 11.8 45.9 12.6 44.4 L29 15.6 C29.9 14.1 30.6 13 32 13 Z" />
+            <path className="rcartWarningBang" d="M32 20 L32 36" />
+            <circle className="rcartWarningDot" cx="32" cy="44" r="3" />
+          </svg>
+        </span>
+        <span className="rcartBottomGroove" aria-hidden="true" />
+      </span>
+      <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
+      <span className="rcartNamePlate" aria-hidden="true">
+        <span className="rcartNameKind">{pack}</span>
+        <strong>{displayTitle}</strong>
+      </span>
+    </button>
+  );
+}
+
+function subscribeCanvasImage(src: string, onReady: () => void) {
+  const entry = ensureCanvasImage(src);
+  if (entry.loaded || entry.failed) return () => {};
+  entry.listeners.add(onReady);
+  return () => entry.listeners.delete(onReady);
+}
+
+function ensureCanvasImage(src: string) {
+  const cached = CANVAS_IMAGE_CACHE.get(src);
+  if (cached) return cached;
+
+  const image = new Image();
+  const entry: CanvasImageEntry = { image, loaded: false, failed: false, listeners: new Set() };
+  image.onload = () => {
+    entry.loaded = true;
+    for (const listener of entry.listeners) listener();
+    entry.listeners.clear();
+  };
+  image.onerror = () => {
+    entry.failed = true;
+    for (const listener of entry.listeners) listener();
+    entry.listeners.clear();
+  };
+  image.src = src;
+  CANVAS_IMAGE_CACHE.set(src, entry);
+  return entry;
+}
+
+function getReadyCanvasImage(src: string | null | undefined) {
+  if (!src) return null;
+  const entry = ensureCanvasImage(src);
+  return entry.loaded ? entry.image : null;
+}
+
+function paintMeasuredCanvas(canvas: HTMLCanvasElement, draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => void) {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(1, rect.width);
+  const height = Math.max(1, rect.height);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const pixelWidth = Math.round(width * dpr);
+  const pixelHeight = Math.round(height * dpr);
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+  }
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw(ctx, width, height);
+}
+
+function drawCanvasCartridgeBase(ctx: CanvasRenderingContext2D, width: number, height: number, paint: CanvasCartridgePaint) {
+  ctx.clearRect(0, 0, width, height);
+  const palette = canvasCartridgePalette(paint.category);
+  const scale = width / 224;
+
+  ctx.save();
+  roundedRectPath(ctx, 0, 0, width, height, 7 * scale);
+  ctx.clip();
+  const shell = ctx.createLinearGradient(0, 0, 0, height);
+  shell.addColorStop(0, palette.shellLight);
+  shell.addColorStop(0.18, colorMixHex(palette.shellLight, "#ffffff", 0.16));
+  shell.addColorStop(0.52, palette.shellMid);
+  shell.addColorStop(0.76, colorMixHex(palette.shellDark, "#000000", 0.06));
+  shell.addColorStop(1, palette.shellDark);
+  ctx.fillStyle = shell;
+  ctx.fill();
+
+  const sideShade = ctx.createLinearGradient(0, 0, width, 0);
+  sideShade.addColorStop(0, "rgba(7, 20, 42, 0.38)");
+  sideShade.addColorStop(0.06, "rgba(7, 20, 42, 0.18)");
+  sideShade.addColorStop(0.12, "rgba(255, 255, 255, 0)");
+  sideShade.addColorStop(0.88, "rgba(255, 255, 255, 0)");
+  sideShade.addColorStop(0.95, "rgba(7, 20, 42, 0.16)");
+  sideShade.addColorStop(1, "rgba(7, 20, 42, 0.32)");
+  ctx.fillStyle = sideShade;
+  ctx.fillRect(0, 0, width, height);
+
+  const moldedInset = ctx.createLinearGradient(0, 0, 0, height);
+  moldedInset.addColorStop(0, "rgba(255, 255, 255, 0.26)");
+  moldedInset.addColorStop(0.08, "rgba(255, 255, 255, 0)");
+  moldedInset.addColorStop(0.86, "rgba(0, 0, 0, 0)");
+  moldedInset.addColorStop(1, "rgba(5, 18, 39, 0.34)");
+  ctx.fillStyle = moldedInset;
+  roundedRectPath(ctx, 7 * scale, 7 * scale, width - 14 * scale, height - 17 * scale, 4 * scale);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  roundedRectPath(ctx, 8 * scale, 0, width - 16 * scale, 14 * scale, 5 * scale);
+  const top = ctx.createLinearGradient(0, 0, 0, 14 * scale);
+  top.addColorStop(0, paint.category === "char" ? "rgba(245, 248, 250, 0.42)" : "rgba(174, 202, 238, 0.4)");
+  top.addColorStop(1, paint.category === "char" ? "rgba(125, 134, 145, 0.24)" : "rgba(78, 119, 178, 0.3)");
+  ctx.fillStyle = top;
+  ctx.fill();
+  ctx.restore();
+
+  const sideDark = paint.category === "char" ? "rgba(77, 84, 93, 0.82)" : paint.category === "cutscene" ? "rgba(16, 18, 25, 0.9)" : "rgba(24, 51, 86, 0.76)";
+  const sideLight = paint.category === "char" ? "rgba(143, 153, 164, 0.38)" : paint.category === "cutscene" ? "rgba(78, 84, 98, 0.36)" : "rgba(70, 110, 165, 0.4)";
+  const leftSide = ctx.createLinearGradient(0, 0, 13 * scale, 0);
+  leftSide.addColorStop(0, sideDark);
+  leftSide.addColorStop(1, sideLight);
+  const rightSide = ctx.createLinearGradient(width - 13 * scale, 0, width, 0);
+  rightSide.addColorStop(0, sideLight);
+  rightSide.addColorStop(1, sideDark);
+  for (let index = 0; index < 9; index += 1) {
+    const ridgeY = (35 + index * 8.7) * scale;
+    roundedRectPath(ctx, 0, ridgeY, 11 * scale, 5.5 * scale, 3 * scale);
+    ctx.fillStyle = leftSide;
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.11)";
+    ctx.fillRect(8.5 * scale, ridgeY + 1 * scale, 1 * scale, 3.5 * scale);
+
+    roundedRectPath(ctx, width - 11 * scale, ridgeY, 11 * scale, 5.5 * scale, 3 * scale);
+    ctx.fillStyle = rightSide;
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.fillRect(width - 9.5 * scale, ridgeY + 1 * scale, 1 * scale, 3.5 * scale);
+  }
+
+  drawCanvasShellScuffs(ctx, width, height, paint, scale);
+  drawCanvasCover(ctx, 29 * scale, 30 * scale, width - 60 * scale, height - 65 * scale, palette, paint, scale);
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+  ctx.lineWidth = 1 * scale;
+  roundedRectPath(ctx, 8 * scale, 8 * scale, width - 15 * scale, height - 18 * scale, 4 * scale);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.fillStyle = palette.shellEdge;
+  roundedRectPath(ctx, 26 * scale, height - 18 * scale, width - 52 * scale, 3 * scale, 2 * scale);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawCanvasCover(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, palette: ReturnType<typeof canvasCartridgePalette>, paint: CanvasCartridgePaint, scale: number) {
+  ctx.save();
+  roundedRectPath(ctx, x, y, width, height, 5 * scale);
+  ctx.clip();
+  ctx.fillStyle = paint.category === "char" ? "#f4f4ef" : "#050508";
+  ctx.fillRect(x, y, width, height);
+
+  if (paint.cover) {
+    drawCoverImage(ctx, paint.cover, x, y, width, height, paint.category);
+  } else {
+    const fallback = ctx.createLinearGradient(x, y, x + width, y + height);
+    fallback.addColorStop(0, paint.category === "char" ? "#f0efe9" : "#090a0f");
+    fallback.addColorStop(0.35, paint.category === "char" ? "#f0efe9" : "#090a0f");
+    fallback.addColorStop(0.36, paint.category === "char" ? "#96a0a2" : "#2d3038");
+    fallback.addColorStop(1, paint.category === "char" ? "#96a0a2" : "#2d3038");
+    ctx.fillStyle = fallback;
+    ctx.fillRect(x, y, width, height);
+  }
+
+  const veil = ctx.createLinearGradient(x, y, x + width, y);
+  if (paint.category === "char") {
+    veil.addColorStop(0, "rgba(247, 247, 243, 0.98)");
+    veil.addColorStop(0.34, "rgba(247, 247, 243, 0.98)");
+    veil.addColorStop(1, "rgba(247, 247, 243, 0.36)");
+  } else {
+    veil.addColorStop(0, "rgba(3, 4, 7, 0.98)");
+    veil.addColorStop(0.33, "rgba(3, 4, 7, 0.98)");
+    veil.addColorStop(1, "rgba(3, 4, 7, 0.2)");
+  }
+  ctx.fillStyle = veil;
+  ctx.fillRect(x, y, width, height);
+
+  ctx.save();
+  ctx.translate(x + width * 0.55, y + height * 0.5);
+  ctx.rotate(paint.category === "char" ? -0.18 : -0.24);
+  ctx.fillStyle = paint.category === "char" ? "rgba(205, 211, 211, 0.36)" : palette.labelRed;
+  ctx.fillRect(-width * 0.09, -height, width * 0.24, height * 2);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalCompositeOperation = paint.category === "char" ? "multiply" : "screen";
+  ctx.globalAlpha = paint.category === "char" ? 0.42 : 0.55;
+  ctx.fillStyle = paint.category === "char" ? "rgba(82, 88, 92, 0.24)" : "rgba(10, 10, 14, 0.8)";
+  ctx.beginPath();
+  ctx.moveTo(x, y + height * 0.55);
+  ctx.lineTo(x + width, y + height * 0.18);
+  ctx.lineTo(x + width, y + height * 0.24);
+  ctx.lineTo(x, y + height * 0.61);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  if (paint.portrait) {
+    drawCanvasPortrait(ctx, paint.portrait, x, y, width, height, paint.category, scale);
+  } else if (!paint.cover) {
+    ctx.fillStyle = paint.category === "char" ? "rgba(255, 255, 255, 0.48)" : "rgba(240, 241, 237, 0.58)";
+    for (const [cx, cy, rx, ry] of [[0.75, 0.28, 0.14, 0.26], [0.76, 0.72, 0.2, 0.48], [0.54, 0.58, 0.12, 0.24]]) {
+      ctx.beginPath();
+      ctx.ellipse(x + width * cx, y + height * cy, width * rx, height * ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const aged = ctx.createRadialGradient(x + width * 0.48, y + height * 0.32, height * 0.2, x + width * 0.48, y + height * 0.32, width * 0.78);
+  aged.addColorStop(0, "rgba(0, 0, 0, 0)");
+  aged.addColorStop(0.72, "rgba(0, 0, 0, 0.12)");
+  aged.addColorStop(1, "rgba(0, 0, 0, 0.42)");
+  ctx.fillStyle = aged;
+  ctx.fillRect(x, y, width, height);
+
+  ctx.globalAlpha = paint.category === "char" ? 0.25 : 0.38;
+  ctx.fillStyle = paint.category === "char" ? "rgba(0, 0, 0, 0.035)" : "rgba(255, 255, 255, 0.045)";
+  for (let lineY = y; lineY < y + height; lineY += 3 * scale) {
+    ctx.fillRect(x, lineY, width, 1 * scale);
+  }
+  ctx.globalAlpha = 1;
+
+  const gloss = ctx.createLinearGradient(x, y, x + width, y + height);
+  gloss.addColorStop(0, "rgba(255, 255, 255, 0.18)");
+  gloss.addColorStop(0.3, "rgba(255, 255, 255, 0)");
+  gloss.addColorStop(0.76, "rgba(255, 255, 255, 0)");
+  gloss.addColorStop(1, "rgba(255, 255, 255, 0.06)");
+  ctx.fillStyle = gloss;
+  ctx.fillRect(x, y, width, height);
+
+  drawCanvasPaperAge(ctx, x, y, width, height, paint, scale);
+  ctx.restore();
+
+  if (paint.category !== "char") {
+    ctx.save();
+    roundedRectPath(ctx, x, y, width, height, 5 * scale);
+    ctx.lineWidth = 3 * scale;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawCanvasPortrait(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number, category: ModCategory, scale: number) {
+  const portraitW = Math.min(width * 0.78, 124 * scale);
+  const portraitH = portraitW * (image.naturalHeight / Math.max(1, image.naturalWidth));
+  const portraitX = x + width - portraitW + 10 * scale;
+  const portraitY = y + height - portraitH + 43 * scale;
+
+  ctx.save();
+  ctx.globalAlpha = category === "char" ? 0.82 : 0.9;
+  ctx.filter = category === "char" ? "saturate(0.68) contrast(0.9) brightness(1.06)" : "sepia(0.08) saturate(0.78) contrast(0.94) brightness(1.05)";
+  ctx.shadowColor = category === "char" ? "rgba(0, 0, 0, 0.42)" : "rgba(0, 0, 0, 0.58)";
+  ctx.shadowBlur = 8 * scale;
+  ctx.shadowOffsetY = 5 * scale;
+  ctx.drawImage(image, portraitX, portraitY, portraitW, portraitH);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = category === "char" ? 0.22 : 0.32;
+  ctx.fillStyle = "rgba(255, 255, 244, 0.13)";
+  const lineTop = Math.max(y, portraitY);
+  const lineBottom = Math.min(y + height, portraitY + portraitH);
+  for (let lineY = lineTop; lineY < lineBottom; lineY += 4 * scale) {
+    ctx.fillRect(Math.max(x, portraitX + 4 * scale), lineY, Math.min(width, portraitW - 2 * scale), 1 * scale);
+  }
+  const sheen = ctx.createLinearGradient(portraitX, portraitY, portraitX + portraitW, portraitY + portraitH);
+  sheen.addColorStop(0, "rgba(247, 239, 216, 0.16)");
+  sheen.addColorStop(1, "rgba(97, 92, 82, 0.08)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(portraitX, Math.max(y, portraitY), portraitW, Math.min(height, portraitH));
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  ctx.globalAlpha = category === "char" ? 0.12 : 0.2;
+  ctx.fillStyle = "rgba(66, 54, 39, 0.26)";
+  for (let index = 0; index < 14; index += 1) {
+    const dotX = portraitX + (((index * 29) % 100) / 100) * portraitW;
+    const dotY = Math.max(y, portraitY) + (((index * 41) % 100) / 100) * Math.min(height, portraitH);
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, (0.7 + (index % 3) * 0.25) * scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCanvasShellScuffs(ctx: CanvasRenderingContext2D, width: number, height: number, paint: CanvasCartridgePaint, scale: number) {
+  ctx.save();
+  ctx.globalAlpha = paint.category === "char" ? 0.22 : 0.18;
+  for (let index = 0; index < 26; index += 1) {
+    const x = (17 + ((index * 37) % 188)) * scale;
+    const y = (18 + ((index * 53) % 116)) * scale;
+    const length = (5 + (index % 9)) * scale;
+    ctx.strokeStyle = index % 3 === 0 ? "rgba(255, 255, 255, 0.36)" : "rgba(16, 28, 48, 0.28)";
+    ctx.lineWidth = Math.max(0.55, 0.7 * scale);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + length, y + ((index % 5) - 2) * 0.7 * scale);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = paint.category === "char" ? "rgba(255, 255, 255, 0.18)" : "rgba(255, 255, 255, 0.12)";
+  for (const [x, y, r] of [[18, 21, 2.2], [207, 126, 1.8], [37, 139, 1.5], [189, 24, 1.6]]) {
+    ctx.beginPath();
+    ctx.arc(x * scale, y * scale, r * scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCanvasPaperAge(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, paint: CanvasCartridgePaint, scale: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = paint.category === "char" ? "multiply" : "screen";
+  for (let index = 0; index < 36; index += 1) {
+    const px = x + ((index * 47) % 100) / 100 * width;
+    const py = y + ((index * 31) % 100) / 100 * height;
+    const radius = (0.7 + (index % 5) * 0.22) * scale;
+    ctx.globalAlpha = paint.category === "char" ? 0.13 : 0.08;
+    ctx.fillStyle = paint.category === "char" ? "rgba(93, 72, 46, 0.42)" : "rgba(255, 236, 204, 0.32)";
+    ctx.beginPath();
+    ctx.ellipse(px, py, radius * 1.4, radius, (index % 7) * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = paint.category === "char" ? 0.2 : 0.18;
+  ctx.strokeStyle = paint.category === "char" ? "rgba(76, 65, 51, 0.32)" : "rgba(255, 239, 214, 0.28)";
+  ctx.lineWidth = Math.max(0.5, 0.6 * scale);
+  for (let index = 0; index < 10; index += 1) {
+    const sx = x + (8 + index * 13) * scale;
+    const sy = y + (18 + ((index * 17) % 54)) * scale;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.bezierCurveTo(sx + 8 * scale, sy - 2 * scale, sx + 17 * scale, sy + 3 * scale, sx + 27 * scale, sy);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawCoverImage(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number, category: ModCategory) {
+  const imageRatio = image.naturalWidth / Math.max(1, image.naturalHeight);
+  const targetRatio = width / height;
+  let drawWidth = width;
+  let drawHeight = height;
+  if (imageRatio > targetRatio) {
+    drawWidth = height * imageRatio;
+  } else {
+    drawHeight = width / imageRatio;
+  }
+  ctx.save();
+  ctx.globalAlpha = category === "char" ? 0.62 : 0.78;
+  ctx.filter = category === "char" ? "grayscale(0.28) contrast(0.95) saturate(0.78) brightness(1.08)" : "contrast(1.04) saturate(0.95)";
+  ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) * 0.24, drawWidth, drawHeight);
+  ctx.restore();
+}
+
+function drawCanvasCartridgePlastic(ctx: CanvasRenderingContext2D, width: number, height: number, paint: CanvasCartridgePaint) {
+  ctx.clearRect(0, 0, width, height);
+  if (paint.have && !paint.hasIssue) return;
+
+  if (paint.plastic) {
+    drawGeneratedHeatsealFilm(ctx, width, height, paint.plastic, paint);
+    return;
+  }
+
+  drawCanvasHeatsealStudy(ctx, width, height, paint, 0.92);
+  drawHeatsealMatteNoise(ctx, width, height, paint, 1);
+  return;
+}
+
+function drawGeneratedHeatsealFilm(ctx: CanvasRenderingContext2D, width: number, height: number, image: HTMLImageElement, paint: CanvasCartridgePaint) {
+  ctx.save();
+  ctx.globalAlpha = paint.hasIssue ? 0.9 : 0.84;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(image, 0, 0, width, height);
+  ctx.restore();
+
+  drawCanvasHeatsealStudy(ctx, width, height, paint, 0.2);
+  drawHeatsealMatteNoise(ctx, width, height, paint, 1.08);
+}
+
+function drawHeatsealMatteNoise(ctx: CanvasRenderingContext2D, width: number, height: number, paint: CanvasCartridgePaint, opacity = 1) {
+  const sx = width / 244;
+  const sy = height / 164;
+
+  ctx.save();
+  roundedRectPath(ctx, 20 * sx, 18 * sy, width - 40 * sx, height - 40 * sy, 12 * sx);
+  ctx.clip();
+  ctx.globalAlpha = opacity * (paint.hasIssue ? 1.06 : 1);
+
+  const fog = ctx.createRadialGradient(width * 0.5, height * 0.48, width * 0.035, width * 0.5, height * 0.5, width * 0.52);
+  fog.addColorStop(0, "rgba(255, 255, 255, 0.14)");
+  fog.addColorStop(0.34, "rgba(248, 252, 255, 0.095)");
+  fog.addColorStop(0.74, "rgba(255, 255, 255, 0.052)");
+  fog.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, 0, width, height);
+
+  const verticalFog = ctx.createLinearGradient(0, 19 * sy, 0, height - 22 * sy);
+  verticalFog.addColorStop(0, "rgba(255, 255, 255, 0.088)");
+  verticalFog.addColorStop(0.18, "rgba(255, 255, 255, 0.052)");
+  verticalFog.addColorStop(0.62, "rgba(255, 255, 255, 0.064)");
+  verticalFog.addColorStop(1, "rgba(255, 255, 255, 0.026)");
+  ctx.fillStyle = verticalFog;
+  ctx.fillRect(20 * sx, 18 * sy, width - 40 * sx, height - 40 * sy);
+
+  ctx.save();
+  ctx.filter = `blur(${Math.max(2, 4.8 * sx)}px)`;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.078)";
+  ctx.beginPath();
+  ctx.ellipse(width * 0.46, height * 0.47, width * 0.28, height * 0.18, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(240, 247, 255, 0.054)";
+  ctx.beginPath();
+  ctx.ellipse(width * 0.6, height * 0.59, width * 0.34, height * 0.22, 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.046)";
+  ctx.beginPath();
+  ctx.ellipse(width * 0.36, height * 0.62, width * 0.22, height * 0.15, 0.18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.globalAlpha = opacity * 0.88;
+  for (let index = 0; index < 260; index += 1) {
+    const x = (24 + ((index * 47) % 196)) * sx;
+    const y = (23 + ((index * 71) % 118)) * sy;
+    const alpha = 0.022 + (index % 5) * 0.0058;
+    const size = Math.max(0.48, (0.52 + (index % 3) * 0.16) * sx);
+    ctx.fillStyle = index % 7 === 0 ? `rgba(210, 218, 226, ${alpha * 0.72})` : `rgba(255, 255, 255, ${alpha})`;
+    ctx.fillRect(x, y, size, Math.max(0.45, size * 0.9));
+  }
+
+  ctx.globalAlpha = opacity * 0.62;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.115)";
+  ctx.lineWidth = Math.max(0.5, 0.65 * sx);
+  for (let index = 0; index < 22; index += 1) {
+    const x = (31 + ((index * 53) % 174)) * sx;
+    const y = (38 + ((index * 29) % 82)) * sy;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.bezierCurveTo(x + 10 * sx, y - 1.5 * sy, x + 21 * sx, y + 1.8 * sy, x + 34 * sx, y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawCanvasHeatsealStudy(ctx: CanvasRenderingContext2D, width: number, height: number, paint: CanvasCartridgePaint, opacity = 1) {
+  const sx = width / 244;
+  const sy = height / 164;
+
+  ctx.save();
+  ctx.globalAlpha = opacity * (paint.hasIssue ? 1.08 : 1);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  ctx.save();
+  roundedRectPath(ctx, 20 * sx, 21 * sy, width - 40 * sx, height - 43 * sy, 10 * sx);
+  ctx.clip();
+  const membrane = ctx.createRadialGradient(width * 0.5, height * 0.48, width * 0.08, width * 0.5, height * 0.52, width * 0.46);
+  membrane.addColorStop(0, "rgba(255, 255, 255, 0.055)");
+  membrane.addColorStop(0.58, "rgba(238, 246, 255, 0.036)");
+  membrane.addColorStop(1, "rgba(255, 255, 255, 0.012)");
+  ctx.fillStyle = membrane;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  const topSeal = ctx.createLinearGradient(0, 6 * sy, 0, 26 * sy);
+  topSeal.addColorStop(0, "rgba(255, 255, 255, 0.44)");
+  topSeal.addColorStop(0.3, "rgba(255, 255, 255, 0.18)");
+  topSeal.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = topSeal;
+  roundedRectPath(ctx, 17 * sx, 7 * sy, width - 34 * sx, 22 * sy, 9 * sx);
+  ctx.fill();
+
+  const bottomSeal = ctx.createLinearGradient(0, height - 30 * sy, 0, height - 4 * sy);
+  bottomSeal.addColorStop(0, "rgba(255, 255, 255, 0)");
+  bottomSeal.addColorStop(0.58, "rgba(255, 255, 255, 0.16)");
+  bottomSeal.addColorStop(1, "rgba(255, 255, 255, 0.34)");
+  ctx.fillStyle = bottomSeal;
+  roundedRectPath(ctx, 18 * sx, height - 30 * sy, width - 36 * sx, 24 * sy, 8 * sx);
+  ctx.fill();
+
+  for (const side of [1, -1]) {
+    ctx.save();
+    const edgeX = side === 1 ? 15 * sx : width - 15 * sx;
+    ctx.translate(edgeX, 0);
+    ctx.scale(side, 1);
+    const sideSeal = ctx.createLinearGradient(0, 0, 23 * sx, 0);
+    sideSeal.addColorStop(0, "rgba(255, 255, 255, 0.4)");
+    sideSeal.addColorStop(0.28, "rgba(255, 255, 255, 0.14)");
+    sideSeal.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = sideSeal;
+    roundedRectPath(ctx, 0, 15 * sy, 24 * sx, height - 30 * sy, 10 * sx);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.56)";
+    ctx.lineWidth = Math.max(0.9, 1.15 * sx);
+    ctx.beginPath();
+    ctx.moveTo(5 * sx, 17 * sy);
+    ctx.bezierCurveTo(2 * sx, 52 * sy, 3 * sx, 101 * sy, 6 * sx, height - 18 * sy);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 255, 255, 0.2)";
+  ctx.shadowBlur = 3 * sx;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+  ctx.lineWidth = Math.max(1.2, 1.55 * sx);
+  ctx.beginPath();
+  ctx.moveTo(31 * sx, 28 * sy);
+  ctx.bezierCurveTo(49 * sx, 37 * sy, 58 * sx, 44 * sy, 68 * sx, 46 * sy);
+  ctx.moveTo(width - 66 * sx, 52 * sy);
+  ctx.bezierCurveTo(width - 43 * sx, 39 * sy, width - 32 * sx, 27 * sy, width - 24 * sx, 20 * sy);
+  ctx.moveTo(width * 0.43, height * 0.45);
+  ctx.bezierCurveTo(width * 0.51, height * 0.38, width * 0.63, height * 0.34, width * 0.69, height * 0.31);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.34)";
+  ctx.lineWidth = Math.max(0.8, 1 * sx);
+  ctx.beginPath();
+  ctx.moveTo(22 * sx, height - 18 * sy);
+  ctx.bezierCurveTo(48 * sx, height - 12 * sy, 73 * sx, height - 17 * sy, 99 * sx, height - 15 * sy);
+  ctx.moveTo(width - 100 * sx, height - 15 * sy);
+  ctx.bezierCurveTo(width - 72 * sx, height - 17 * sy, width - 46 * sx, height - 12 * sy, width - 22 * sx, height - 18 * sy);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function tracePlasticBagPath(ctx: CanvasRenderingContext2D, width: number, height: number, scale: number) {
+  ctx.beginPath();
+  ctx.moveTo(16 * scale, 8 * scale);
+  ctx.bezierCurveTo(68 * scale, 6 * scale, 144 * scale, 7 * scale, width - 16 * scale, 8 * scale);
+  ctx.bezierCurveTo(width - 10 * scale, 9 * scale, width - 7 * scale, 14 * scale, width - 8 * scale, 24 * scale);
+  ctx.lineTo(width - 8 * scale, height - 39 * scale);
+  ctx.bezierCurveTo(width - 7 * scale, height - 28 * scale, width - 12 * scale, height - 18 * scale, width - 24 * scale, height - 10 * scale);
+  ctx.bezierCurveTo(width - 77 * scale, height - 7 * scale, 76 * scale, height - 7 * scale, 24 * scale, height - 10 * scale);
+  ctx.bezierCurveTo(12 * scale, height - 18 * scale, 7 * scale, height - 28 * scale, 8 * scale, height - 39 * scale);
+  ctx.lineTo(8 * scale, 24 * scale);
+  ctx.bezierCurveTo(7 * scale, 14 * scale, 10 * scale, 9 * scale, 16 * scale, 8 * scale);
+  ctx.closePath();
+}
+
+function drawPlasticOuterSilhouette(ctx: CanvasRenderingContext2D, width: number, height: number, scale: number) {
+  ctx.save();
+  ctx.filter = `blur(${1.15 * scale}px)`;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.075)";
+  tracePlasticBagPath(ctx, width, height, scale);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  const edgeShade = ctx.createLinearGradient(0, 0, 0, height);
+  edgeShade.addColorStop(0, "rgba(255, 255, 255, 0.28)");
+  edgeShade.addColorStop(0.08, "rgba(64, 66, 69, 0.055)");
+  edgeShade.addColorStop(0.48, "rgba(255, 255, 255, 0)");
+  edgeShade.addColorStop(0.83, "rgba(55, 57, 60, 0.07)");
+  edgeShade.addColorStop(1, "rgba(255, 255, 255, 0.28)");
+  ctx.strokeStyle = edgeShade;
+  ctx.lineWidth = Math.max(1, 1.2 * scale);
+  tracePlasticBagPath(ctx, width, height, scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPlasticNoise(ctx: CanvasRenderingContext2D, width: number, height: number, scale: number) {
+  ctx.save();
+  const logicalWidth = width / scale;
+  const logicalHeight = height / scale;
+  for (let index = 0; index < 90; index += 1) {
+    const x = ((index * 37) % logicalWidth) * scale;
+    const y = ((index * 61) % logicalHeight) * scale;
+    const size = Math.max(0.45, (0.36 + (index % 3) * 0.12) * scale);
+    const lightAlpha = 0.011 + (index % 5) * 0.0025;
+    ctx.fillStyle = index % 5 === 0 ? `rgba(48, 52, 56, ${lightAlpha * 0.75})` : `rgba(255, 255, 255, ${lightAlpha})`;
+    ctx.fillRect(x, y, size, size);
+  }
+  ctx.restore();
+}
+
+function drawPlasticHeatSeal(ctx: CanvasRenderingContext2D, width: number, height: number, scale: number) {
+  ctx.save();
+  const topSeal = ctx.createLinearGradient(0, 5 * scale, 0, 25 * scale);
+  topSeal.addColorStop(0, "rgba(255, 255, 255, 0.5)");
+  topSeal.addColorStop(0.2, "rgba(255, 255, 255, 0.2)");
+  topSeal.addColorStop(0.62, "rgba(255, 255, 255, 0.045)");
+  topSeal.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = topSeal;
+  ctx.beginPath();
+  ctx.moveTo(15 * scale, 7 * scale);
+  ctx.bezierCurveTo(63 * scale, 9 * scale, 102 * scale, 7 * scale, 143 * scale, 8 * scale);
+  ctx.bezierCurveTo(184 * scale, 9 * scale, 210 * scale, 6 * scale, width - 15 * scale, 8 * scale);
+  ctx.lineTo(width - 12 * scale, 22 * scale);
+  ctx.bezierCurveTo(181 * scale, 20 * scale, 142 * scale, 21 * scale, 101 * scale, 19 * scale);
+  ctx.bezierCurveTo(66 * scale, 18 * scale, 37 * scale, 19 * scale, 13 * scale, 17 * scale);
+  ctx.closePath();
+  ctx.fill();
+
+  const bottomSeal = ctx.createLinearGradient(0, height - 35 * scale, 0, height);
+  bottomSeal.addColorStop(0, "rgba(255, 255, 255, 0)");
+  bottomSeal.addColorStop(0.34, "rgba(255, 255, 255, 0.075)");
+  bottomSeal.addColorStop(0.72, "rgba(255, 255, 255, 0.28)");
+  bottomSeal.addColorStop(1, "rgba(255, 255, 255, 0.44)");
+  ctx.fillStyle = bottomSeal;
+  ctx.beginPath();
+  ctx.moveTo(17 * scale, height - 27 * scale);
+  ctx.bezierCurveTo(56 * scale, height - 22 * scale, 94 * scale, height - 31 * scale, 129 * scale, height - 27 * scale);
+  ctx.bezierCurveTo(166 * scale, height - 22 * scale, 202 * scale, height - 31 * scale, width - 17 * scale, height - 27 * scale);
+  ctx.lineTo(width - 26 * scale, height - 8 * scale);
+  ctx.bezierCurveTo(182 * scale, height - 5 * scale, 67 * scale, height - 5 * scale, 26 * scale, height - 8 * scale);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 255, 255, 0.2)";
+  ctx.shadowBlur = 4 * scale;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.74)";
+  ctx.lineWidth = Math.max(1, 1.45 * scale);
+  ctx.beginPath();
+  ctx.moveTo(17 * scale, 8 * scale);
+  ctx.bezierCurveTo(56 * scale, 10 * scale, 96 * scale, 7 * scale, 139 * scale, 8 * scale);
+  ctx.bezierCurveTo(180 * scale, 9 * scale, 209 * scale, 6 * scale, width - 17 * scale, 9 * scale);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+  ctx.lineWidth = Math.max(0.7, 0.8 * scale);
+  ctx.beginPath();
+  ctx.moveTo(23 * scale, 18 * scale);
+  ctx.bezierCurveTo(62 * scale, 20 * scale, 102 * scale, 17 * scale, 142 * scale, 18 * scale);
+  ctx.bezierCurveTo(179 * scale, 20 * scale, 205 * scale, 18 * scale, width - 23 * scale, 19 * scale);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 255, 255, 0.2)";
+  ctx.shadowBlur = 4 * scale;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.68)";
+  ctx.lineWidth = Math.max(1, 1.45 * scale);
+  ctx.beginPath();
+  ctx.moveTo(25 * scale, height - 9 * scale);
+  ctx.bezierCurveTo(59 * scale, height - 6 * scale, 94 * scale, height - 11 * scale, 126 * scale, height - 9 * scale);
+  ctx.bezierCurveTo(160 * scale, height - 8 * scale, 194 * scale, height - 12 * scale, width - 25 * scale, height - 9 * scale);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+  ctx.lineWidth = Math.max(0.7, 0.82 * scale);
+  ctx.beginPath();
+  ctx.moveTo(26 * scale, height - 24 * scale);
+  ctx.bezierCurveTo(66 * scale, height - 20 * scale, 104 * scale, height - 28 * scale, 138 * scale, height - 24 * scale);
+  ctx.bezierCurveTo(175 * scale, height - 21 * scale, 204 * scale, height - 28 * scale, width - 26 * scale, height - 24 * scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPlasticSideFolds(ctx: CanvasRenderingContext2D, width: number, height: number, scale: number) {
+  ctx.save();
+  for (const side of [1, -1]) {
+    const edgeX = side === 1 ? 8 * scale : width - 8 * scale;
+    ctx.save();
+    ctx.translate(edgeX, 0);
+    ctx.scale(side, 1);
+
+    const fold = ctx.createLinearGradient(-4 * scale, 0, 23 * scale, 0);
+    fold.addColorStop(0, "rgba(255, 255, 255, 0.28)");
+    fold.addColorStop(0.2, "rgba(255, 255, 255, 0.15)");
+    fold.addColorStop(0.62, "rgba(255, 255, 255, 0.045)");
+    fold.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = fold;
+    ctx.beginPath();
+    ctx.moveTo(2 * scale, 20 * scale);
+    ctx.bezierCurveTo(-4 * scale, 45 * scale, -3 * scale, 92 * scale, 4 * scale, height - 34 * scale);
+    ctx.lineTo(22 * scale, height - 25 * scale);
+    ctx.bezierCurveTo(18 * scale, height - 58 * scale, 19 * scale, 86 * scale, 18 * scale, 52 * scale);
+    ctx.bezierCurveTo(17 * scale, 34 * scale, 13 * scale, 23 * scale, 2 * scale, 20 * scale);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.beginPath();
+    ctx.moveTo(0, 28 * scale);
+    ctx.lineTo(-5 * scale, 37 * scale);
+    ctx.lineTo(0, 48 * scale);
+    ctx.lineTo(9 * scale, 42 * scale);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.beginPath();
+    ctx.moveTo(2 * scale, height - 42 * scale);
+    ctx.lineTo(-4 * scale, height - 33 * scale);
+    ctx.lineTo(5 * scale, height - 22 * scale);
+    ctx.lineTo(16 * scale, height - 26 * scale);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.lineWidth = Math.max(0.7, 0.82 * scale);
+    ctx.beginPath();
+    ctx.moveTo(3 * scale, 20 * scale);
+    ctx.bezierCurveTo(-2 * scale, 54 * scale, 2 * scale, 91 * scale, 4 * scale, height - 34 * scale);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.13)";
+    ctx.lineWidth = Math.max(0.6, 0.68 * scale);
+    ctx.beginPath();
+    ctx.moveTo(16 * scale, 25 * scale);
+    ctx.bezierCurveTo(18 * scale, 58 * scale, 14 * scale, 88 * scale, 17 * scale, height - 31 * scale);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawPlasticCornerWraps(ctx: CanvasRenderingContext2D, width: number, height: number, scale: number) {
+  ctx.save();
+  const corners: Array<[number, number, number, number, number, number]> = [
+    [13, 9, 1, 1, -0.06, 0],
+    [width / scale - 13, 9, -1, 1, 0.06, 1],
+    [14, height / scale - 10, 1, -1, 0.1, 2],
+    [width / scale - 14, height / scale - 10, -1, -1, -0.1, 3]
+  ];
+  for (const [cx, cy, sx, sy, rotation, index] of corners) {
+    const x = cx * scale;
+    const y = cy * scale;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(sx, sy);
+    ctx.rotate(rotation);
+    const fold = ctx.createLinearGradient(-7 * scale, -4 * scale, 35 * scale, 32 * scale);
+    fold.addColorStop(0, "rgba(255, 255, 255, 0.52)");
+    fold.addColorStop(0.36, "rgba(255, 255, 255, 0.2)");
+    fold.addColorStop(0.72, "rgba(255, 255, 255, 0.055)");
+    fold.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = fold;
+    ctx.beginPath();
+    ctx.moveTo(-7 * scale, -1 * scale);
+    ctx.lineTo(29 * scale, -1 * scale);
+    ctx.lineTo(20 * scale, 8 * scale);
+    ctx.lineTo(34 * scale, 25 * scale);
+    ctx.lineTo(12 * scale, 20 * scale);
+    ctx.lineTo(1 * scale, 34 * scale);
+    ctx.lineTo(-7 * scale, 18 * scale);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.42)";
+    ctx.lineWidth = Math.max(0.75, 0.86 * scale);
+    ctx.beginPath();
+    ctx.moveTo(-2 * scale, 2 * scale);
+    ctx.lineTo(21 * scale, 3 * scale);
+    ctx.lineTo(7 * scale, 22 * scale);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = Math.max(0.55, 0.66 * scale);
+    ctx.beginPath();
+    ctx.moveTo(9 * scale, 7 * scale);
+    ctx.lineTo(27 * scale, 22 * scale);
+    ctx.stroke();
+
+    if (index > 1) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.24)";
+      ctx.lineWidth = Math.max(0.65, 0.78 * scale);
+      ctx.beginPath();
+      ctx.moveTo(-6 * scale, 14 * scale);
+      ctx.bezierCurveTo(7 * scale, 23 * scale, 17 * scale, 22 * scale, 29 * scale, 31 * scale);
+      ctx.stroke();
+    }
+    if (index === 1) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.44)";
+      ctx.lineWidth = Math.max(0.7, 0.84 * scale);
+      ctx.beginPath();
+      ctx.moveTo(11 * scale, 1 * scale);
+      ctx.lineTo(30 * scale, 18 * scale);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.14)";
+  ctx.beginPath();
+  ctx.moveTo(29 * scale, height - 13 * scale);
+  ctx.lineTo(width - 29 * scale, height - 13 * scale);
+  ctx.lineTo(width - 25 * scale, height - 6 * scale);
+  ctx.lineTo(25 * scale, height - 6 * scale);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  ctx.lineWidth = Math.max(0.65, 0.78 * scale);
+  ctx.beginPath();
+  ctx.moveTo(29 * scale, height - 13 * scale);
+  ctx.lineTo(25 * scale, height - 6 * scale);
+  ctx.moveTo(width - 29 * scale, height - 13 * scale);
+  ctx.lineTo(width - 25 * scale, height - 6 * scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPlasticSoftHighlights(ctx: CanvasRenderingContext2D, width: number, height: number, paint: CanvasCartridgePaint, scale: number) {
+  ctx.save();
+  ctx.globalAlpha = paint.hasIssue ? 0.52 : 0.44;
+
+  const diagonal = ctx.createLinearGradient(width * 0.14, 0, width * 0.9, height);
+  diagonal.addColorStop(0, "rgba(255, 255, 255, 0)");
+  diagonal.addColorStop(0.18, "rgba(255, 255, 255, 0.052)");
+  diagonal.addColorStop(0.225, "rgba(255, 255, 255, 0.01)");
+  diagonal.addColorStop(0.64, "rgba(255, 255, 255, 0)");
+  diagonal.addColorStop(0.82, "rgba(255, 255, 255, 0.044)");
+  diagonal.addColorStop(0.85, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = diagonal;
+  ctx.fillRect(0, 0, width, height);
+
+  const topGleam = ctx.createLinearGradient(18 * scale, 0, width - 18 * scale, 0);
+  topGleam.addColorStop(0, "rgba(255, 255, 255, 0)");
+  topGleam.addColorStop(0.08, "rgba(255, 255, 255, 0.26)");
+  topGleam.addColorStop(0.5, "rgba(255, 255, 255, 0.06)");
+  topGleam.addColorStop(0.92, "rgba(255, 255, 255, 0.24)");
+  topGleam.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.strokeStyle = topGleam;
+  ctx.lineWidth = Math.max(0.9, 1.1 * scale);
+  ctx.beginPath();
+  ctx.moveTo(18 * scale, 12 * scale);
+  ctx.bezierCurveTo(78 * scale, 9 * scale, 137 * scale, 15 * scale, width - 18 * scale, 11 * scale);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.44)";
+  ctx.lineWidth = Math.max(1.1, 1.35 * scale);
+  ctx.shadowColor = "rgba(255, 255, 255, 0.16)";
+  ctx.shadowBlur = 3 * scale;
+  ctx.beginPath();
+  ctx.moveTo(width - 48 * scale, 18 * scale);
+  ctx.lineTo(width - 13 * scale, 55 * scale);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+  ctx.lineWidth = Math.max(0.7, 0.78 * scale);
+  ctx.beginPath();
+  ctx.moveTo(14 * scale, 22 * scale);
+  ctx.lineTo(14 * scale, height - 43 * scale);
+  ctx.moveTo(width - 14 * scale, 24 * scale);
+  ctx.lineTo(width - 14 * scale, height - 43 * scale);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.065)";
+  ctx.beginPath();
+  ctx.ellipse(width * 0.5, height * 0.56, width * 0.37, height * 0.3, -0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function colorMixHex(base: string, mix: string, amount: number) {
+  const a = parseHexColor(base);
+  const b = parseHexColor(mix);
+  if (!a || !b) return base;
+  const c = a.map((value, index) => Math.round(value + (b[index] - value) * amount));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
+function parseHexColor(value: string) {
+  const match = value.match(/^#([0-9a-f]{6})$/i);
+  if (!match) return null;
+  const int = Number.parseInt(match[1], 16);
+  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
+
+function canvasCartridgePalette(category: ModCategory) {
+  if (category === "char") {
+    return { shellLight: "#bcc2c8", shellMid: "#858e98", shellDark: "#5f6873", shellEdge: "#4c545f", labelRed: "#d8dad6", labelRedDeep: "#a8b2b4" };
+  }
+  if (category === "cutscene") {
+    return { shellLight: "#595e6c", shellMid: "#343845", shellDark: "#20232d", shellEdge: "#151822", labelRed: "#92dce9", labelRedDeep: "#4f8e9d" };
+  }
+  if (category === "other") {
+    return { shellLight: "#76807d", shellMid: "#515f5a", shellDark: "#323d39", shellEdge: "#222c29", labelRed: "#d6b75c", labelRedDeep: "#8d7133" };
+  }
+  return { shellLight: "#7193c8", shellMid: "#4d73aa", shellDark: "#31598d", shellEdge: "#244674", labelRed: "#d3192e", labelRedDeep: "#8d0f20" };
+}
+
+function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }
 
 function categoryPack(category: ModCategory) {
