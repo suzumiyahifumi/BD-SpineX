@@ -184,12 +184,24 @@ fn run_command(program: &str, args: &[&OsStr]) -> Result<String, String> {
     }
 }
 
+fn key_has_asset_id(key: &str, prefix: &str) -> bool {
+    let Some(rest) = key.strip_prefix(prefix) else {
+        return false;
+    };
+    rest.trim_start_matches(|c: char| c == '_' || c == '-' || c == '.' || c.is_ascii_whitespace())
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_digit())
+        .unwrap_or(false)
+}
+
 fn classify_key(key: &str) -> &'static str {
-    if key.starts_with("cutscene_char") {
+    let key = key.trim().to_ascii_lowercase();
+    if key_has_asset_id(&key, "cutscene_char") {
         "skillcut"
-    } else if key.starts_with("illust_dating") {
+    } else if key_has_asset_id(&key, "illust_dating") {
         "dating"
-    } else if key.starts_with("char") && key[4..].chars().all(|c| c.is_ascii_digit()) {
+    } else if key_has_asset_id(&key, "char") {
         "standing"
     } else {
         "other"
@@ -290,6 +302,34 @@ fn detect_game_version() -> GameVersionInfo {
     }
 }
 
+fn normalize_version_for_compare(version: &str) -> String {
+    version
+        .trim()
+        .trim_start_matches(|c| c == 'v' || c == 'V')
+        .split(|c| c == '+' || c == '-')
+        .next()
+        .unwrap_or("")
+        .to_string()
+}
+
+fn injection_version_mismatch_message(detected_version: &str) -> String {
+    format!(
+        "Runtime Injection is locked: this BD-SpineX app supports BrownDust II {SUPPORTED_GAME_VERSION}, but the detected game version is {detected_version}. Update BD-SpineX to the matching app version."
+    )
+}
+
+fn runtime_injection_version_guard() -> Option<ActionResult> {
+    let info = detect_game_version();
+    let detected = info.version?;
+    let detected_comparable = normalize_version_for_compare(&detected);
+    let supported_comparable = normalize_version_for_compare(SUPPORTED_GAME_VERSION);
+    if !detected_comparable.is_empty() && !supported_comparable.is_empty() && detected_comparable != supported_comparable {
+        Some(fail(&injection_version_mismatch_message(&detected)))
+    } else {
+        None
+    }
+}
+
 #[tauri::command]
 fn select_directory() -> Option<String> {
     rfd::FileDialog::new().pick_folder().map(|p| p.to_string_lossy().to_string())
@@ -348,6 +388,9 @@ fn runtime_install(app: AppHandle) -> Result<ActionResult, String> {
     let bin = main_binary_path()?;
     if !bin.exists() {
         return Ok(fail("Could not find BrownDustII. Is the PlayCover app installed?"));
+    }
+    if let Some(version_error) = runtime_injection_version_guard() {
+        return Ok(version_error);
     }
     if is_game_running() {
         return Ok(fail("Close BrownDust II before installing Runtime Injection."));

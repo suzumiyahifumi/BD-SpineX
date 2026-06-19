@@ -6,9 +6,10 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { detectGameVersion } from "./game-version.js";
 import { addLoadDylib, hasLoadDylib } from "./macho-inject.js";
 import { checkLegacyRuntimeMigration, cleanupLegacyRuntimeMigrationRecords, legacyOriginalBackupPath, readLegacyActivePatchEntries } from "./patch-runner.js";
-import { isPackagedRuntime, resourcePath } from "./runtime-paths.js";
+import { isPackagedRuntime, resourcePath, supportedGameVersion } from "./runtime-paths.js";
 import type { LegacyRuntimeMigrationCheck, LegacyRuntimeMigrationResult } from "./types.js";
 
 const exec = promisify(execFile);
@@ -62,6 +63,25 @@ function disabledMarkerPath() {
 }
 function entitlementsCachePath() {
   return path.join(appBundlePath(), "..", `${BUNDLE_ID}.app.BAK-mainbin`, "bd2.entitlements.plist");
+}
+
+function normalizeVersionForCompare(version?: string) {
+  return version?.trim().replace(/^v/i, "").split(/[+-]/)[0];
+}
+
+function injectionVersionMismatchMessage(detectedVersion: string, supportedVersion: string) {
+  return `Runtime Injection is locked: this BD-SpineX app supports BrownDust II ${supportedVersion}, but the detected game version is ${detectedVersion}. Update BD-SpineX to the matching app version.`;
+}
+
+async function validateRuntimeInjectionGameVersion() {
+  const supported = supportedGameVersion();
+  const detected = (await detectGameVersion(appBundlePath())).version;
+  const detectedComparable = normalizeVersionForCompare(detected);
+  const supportedComparable = normalizeVersionForCompare(supported);
+  if (detected && detectedComparable && supportedComparable && detectedComparable !== supportedComparable) {
+    return { ok: false as const, message: injectionVersionMismatchMessage(detected, supported) };
+  }
+  return { ok: true as const };
 }
 
 /** loader dylib 來源：packaged → resources/backend；dev → 編譯輸出。 */
@@ -327,6 +347,8 @@ export async function setRuntimeModsEnabled(enabled: boolean): Promise<{ ok: boo
 export async function installLoader(): Promise<{ ok: boolean; message: string }> {
   const bin = mainBinaryPath();
   if (!fs.existsSync(bin)) return { ok: false, message: "Could not find BrownDustII. Is the PlayCover app installed?" };
+  const versionCheck = await validateRuntimeInjectionGameVersion();
+  if (!versionCheck.ok) return versionCheck;
   if (await isGameRunning()) return { ok: false, message: "Close BrownDust II before installing Runtime Injection." };
   const src = loaderSourcePath();
   if (!fs.existsSync(src)) return { ok: false, message: `Runtime loader dylib was not found: ${src}` };

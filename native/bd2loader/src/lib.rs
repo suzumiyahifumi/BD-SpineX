@@ -2,7 +2,7 @@
 //!
 //! Phase 3：注入後進入遊戲、解析 il2cpp domain、attach thread。
 //! Phase 4.1：用 frida-gum inline-hook `SkeletonDataAsset.GetSkeletonData`
-//!            （UnityFramework.base + 0x94A9560），在 hook 內用 il2cpp runtime_invoke
+//!            （UnityFramework.base + 0x94E6AB4），在 hook 內用 il2cpp runtime_invoke
 //!            讀出正在載入的資產名稱（= 識別角色，決定要不要替換）。
 //!
 //! 注入：以 `LC_LOAD_DYLIB` 加進 BrownDustII 主程式（見 ../tools/inject_dylib.py）。
@@ -21,7 +21,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const LOG_NOTICE: c_int = 5;
 const RTLD_NOLOAD: c_int = 0x10;
 // IL2CPP_TARGETS.md：SkeletonDataAsset.GetSkeletonData 的 RVA。
-const RVA_GET_SKELETON_DATA: usize = 0x94A9560;
+const RVA_GET_SKELETON_DATA: usize = 0x94E6AB4;
 // SkeletonDataAsset 欄位偏移（IL2CPP_TARGETS.md）
 const OFF_ATLAS_ASSETS: usize = 0x18; // AtlasAssetBase[] atlasAssets
 const OFF_SCALE: usize = 0x20; // float scale
@@ -31,9 +31,9 @@ const OFF_SKELETON_JSON: usize = 0x28; // TextAsset skeletonJSON
 const OFF_SKELETON_DATA: usize = 0x70; // SkeletonData skeletonData（CreateRuntimeInstance(initialize=true) 後即填好）
 
 // 多載用 RVA 精準定位（名稱+argc 會撞多載）
-const RVA_SPINEATLAS_CREATE_TEX_MAT: usize = 0x94AC378; // SpineAtlasAsset.CreateRuntimeInstance(TextAsset, Texture2D[], Material, bool, Func)
-const RVA_SKELDATA_CREATE_ARR: usize = 0x94AB660; // SkeletonDataAsset.CreateRuntimeInstance(TextAsset, AtlasAssetBase[], bool, float)
-const RVA_SKELDATA_READ_BYTES: usize = 0x94AB960; // SkeletonDataAsset.ReadSkeletonData(byte[], AttachmentLoader, float) [static]
+const RVA_SPINEATLAS_CREATE_TEX_MAT: usize = 0x94E98CC; // SpineAtlasAsset.CreateRuntimeInstance(TextAsset, Texture2D[], Material, bool, Func)
+const RVA_SKELDATA_CREATE_ARR: usize = 0x94E8BB4; // SkeletonDataAsset.CreateRuntimeInstance(TextAsset, AtlasAssetBase[], bool, float)
+const RVA_SKELDATA_READ_BYTES: usize = 0x94E8EB4; // SkeletonDataAsset.ReadSkeletonData(byte[], AttachmentLoader, float) [static]
 
 // il2cpp array 資料起點（64-bit）
 const IL2CPP_ARRAY_DATA: usize = 0x20;
