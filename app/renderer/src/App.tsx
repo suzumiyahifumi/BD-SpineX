@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
 import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
 import characterAssetsJson from "./data/bd2-characters.json";
+import { LibraryHalftoneBackdrop } from "./LibraryHalftoneBackdrop";
 
 // Runtime-based BD-SpineX. The interaction model follows the original offline patch UI.
 // Stage 3 of the liquid-glass redesign: the top toolbar is replaced by a left glass
@@ -648,6 +649,7 @@ export function App() {
 
   const libraryView = (
     <>
+      <LibraryHalftoneBackdrop />
       <section className="scanGrid libraryFlow">
         <div className="panel tablePanel modsPanel cartridgePanel">
           <div className="modsHeader cartridgeToolbar">
@@ -942,7 +944,6 @@ export function App() {
     );
   };
 
-  const dockFillPct = library.length > 0 ? Math.round((mountedMods.length / library.length) * 100) : 0;
   const dockSpinning = modsEnabled && mountedMods.length > 0;
   const applyDisabled = modsLocked || pendingChanges.length === 0 || hasConflict;
   const launchDisabled = busy || !appReady;
@@ -967,11 +968,6 @@ export function App() {
             {gameRunning && <span className="warn"> · game running</span>}
           </div>
         </div>
-      </div>
-
-      <div className="dockTrack">
-        <div className="dockBar"><div className="dockFill" style={{ width: `${dockFillPct}%` }} /></div>
-        <div className="dockTimes"><span>{mountedMods.length} mounted</span><span>of {library.length} scanned</span></div>
       </div>
 
       <div className="dockControls">
@@ -1002,7 +998,9 @@ export function App() {
           onClick={applyChanges}
           title={versionLocked ? "Update BD-SpineX version" : hasConflict ? "Resolve same-key conflicts first" : pendingChanges.length === 0 ? "No staged changes" : "Apply staged changes"}
         >
-          ▶ Apply{pendingChanges.length ? ` (${pendingChanges.length})` : ""}
+          <span className="dockApplyIcon" aria-hidden="true">▶</span>
+          <span>Apply</span>
+          {pendingChanges.length ? <span className="dockApplyCount">{pendingChanges.length}</span> : null}
         </button>
         <button
           type="button"
@@ -1012,7 +1010,7 @@ export function App() {
           title={appReady ? "Launch BrownDust II" : "PlayCover BrownDust II not ready"}
           aria-label="Launch game"
         >
-          🚀
+          Launch
         </button>
       </div>
     </div>
@@ -1084,7 +1082,7 @@ export function App() {
         </div>
       </nav>
 
-      <main className="appMain">
+      <main className={`appMain view-${view}`}>
         <div className="viewHead">
           <div>
             <h1>{activeNav.label}</h1>

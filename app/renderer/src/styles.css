@@ -2206,6 +2206,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   cursor: pointer;
   border: 0;
   border-left: 3px solid color-mix(in srgb, var(--red) 30%, transparent);
+  border-radius: 0;
   background: linear-gradient(90deg, color-mix(in srgb, var(--red) 6%, transparent), transparent 60%);
   color: var(--text-dim);
   font-family: var(--cond);
@@ -5220,4 +5221,314 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 /* ---------- view subtitle -> condensed ---------- */
 :where([data-theme="night"]) .viewHead .viewSub {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
+}
+
+/* ============================================================
+   Night Press — Library page tuning (§09)
+   Chrome-only adjustments: press-bed ground, cartridge nameplates,
+   pending hover scan, and dock apply/launch treatment.
+   ============================================================ */
+
+/* background: press-bed halftone and blueprint grid */
+:where([data-theme="night"]) .appMain.view-library {
+  position: relative;
+  isolation: isolate;
+  background-image:
+    radial-gradient(520px 360px at 8% -10%, rgba(36, 26, 16, 0.72), transparent 62%),
+    radial-gradient(rgba(226, 64, 42, 0.07) 1px, transparent 1.5px),
+    radial-gradient(rgba(232, 162, 44, 0.07) 1px, transparent 1.5px),
+    linear-gradient(rgba(237, 224, 196, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237, 224, 196, 0.045) 1px, transparent 1px);
+  background-size:
+    auto,
+    16px 16px,
+    16px 16px,
+    40px 40px,
+    40px 40px;
+  background-position:
+    center,
+    0 0,
+    8px 8px,
+    0 0,
+    0 0;
+}
+
+:where([data-theme="night"]) .appMain.view-library > :not(.libraryHalftoneBackdrop) {
+  position: relative;
+  z-index: 2;
+}
+
+:where([data-theme="night"]) .libraryHalftoneBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  opacity: 0.88;
+  mix-blend-mode: screen;
+}
+
+:where([data-theme="night"]) .appMain.view-library::before {
+  content: "BD";
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  width: min(420px, 34vw);
+  height: min(300px, 34vh);
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px 30px 0 0;
+  pointer-events: none;
+  background: radial-gradient(360px 280px at calc(100% - 86px) 48px, rgba(42, 18, 11, 0.58), transparent 58%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: rgba(237, 224, 196, 0.036);
+  font-family: var(--cond);
+  font-size: clamp(128px, 15vw, 220px);
+  font-weight: 800;
+  line-height: 0.82;
+  text-transform: uppercase;
+  mix-blend-mode: screen;
+}
+
+:where([data-theme="night"]) .appMain.view-library::after {
+  content: "";
+  position: fixed;
+  top: 22px;
+  right: 24px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+  opacity: 0.56;
+  background:
+    radial-gradient(circle at 18px 18px, transparent 0 7px, rgba(237, 224, 196, 0.34) 7px 8.5px, transparent 9px),
+    linear-gradient(rgba(237, 224, 196, 0.34), rgba(237, 224, 196, 0.34)) 17.25px 6px / 1.5px 24px no-repeat,
+    linear-gradient(90deg, rgba(237, 224, 196, 0.34), rgba(237, 224, 196, 0.34)) 6px 17.25px / 24px 1.5px no-repeat;
+}
+
+/* cartridge labels: letterpress paper nameplates with idle/staged/mounted states */
+:where([data-theme="night"]) .rcart {
+  --nameplate-strip: transparent;
+  --nameplate-status: "·";
+  --nameplate-status-bg: rgba(169, 158, 132, 0.76);
+  --nameplate-status-ink: var(--ink);
+  --nameplate-setoff: rgba(0, 0, 0, 0.42);
+}
+
+:where([data-theme="night"]) .rcart.is-mounted,
+:where([data-theme="night"]) .rcart.is-have {
+  --nameplate-strip: var(--red);
+  --nameplate-status: "✓";
+  --nameplate-status-bg: var(--red);
+  --nameplate-status-ink: var(--paper);
+  --nameplate-setoff: var(--red-deep);
+}
+
+:where([data-theme="night"]) .rcart.is-add {
+  --nameplate-strip: var(--amber);
+  --nameplate-status: "+";
+  --nameplate-status-bg: var(--amber);
+  --nameplate-status-ink: var(--ink);
+  --nameplate-setoff: rgba(0, 0, 0, 0.42);
+}
+
+:where([data-theme="night"]) .rcart.is-remove {
+  --nameplate-strip: var(--red);
+  --nameplate-status: "-";
+  --nameplate-status-bg: var(--red);
+  --nameplate-status-ink: var(--paper);
+  --nameplate-setoff: var(--red-deep);
+}
+
+:where([data-theme="night"]) .rcart.is-warning {
+  --nameplate-strip: var(--conflict);
+  --nameplate-status: "!";
+  --nameplate-status-bg: var(--conflict);
+  --nameplate-status-ink: var(--ink);
+}
+
+:where([data-theme="night"]) .rcartNamePlate {
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, #171511 0 14px, rgba(237, 224, 196, 0.95) 14px 100%),
+    radial-gradient(72px 28px at 90% 86%, rgba(14, 13, 12, 0.08), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='92' height='92'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .36 0 0 0 0 .26 0 0 0 .12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    var(--paper);
+  background-blend-mode: normal, multiply, multiply, normal;
+  box-shadow:
+    inset 4px 0 0 var(--nameplate-strip),
+    3px 3px 0 var(--nameplate-setoff);
+  filter: none;
+}
+
+:where([data-theme="night"]) .rcartNamePlate::before {
+  background:
+    linear-gradient(180deg, rgba(237, 224, 196, 0.1) 0 1px, transparent 1px 13px, rgba(0, 0, 0, 0.26) 13px 14px, transparent 14px),
+    linear-gradient(90deg, rgba(14, 13, 12, 0.14) 0 1px, transparent 1px calc(100% - 1px), rgba(255, 255, 255, 0.18) calc(100% - 1px));
+  opacity: 0.72;
+}
+
+:where([data-theme="night"]) .rcartNamePlate::after {
+  opacity: 0.36;
+}
+
+:where([data-theme="night"]) .rcartNameKind {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 26px 0 9px;
+  background: #171511;
+  color: var(--amber);
+  font-family: var(--cond);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-align: left;
+}
+
+:where([data-theme="night"]) .rcartNameKind::after {
+  content: var(--nameplate-status);
+  position: absolute;
+  top: 1px;
+  right: 6px;
+  display: grid;
+  width: 13px;
+  height: 13px;
+  place-items: center;
+  background: var(--nameplate-status-bg);
+  color: var(--nameplate-status-ink);
+  font-family: var(--cond);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+:where([data-theme="night"]) .rcartNamePlate strong {
+  padding: 7px 10px 9px 12px;
+  color: rgba(14, 13, 12, 0.76);
+  font-family: var(--cond);
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.08;
+  text-align: left;
+  text-transform: uppercase;
+  text-shadow: none;
+}
+
+/* Pending Changes: only add the sidebar-like left-to-right hover glow. */
+:where([data-theme="night"]) .pendingDiffItem {
+  position: relative;
+  overflow: hidden;
+}
+
+:where([data-theme="night"]) .pendingDiffItem > * {
+  position: relative;
+  z-index: 1;
+}
+
+:where([data-theme="night"]) .pendingDiffItem::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-110%);
+  background:
+    linear-gradient(90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--amber) 14%, transparent) 22%,
+      rgba(237, 224, 196, 0.28) 46%,
+      color-mix(in srgb, var(--pending-diff-color) 18%, transparent) 58%,
+      transparent 78%);
+  mix-blend-mode: screen;
+  transition:
+    opacity 0.16s ease,
+    transform 0.46s cubic-bezier(.2,.7,.2,1);
+}
+
+:where([data-theme="night"]) button.pendingDiffItem:hover:not(:disabled)::before,
+:where([data-theme="night"]) button.pendingDiffItem:focus-visible::before,
+:where([data-theme="night"]) button.pendingDiffItem.is-active::before {
+  opacity: 1;
+  transform: translateX(110%);
+}
+
+/* Dock: remove progress column in JSX; make Apply red glass and Launch amber glass. */
+:where([data-theme="night"]) .dock {
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+:where([data-theme="night"]) .dockBtn.apply {
+  display: inline-flex;
+  width: auto;
+  min-width: 118px;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1.5px solid var(--red);
+  border-radius: 5px;
+  background:
+    linear-gradient(160deg, rgba(226, 64, 42, 0.44), rgba(158, 35, 23, 0.3)),
+    var(--liquid-surface);
+  color: var(--paper);
+  box-shadow:
+    3px 3px 0 rgba(158, 35, 23, 0.5),
+    0 0 18px rgba(226, 64, 42, 0.34),
+    inset 0 1px 0 rgba(255, 244, 214, 0.24);
+}
+
+:where([data-theme="night"]) .dockBtn.apply:hover:not(:disabled) {
+  border-color: var(--red);
+  background:
+    linear-gradient(160deg, rgba(226, 64, 42, 0.52), rgba(158, 35, 23, 0.34)),
+    var(--liquid-surface);
+  box-shadow:
+    2px 2px 0 rgba(158, 35, 23, 0.55),
+    0 0 22px rgba(226, 64, 42, 0.42),
+    inset 0 1px 0 rgba(255, 244, 214, 0.28);
+  transform: none;
+}
+
+:where([data-theme="night"]) .dockApplyIcon {
+  font-size: 10px;
+  transform: translateY(-0.5px);
+}
+
+:where([data-theme="night"]) .dockApplyCount {
+  display: inline-grid;
+  min-width: 19px;
+  height: 18px;
+  place-items: center;
+  padding: 0 6px;
+  background: var(--amber);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+:where([data-theme="night"]) .dockBtn.launch {
+  display: inline-flex;
+  width: auto;
+  min-width: 82px;
+  padding: 0 14px;
+  border-color: color-mix(in srgb, var(--amber) 58%, transparent);
+  color: var(--amber);
+}
+
+:where([data-theme="night"]) .dockBtn.launch:hover:not(:disabled) {
+  border-color: var(--amber);
+  color: var(--paper);
+}
+
+@supports ((backdrop-filter: blur(1px) url(#liquid-lens)) or (-webkit-backdrop-filter: blur(1px) url(#liquid-lens))) {
+  :root[data-glass="liquid"]:where([data-theme="night"]) .dockBtn.apply,
+  :root[data-glass="liquid"]:where([data-theme="night"]) .dockBtn.launch {
+    -webkit-backdrop-filter: blur(2.5px) url(#liquid-lens) saturate(1.55);
+    backdrop-filter: blur(2.5px) url(#liquid-lens) saturate(1.55);
+  }
 }

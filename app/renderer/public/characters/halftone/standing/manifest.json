@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-19T18:31:56.423Z",
+  "inputDir": "app/renderer/public/characters/standing",
+  "outputDir": "app/renderer/public/characters/halftone/standing",
+  "settings": {
+    "mode": "classic",
+    "grid": 3,
+    "density": 0.82,
+    "edgeWeight": 1.25,
+    "maxDots": 5200,
+    "contourAlphaThreshold": 0.18,
+    "lineArt": "posterGhost"
+  },
+  "characters": [
+    {
+      "id": "000201",
+      "dots": 2553,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000201.lineart.png",
+      "inkPixels": 943294,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "contour": "app/renderer/public/characters/halftone/standing/000201.contour.lineart.png",
+        "duotone": "app/renderer/public/characters/halftone/standing/000201.duotone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000201.poster-ghost.lineart.png",
+        "detailInk": "app/renderer/public/characters/halftone/standing/000201.detail-ink.lineart.png",
+        "backdropTrace": "app/renderer/public/characters/halftone/standing/000201.backdrop-trace.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000201.json",
+      "preview": "app/renderer/public/characters/halftone/standing/000201.preview.png"
+    },
+    {
+      "id": "067702",
+      "dots": 2468,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067702.lineart.png",
+      "inkPixels": 924244,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "contour": "app/renderer/public/characters/halftone/standing/067702.contour.lineart.png",
+        "duotone": "app/renderer/public/characters/halftone/standing/067702.duotone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067702.poster-ghost.lineart.png",
+        "detailInk": "app/renderer/public/characters/halftone/standing/067702.detail-ink.lineart.png",
+        "backdropTrace": "app/renderer/public/characters/halftone/standing/067702.backdrop-trace.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067702.json",
+      "preview": "app/renderer/public/characters/halftone/standing/067702.preview.png"
+    },
+    {
+      "id": "000101",
+      "dots": 2305,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000101.lineart.png",
+      "inkPixels": 804916,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "contour": "app/renderer/public/characters/halftone/standing/000101.contour.lineart.png",
+        "duotone": "app/renderer/public/characters/halftone/standing/000101.duotone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000101.poster-ghost.lineart.png",
+        "detailInk": "app/renderer/public/characters/halftone/standing/000101.detail-ink.lineart.png",
+        "backdropTrace": "app/renderer/public/characters/halftone/standing/000101.backdrop-trace.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000101.json",
+      "preview": "app/renderer/public/characters/halftone/standing/000101.preview.png"
+    }
+  ]
+}
