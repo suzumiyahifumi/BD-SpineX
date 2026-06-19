@@ -4554,12 +4554,10 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 /* ============================================================
-   Poster themes — Soviet print (Night Press / Risograph / Mono)
-   Switchable via :root[data-theme]. Classic (default :root) is
-   left untouched so it can be switched back. The cartridge art &
-   shape are never changed — only its selection check is restyled
-   as a red stamp. Uses :where() (zero specificity) so component
-   rules like .dockBtn keep their own styling.
+   Night Press — Soviet print overlay
+   The original dark glass layer remains the base. Night Press is
+   applied on top through :where() (zero specificity), preserving
+   the base-glass + poster cascade that the app visuals rely on.
    ============================================================ */
 
 .viewCount { display: none; }  /* poster-only giant numeral */
@@ -4576,28 +4574,6 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --scrollbar-thumb-hover:#E2402A; --scrollbar-thumb-active:#9E2317; --scrollbar-border:transparent; --scrollbar-radius:0;
   --cond:"BD Label Condensed","Oswald","Archivo Narrow",sans-serif;
 }
-:root[data-theme="riso"] {
-  --bg-0:#F0E3C6; --bg-1:#E4D3AC;
-  --text:#1B1714; --text-dim:#6b5e49; --text-faint:#897b62;
-  --glass:rgba(27,23,20,0.05); --glass-2:rgba(27,23,20,0.08); --glass-3:rgba(27,23,20,0.13);
-  --stroke:rgba(27,23,20,0.2); --stroke-2:rgba(27,23,20,0.32); --shine:rgba(255,255,255,0.65);
-  --shadow:rgba(60,40,20,0.3);
-  --red:#C8372A; --red-deep:#8E1E15; --amber:#D9772A; --paper:#F0E3C6; --ink:#1B1714; --tray:#14120E;
-  --scrollbar-track:transparent; --scrollbar-thumb:#C8372A;
-  --scrollbar-thumb-hover:#C8372A; --scrollbar-thumb-active:#8E1E15; --scrollbar-border:transparent; --scrollbar-radius:0;
-  --cond:"BD Label Condensed","Oswald","Archivo Narrow",sans-serif;
-}
-:root[data-theme="mono"] {
-  --bg-0:#F2E7C9; --bg-1:#E8DBB6;
-  --text:#161616; --text-dim:#5a533f; --text-faint:#7d745c;
-  --glass:rgba(22,22,22,0.05); --glass-2:rgba(22,22,22,0.08); --glass-3:rgba(22,22,22,0.13);
-  --stroke:rgba(22,22,22,0.22); --stroke-2:rgba(22,22,22,0.34); --shine:rgba(255,255,255,0.65);
-  --shadow:rgba(60,40,20,0.3);
-  --red:#C4382B; --red-deep:#8D1E16; --amber:#E0AE2E; --paper:#F2E7C9; --ink:#161616; --tray:#1a1812;
-  --scrollbar-track:transparent; --scrollbar-thumb:#C4382B;
-  --scrollbar-thumb-hover:#C4382B; --scrollbar-thumb-active:#8D1E16; --scrollbar-border:transparent; --scrollbar-radius:0;
-  --cond:"BD Label Condensed","Oswald","Archivo Narrow",sans-serif;
-}
 
 /* ---- body backgrounds ---- */
 [data-theme="night"] body {
@@ -4606,52 +4582,37 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     radial-gradient(900px 720px at 100% 0%, #2a120b 0%, transparent 55%),
     #0E0D0C;
 }
-[data-theme="riso"] body { background:#F0E3C6; }
-[data-theme="mono"] body { background:#F2E7C9; }
 
-/* ---- light themes: paper rail + dark "press tray" main ---- */
 [data-theme="night"] .appRail { background:rgba(23,21,15,0.55); }
-[data-theme="riso"] .appRail, [data-theme="mono"] .appRail {
-  background:var(--paper); border-right:1px solid rgba(0,0,0,0.18);
-  -webkit-backdrop-filter:none; backdrop-filter:none;
-}
-[data-theme="riso"] .appMain, [data-theme="mono"] .appMain {
-  background:var(--tray);
-  --text:#EDE0C4; --text-dim:#B9AD8E; --text-faint:#8a7f63;
-  --glass:rgba(237,224,196,0.06); --glass-2:rgba(237,224,196,0.10); --glass-3:rgba(237,224,196,0.15);
-  --stroke:rgba(237,224,196,0.16); --stroke-2:rgba(237,224,196,0.28); --shine:rgba(255,244,214,0.5);
-  --scrollbar-track:transparent; --scrollbar-thumb:var(--red);
-  --scrollbar-thumb-hover:var(--red); --scrollbar-thumb-active:var(--red-deep); --scrollbar-border:transparent;
-}
 
-/* ============ shared print chrome (all poster themes) ============ */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railName,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railGroup,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusKicker,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusMain,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersionLabel,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewHead h1,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panelTitle,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .statusPill {
+/* ============ print chrome ============ */
+:where([data-theme="night"]) .railName,
+:where([data-theme="night"]) .railGroup,
+:where([data-theme="night"]) .railItem,
+:where([data-theme="night"]) .railStatusKicker,
+:where([data-theme="night"]) .railStatusMain,
+:where([data-theme="night"]) .railVersionLabel,
+:where([data-theme="night"]) .viewHead h1,
+:where([data-theme="night"]) .panelTitle,
+:where([data-theme="night"]) .statusPill {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em;
 }
 
 /* rail */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railLogo {
+:where([data-theme="night"]) .railLogo {
   border-radius:0; background:var(--red); color:var(--paper);
   clip-path:polygon(0 0,100% 0,100% 100%,24% 100%);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railName { letter-spacing:0.06em; }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railGroup { letter-spacing:0.16em; color:var(--red); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem {
+:where([data-theme="night"]) .railName { letter-spacing:0.06em; }
+:where([data-theme="night"]) .railGroup { letter-spacing:0.16em; color:var(--red); }
+:where([data-theme="night"]) .railItem {
   position:relative;
   overflow:hidden;
   border-radius:0;
   border-left:3px solid transparent;
   font-weight:700;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active) {
+:where([data-theme="night"]) .railItem:not(.active) {
   border-color:transparent;
   border-left-color:color-mix(in srgb, var(--red) 32%, transparent);
   background:
@@ -4662,7 +4623,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     inset 0 1px 0 color-mix(in srgb, var(--paper) 9%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--ink) 18%, transparent);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active)::after {
+:where([data-theme="night"]) .railItem:not(.active)::after {
   content:"";
   position:absolute;
   right:9px;
@@ -4674,8 +4635,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   transform:translateY(-50%) skewX(-18deg);
   opacity:0.58;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):hover:not(:disabled),
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):focus-visible {
+:where([data-theme="night"]) .railItem:not(.active):hover:not(:disabled),
+:where([data-theme="night"]) .railItem:not(.active):focus-visible {
   border-color:color-mix(in srgb, var(--red) 30%, transparent);
   border-left-color:var(--amber);
   background:
@@ -4688,27 +4649,27 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   outline:0;
   transform:none;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):hover:not(:disabled)::after,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):focus-visible::after {
+:where([data-theme="night"]) .railItem:not(.active):hover:not(:disabled)::after,
+:where([data-theme="night"]) .railItem:not(.active):focus-visible::after {
   background:var(--red);
   opacity:0.95;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem .railIco,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem .railLabel,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem .railBadge {
+:where([data-theme="night"]) .railItem .railIco,
+:where([data-theme="night"]) .railItem .railLabel,
+:where([data-theme="night"]) .railItem .railBadge {
   position:relative;
   z-index:1;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem.active {
+:where([data-theme="night"]) .railItem.active {
   background:var(--red); color:var(--paper); border-color:transparent; border-left-color:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railBadge { border-radius:0; background:var(--amber); color:var(--ink); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railFoot {
+:where([data-theme="night"]) .railBadge { border-radius:0; background:var(--amber); color:var(--ink); }
+:where([data-theme="night"]) .railFoot {
   gap:9px;
   padding:12px 4px 0;
   border-top:3px solid var(--red);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus {
+:where([data-theme="night"]) .railStatus {
   gap:8px;
   border-radius:8px;
   border:1px solid rgba(237,224,196,0.18);
@@ -4720,14 +4681,14 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   backdrop-filter:blur(7px) saturate(1.45);
   box-shadow:var(--liquid-shadow);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus::before {
+:where([data-theme="night"]) .railStatus::before {
   background:
     radial-gradient(80px 32px at 90% 0%, color-mix(in srgb, var(--amber) 25%, transparent), transparent 74%),
     repeating-linear-gradient(0deg, rgba(237,224,196,0.045) 0 1px, transparent 1px 5px);
   opacity:0.7;
   mix-blend-mode:screen;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus::after {
+:where([data-theme="night"]) .railStatus::after {
   content:"";
   position:absolute;
   top:0;
@@ -4737,20 +4698,20 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background:var(--red);
   clip-path:polygon(12px 0,100% 0,100% 100%,0 100%);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusKicker {
+:where([data-theme="night"]) .railStatusKicker {
   color:var(--amber);
   letter-spacing:0.2em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusMain {
+:where([data-theme="night"]) .railStatusMain {
   color:var(--paper);
   font-size:14px;
   line-height:0.96;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusSub {
+:where([data-theme="night"]) .railStatusSub {
   color:color-mix(in srgb, var(--paper) 64%, transparent);
   letter-spacing:0.08em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus .statusDot {
+:where([data-theme="night"]) .railStatus .statusDot {
   width:10px;
   height:10px;
   border-radius:0;
@@ -4760,14 +4721,14 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     2px 2px 0 var(--red-deep),
     0 0 10px color-mix(in srgb, var(--red) 46%, transparent);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus .statusDot.ok {
+:where([data-theme="night"]) .railStatus .statusDot.ok {
   background:var(--amber);
   color:var(--amber);
   box-shadow:
     2px 2px 0 var(--red-deep),
     0 0 10px color-mix(in srgb, var(--amber) 42%, transparent);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion {
+:where([data-theme="night"]) .railVersion {
   min-height:35px;
   border-radius:0;
   border:1.5px solid var(--ink);
@@ -4776,7 +4737,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   padding:7px 9px 7px 15px;
   box-shadow:3px 3px 0 rgba(0,0,0,0.36);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion::before {
+:where([data-theme="night"]) .railVersion::before {
   content:"";
   position:absolute;
   left:0;
@@ -4785,102 +4746,102 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   width:5px;
   background:var(--red);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersionLabel {
+:where([data-theme="night"]) .railVersionLabel {
   color:var(--red-deep);
   font-size:10px;
   letter-spacing:0.12em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion strong {
+:where([data-theme="night"]) .railVersion strong {
   color:var(--ink);
   font-family:var(--cond);
   font-size:13px;
   letter-spacing:0.02em;
   text-transform:none;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked {
+:where([data-theme="night"]) .railVersion.locked {
   border-color:var(--red-deep);
   background:var(--red);
   box-shadow:3px 3px 0 var(--red-deep);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked::before {
+:where([data-theme="night"]) .railVersion.locked::before {
   background:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked .railVersionLabel,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked strong {
+:where([data-theme="night"]) .railVersion.locked .railVersionLabel,
+:where([data-theme="night"]) .railVersion.locked strong {
   color:var(--paper);
 }
 
 /* title + giant count */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewHead h1 {
+:where([data-theme="night"]) .viewHead h1 {
   background:none; -webkit-background-clip:border-box; background-clip:border-box;
   color:var(--text); -webkit-text-fill-color:var(--text);
   display:inline-block; border-bottom:4px solid var(--red); padding-bottom:3px; letter-spacing:0.01em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewCount {
+:where([data-theme="night"]) .viewCount {
   display:flex; align-items:baseline; gap:7px; margin-right:6px;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewCount b {
+:where([data-theme="night"]) .viewCount b {
   font-family:var(--cond); font-weight:800; font-size:52px; line-height:0.78;
   color:var(--amber); text-shadow:3px 3px 0 var(--red-deep);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewCount span {
+:where([data-theme="night"]) .viewCount span {
   font-family:var(--cond); font-weight:700; text-transform:uppercase; letter-spacing:0.14em;
   font-size:12px; color:var(--text-dim);
 }
 
 /* status pill -> bordered print chip */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .statusPill {
+:where([data-theme="night"]) .statusPill {
   border-radius:0; background:transparent; border:1.5px solid var(--red); color:var(--text); font-weight:700;
 }
 
 /* flat-print buttons -> glass on hover (plain buttons only; :where keeps
    .dockBtn/.helpButton/.sortButton/.segmentedControl on their own rules) */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) button {
+:where([data-theme="night"]) button {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
   border-radius:5px; border:1.5px solid var(--ink); background:var(--paper); color:var(--ink);
   box-shadow:3px 3px 0 rgba(0,0,0,0.4);
   -webkit-backdrop-filter:none; backdrop-filter:none;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) button:hover:not(:disabled) {
+:where([data-theme="night"]) button:hover:not(:disabled) {
   transform:translate(1px,1px); box-shadow:2px 2px 0 rgba(0,0,0,0.4);
   border-color:var(--red-deep); background:var(--paper);
 }
 @supports ((backdrop-filter: blur(1px) url(#liquid-lens)) or (-webkit-backdrop-filter: blur(1px) url(#liquid-lens))) {
-  :root[data-glass="liquid"]:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) button:hover:not(:disabled) {
+  :root[data-glass="liquid"]:where([data-theme="night"]) button:hover:not(:disabled) {
     backdrop-filter:blur(5px) url(#liquid-lens) saturate(1.4);
     -webkit-backdrop-filter:blur(5px) url(#liquid-lens) saturate(1.4);
   }
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) button:disabled { box-shadow:none; opacity:0.55; }
+:where([data-theme="night"]) button:disabled { box-shadow:none; opacity:0.55; }
 
 /* segmented control -> print blocks */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .segmentedControl {
+:where([data-theme="night"]) .segmentedControl {
   border-radius:0; border:1.5px solid var(--stroke-2); background:rgba(0,0,0,0.18); padding:3px;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .segmentedControl button {
+:where([data-theme="night"]) .segmentedControl button {
   border-radius:0; box-shadow:none; border:0; background:transparent; transform:none;
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .segmentedControl button.active {
+:where([data-theme="night"]) .segmentedControl button.active {
   background:var(--red); box-shadow:none;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .segmentedControl button.active span { color:var(--paper); }
+:where([data-theme="night"]) .segmentedControl button.active span { color:var(--paper); }
 
 /* dock: stays glass; just recolor accents + make Apply red */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockEyebrow {
+:where([data-theme="night"]) .dockEyebrow {
   color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.18em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn.apply {
+:where([data-theme="night"]) .dockBtn.apply {
   background:linear-gradient(160deg,var(--red),var(--red-deep)); color:var(--paper);
   box-shadow:0 8px 22px rgba(226,64,42,0.34);
 }
 
 /* cartridge selection: green check -> red stamp (art/shape untouched) */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-check {
+:where([data-theme="night"]) .rcartPod.is-check {
   background:var(--paper);
   box-shadow:0 0 0 2px var(--red), 0 4px 9px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.85);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-check .rcartPodMark { color:var(--red); }
+:where([data-theme="night"]) .rcartPod.is-check .rcartPodMark { color:var(--red); }
 
 /* theme switch swatch in settings */
 .appearancePanel .themeSwitch { flex-wrap:wrap; }
@@ -4890,25 +4851,25 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
    Empty states · dividers · badges get the poster motifs
    (thick rules / halftone dots / stars); the remaining buttons,
    the dock + toolbar shape, and List mode are brought onto the
-   print system. All gated to poster themes via :where() so
-   Classic stays untouched, and the dock/toolbar keep their
+   print system. All gated via :where() so the base glass layer
+   stays intact, and the dock/toolbar keep their
    liquid-glass refraction — only the "chrome" is reshaped.
    ============================================================ */
 
 /* ---------- empty states → poster placard (star + halftone) ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartEmpty,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td.empty {
+:where([data-theme="night"]) .cartEmpty,
+:where([data-theme="night"]) td.empty {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.1em;
   font-weight:700; color:var(--text-dim); text-align:center;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartEmpty::before,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td.empty::before {
+:where([data-theme="night"]) .cartEmpty::before,
+:where([data-theme="night"]) td.empty::before {
   content:""; display:block; width:30px; height:30px; margin:0 auto 14px;
   background:var(--red);
   clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartEmpty::after,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td.empty::after {
+:where([data-theme="night"]) .cartEmpty::after,
+:where([data-theme="night"]) td.empty::after {
   content:""; display:block; width:min(190px,55%); height:16px; margin:16px auto 0;
   border-top:3px solid var(--red);            /* 厚規線 */
   background-image:                            /* 半色調網點 */
@@ -4920,168 +4881,168 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 /* ---------- dividers → thick print rules ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockDivider {
+:where([data-theme="night"]) .dockDivider {
   width:3px; height:30px; background:var(--red);
 }
 /* a press rule under the cartridge toolbar */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modsHeader.cartridgeToolbar {
+:where([data-theme="night"]) .modsHeader.cartridgeToolbar {
   border-bottom:3px solid var(--red);
 }
 
 /* ---------- badges → square print chips & red "stamps" ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge {
+:where([data-theme="night"]) .badge,
+:where([data-theme="night"]) .categoryBadge {
   border-radius:0; border-width:1.5px;
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
 }
 /* mounted / injected = solid red stamp with a hard set-off shadow */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.patched,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionBadge.injected {
+:where([data-theme="night"]) .badge.patched,
+:where([data-theme="night"]) .injectionBadge.injected {
   background:var(--red); color:var(--paper); border-color:var(--red-deep);
   box-shadow:2px 2px 0 rgba(0,0,0,0.35);
 }
 /* available / not-injected = outline chip */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.ready {
+:where([data-theme="night"]) .badge.ready {
   background:transparent; color:var(--text); border-color:var(--stroke-2);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionBadge.notInjected {
+:where([data-theme="night"]) .injectionBadge.notInjected {
   background:transparent; color:var(--red); border-color:var(--red);
 }
 /* warn-ish states → amber ink; error states → red ink */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.restored,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_json,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_png,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.conflict,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.skipped,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.changed {
+:where([data-theme="night"]) .badge.restored,
+:where([data-theme="night"]) .badge.missing_json,
+:where([data-theme="night"]) .badge.missing_png,
+:where([data-theme="night"]) .badge.conflict,
+:where([data-theme="night"]) .badge.skipped,
+:where([data-theme="night"]) .badge.changed {
   background:transparent; color:var(--amber); border-color:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.bundle_not_found,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_skeleton,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_atlas,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_skel,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.missing_texture,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .badge.failed {
+:where([data-theme="night"]) .badge.bundle_not_found,
+:where([data-theme="night"]) .badge.missing_skeleton,
+:where([data-theme="night"]) .badge.missing_atlas,
+:where([data-theme="night"]) .badge.missing_skel,
+:where([data-theme="night"]) .badge.missing_texture,
+:where([data-theme="night"]) .badge.failed {
   background:transparent; color:var(--red); border-color:var(--red);
 }
 /* category chips → flat warm-ink outlines */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.char {
+:where([data-theme="night"]) .categoryBadge.char {
   background:transparent; color:var(--amber); border-color:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.cutscene {
+:where([data-theme="night"]) .categoryBadge.cutscene {
   background:transparent; color:var(--red); border-color:var(--red);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.dating {
+:where([data-theme="night"]) .categoryBadge.dating {
   background:transparent; color:var(--red-deep); border-color:var(--red-deep);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.other {
+:where([data-theme="night"]) .categoryBadge.other {
   background:transparent; color:var(--cosmic-orange); border-color:var(--cosmic-orange);
 }
 
 /* ---------- remaining buttons: help & sort ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpButton {
+:where([data-theme="night"]) .helpButton {
   border-radius:3px; border:1px solid var(--stroke-2); background:var(--glass-2);
   font-family:var(--cond);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpButton:hover {
+:where([data-theme="night"]) .helpButton:hover {
   border-color:var(--amber); color:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .sortButton {
+:where([data-theme="night"]) .sortButton {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .sortButton:hover,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .sortButton.active {
+:where([data-theme="night"]) .sortButton:hover,
+:where([data-theme="night"]) .sortButton.active {
   color:var(--amber);
 }
 
 /* ---------- toolbar shape: square the glass blocks like cartridge/list ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbarActions > button {
+:where([data-theme="night"]) .cartridgeToolbarActions > button {
   border-radius:5px; border:1.5px solid var(--stroke-2);
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em; font-weight:700;
   color:var(--text);   /* light ink on the dark glass (not the paper-button dark ink) */
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbar .modFilterField input {
+:where([data-theme="night"]) .cartridgeToolbar .modFilterField input {
   border-radius:5px; border:1.5px solid var(--stroke-2);
 }
 
 /* These controls are glass, not paper: keep light text and a glassy hover
    instead of the paper-print flip (which left dark text on dark glass). */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn {
+:where([data-theme="night"]) .dockBtn {
   color:var(--text);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartridgeToolbarActions > button:hover:not(:disabled),
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn:not(.apply):hover:not(:disabled) {
+:where([data-theme="night"]) .cartridgeToolbarActions > button:hover:not(:disabled),
+:where([data-theme="night"]) .dockBtn:not(.apply):hover:not(:disabled) {
   background:var(--glass-3); border-color:var(--red);
   box-shadow:var(--liquid-shadow); transform:none;
 }
 
 /* ---------- dock shape: print panels that still host the glass ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockNow,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockTrack {
+:where([data-theme="night"]) .dockNow,
+:where([data-theme="night"]) .dockTrack {
   border-radius:5px; border:1px solid var(--stroke-2);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn {
+:where([data-theme="night"]) .dockBtn {
   border-radius:5px; border:1px solid var(--stroke-2);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn.on {
+:where([data-theme="night"]) .dockBtn.on {
   border-color:var(--amber); color:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockBtn.apply {
+:where([data-theme="night"]) .dockBtn.apply {
   border-radius:5px;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .dockFill {
+:where([data-theme="night"]) .dockFill {
   background:linear-gradient(90deg, var(--amber), var(--red));
 }
 
 /* ---------- List mode → onto the print system ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modsTableFrame.is-list {
+:where([data-theme="night"]) .modsTableFrame.is-list {
   border-radius:5px; border:1.5px solid var(--stroke-2);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockOverlay {
+:where([data-theme="night"]) .cartShelfLockOverlay {
   background:
     radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--ink) 36%, transparent), rgba(0,0,0,0.62) 62%, rgba(0,0,0,0.76)),
     rgba(0,0,0,0.38);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockCard {
+:where([data-theme="night"]) .cartShelfLockCard {
   border:1.5px solid var(--red);
   border-radius:5px;
   background:var(--glass-2);
   box-shadow:var(--liquid-shadow);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockCard strong {
+:where([data-theme="night"]) .cartShelfLockCard strong {
   color:var(--red);
   font-family:var(--cond);
   letter-spacing:0.06em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockCard span {
+:where([data-theme="night"]) .cartShelfLockCard span {
   color:var(--text);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) table th {
+:where([data-theme="night"]) table th {
   background:rgba(0,0,0,0.28); color:var(--text); border-bottom:2px solid var(--red);
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) table td {
+:where([data-theme="night"]) table td {
   border-bottom:1px solid var(--stroke);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) td code {
+:where([data-theme="night"]) td code {
   color:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) input[type="checkbox"] {
+:where([data-theme="night"]) input[type="checkbox"] {
   accent-color:var(--red);
 }
 /* pending-row tones recolored to the poster palette */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) tr.pendingPatchChange.pendingPatchAdd td {
+:where([data-theme="night"]) tr.pendingPatchChange.pendingPatchAdd td {
   background:rgba(232,162,44,0.10); box-shadow:inset 3px 0 0 var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) tr.pendingPatchChange.pendingPatchRemove td {
+:where([data-theme="night"]) tr.pendingPatchChange.pendingPatchRemove td {
   background:rgba(226,64,42,0.10); box-shadow:inset 3px 0 0 var(--red);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) tr.pendingPatchChange.pendingPatchRepair td {
+:where([data-theme="night"]) tr.pendingPatchChange.pendingPatchRepair td {
   background:rgba(158,35,23,0.12); box-shadow:inset 3px 0 0 var(--red-deep);
 }
 
 /* ---------- "coming soon" empty pages ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .comingSoon .csIcon {
+:where([data-theme="night"]) .comingSoon .csIcon {
   border-radius:0; border:2px solid var(--stroke-2); box-shadow:4px 4px 0 rgba(0,0,0,0.35);
   background-image:
     radial-gradient(var(--red) 20%, transparent 21%),
@@ -5090,10 +5051,10 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background-position:0 0, 5px 5px;
   background-color:var(--glass-2);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .comingSoon h2 {
+:where([data-theme="night"]) .comingSoon h2 {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .comingSoon .csTag {
+:where([data-theme="night"]) .comingSoon .csTag {
   border-radius:0; background:transparent; border:1.5px solid var(--amber); color:var(--amber);
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.08em;
 }
@@ -5109,129 +5070,129 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 /* ---------- cartridge stage marks → rubber stamps ---------- */
 /* Collector pod: staged-mount = amber stamp, staged-unmount = red stamp.
    (Mounted ✓ is already a red stamp from pass 1.) */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-plus.on {
+:where([data-theme="night"]) .rcartPod.is-plus.on {
   background:var(--paper);
   box-shadow:0 0 0 2px var(--amber), 0 5px 12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.85);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-plus.on .rcartPodMark {
+:where([data-theme="night"]) .rcartPod.is-plus.on .rcartPodMark {
   --rcart-pod-symbol:var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-minus {
+:where([data-theme="night"]) .rcartPod.is-minus {
   background:var(--paper);
   box-shadow:0 0 0 3px var(--red), 0 5px 12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.85);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-minus .rcartPodMark {
+:where([data-theme="night"]) .rcartPod.is-minus .rcartPodMark {
   --rcart-pod-symbol:var(--red);
 }
 /* collector frame outlines onto the palette */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-on {
+:where([data-theme="night"]) .rcart.is-on {
   --rcart-shell-state-shadow:
     drop-shadow(0 0 1px var(--amber))
     drop-shadow(0 0 7px color-mix(in srgb, var(--amber) 54%, transparent));
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-add {
+:where([data-theme="night"]) .rcart.is-add {
   --rcart-shell-state-shadow:
     drop-shadow(0 0 1px var(--amber))
     drop-shadow(0 0 8px color-mix(in srgb, var(--amber) 54%, transparent));
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-remove {
+:where([data-theme="night"]) .rcart.is-remove {
   --rcart-shell-state-shadow:
     drop-shadow(0 0 1px var(--red))
     drop-shadow(0 0 8px color-mix(in srgb, var(--red) 54%, transparent));
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-warning {
+:where([data-theme="night"]) .rcart.is-warning {
   --rcart-shell-state-shadow:
     drop-shadow(0 0 1px var(--amber))
     drop-shadow(0 0 8px color-mix(in srgb, var(--amber) 52%, transparent));
 }
 
 /* Arcade cartridge: selection check → square red stamp, frames recolored */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-selected .cartCheck {
+:where([data-theme="night"]) .cart.is-selected .cartCheck {
   border-radius:4px; background:var(--paper); border:1.5px solid var(--red); color:var(--red);
   box-shadow:2px 2px 0 rgba(0,0,0,0.35);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-mounted { border-color:var(--red); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-add { border-color:var(--amber); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-remove { border-color:var(--red); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-conflict { border-color:var(--red-deep); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-mounted .cartStatus { color:var(--amber); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-add .cartStatus { color:var(--amber); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-remove .cartStatus { color:var(--red); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-conflict .cartStatus { color:var(--red-deep); }
+:where([data-theme="night"]) .cart.is-mounted { border-color:var(--red); }
+:where([data-theme="night"]) .cart.is-add { border-color:var(--amber); }
+:where([data-theme="night"]) .cart.is-remove { border-color:var(--red); }
+:where([data-theme="night"]) .cart.is-conflict { border-color:var(--red-deep); }
+:where([data-theme="night"]) .cart.is-mounted .cartStatus { color:var(--amber); }
+:where([data-theme="night"]) .cart.is-add .cartStatus { color:var(--amber); }
+:where([data-theme="night"]) .cart.is-remove .cartStatus { color:var(--red); }
+:where([data-theme="night"]) .cart.is-conflict .cartStatus { color:var(--red-deep); }
 
 /* ---------- panels → print frames (still host the glass) ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panel {
+:where([data-theme="night"]) .panel {
   border-radius:8px; border:1.5px solid var(--stroke-2);
   box-shadow:0 8px 26px var(--shadow);
 }
 
 /* ---------- inputs: red focus instead of gold ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) input:focus,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) select:focus {
+:where([data-theme="night"]) input:focus,
+:where([data-theme="night"]) select:focus {
   border-color:var(--red); box-shadow:0 0 0 3px rgba(226,64,42,0.18);
 }
 
 /* ---------- logs → press readout ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logPanel h2,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logPage h2 {
+:where([data-theme="night"]) .logPanel h2,
+:where([data-theme="night"]) .logPage h2 {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em;
   border-bottom:3px solid var(--red); padding-bottom:5px; display:inline-block;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent {
+:where([data-theme="night"]) .logAccent {
   border-radius:0; font-family:var(--cond); text-transform:uppercase; letter-spacing:0.02em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.ok,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.warn,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.module,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.bundle {
+:where([data-theme="night"]) .logAccent.ok,
+:where([data-theme="night"]) .logAccent.warn,
+:where([data-theme="night"]) .logAccent.module,
+:where([data-theme="night"]) .logAccent.bundle {
   background:transparent; color:var(--amber); box-shadow:inset 0 0 0 1px var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.err,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.error,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .logAccent.action {
+:where([data-theme="night"]) .logAccent.err,
+:where([data-theme="night"]) .logAccent.error,
+:where([data-theme="night"]) .logAccent.action {
   background:transparent; color:var(--red); box-shadow:inset 0 0 0 1px var(--red);
 }
 
 /* ---------- banners → print warning placards (thick left bar) ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .errorPill {
+:where([data-theme="night"]) .errorPill {
   border-radius:0; background:transparent; border:1.5px solid var(--red); border-left-width:5px;
   color:var(--red); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .warningPill {
+:where([data-theme="night"]) .warningPill {
   border-radius:0; background:transparent; border:1.5px solid var(--amber); border-left-width:5px;
   color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .migrationPanel,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .inheritHistoryPanel {
+:where([data-theme="night"]) .migrationPanel,
+:where([data-theme="night"]) .inheritHistoryPanel {
   border-radius:0; border-color:var(--amber); border-left-width:5px;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .inheritHistoryTitle {
+:where([data-theme="night"]) .inheritHistoryTitle {
   color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.04em;
 }
 
 /* ---------- staged-changes manifest (pending diff dock) ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffDock {
+:where([data-theme="night"]) .pendingDiffDock {
   border-radius:8px; border:1.5px solid var(--stroke-2);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffHead span {
+:where([data-theme="night"]) .pendingDiffHead span {
   color:var(--amber); font-family:var(--cond);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffHead strong {
+:where([data-theme="night"]) .pendingDiffHead strong {
   border-radius:0; background:var(--red); border-color:var(--red-deep); color:var(--paper);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem { border-radius:0; }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffColor { border-radius:0; box-shadow:none; }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffName {
+:where([data-theme="night"]) .pendingDiffItem { border-radius:0; }
+:where([data-theme="night"]) .pendingDiffColor { border-radius:0; box-shadow:none; }
+:where([data-theme="night"]) .pendingDiffName {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchAdd {
+:where([data-theme="night"]) .pendingDiffItem.pendingPatchAdd {
   --pending-diff-color:var(--amber); --pending-diff-bg:rgba(232,162,44,0.1); background:var(--pending-diff-bg);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchRemove {
+:where([data-theme="night"]) .pendingDiffItem.pendingPatchRemove {
   --pending-diff-color:var(--red); --pending-diff-bg:rgba(226,64,42,0.1); background:var(--pending-diff-bg);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchRepair,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchConflict {
+:where([data-theme="night"]) .pendingDiffItem.pendingPatchRepair,
+:where([data-theme="night"]) .pendingDiffItem.pendingPatchConflict {
   --pending-diff-color:var(--conflict); --pending-diff-bg:var(--conflict-bg); background:var(--pending-diff-bg);
 }
 
@@ -5239,29 +5200,29 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
    No outer frame on the settings blocks themselves; the print/glass
    juxtaposition lives in the detail elements (printed labels + ink swatches
    vs. glass status/author cards). */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panel.settingsGrid,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panel.authorSettingsPanel {
+:where([data-theme="night"]) .panel.settingsGrid,
+:where([data-theme="night"]) .panel.authorSettingsPanel {
   border:0; border-radius:0; background:transparent; box-shadow:none;
   -webkit-backdrop-filter:none; backdrop-filter:none;
 }
 
 /* PRINT — field labels are printed headings with a red ink tick */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .field > .fieldLabel,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modFilterField span {
+:where([data-theme="night"]) .field > .fieldLabel,
+:where([data-theme="night"]) .modFilterField span {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
   color:var(--text); font-weight:700;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .field > .fieldLabel {
+:where([data-theme="night"]) .field > .fieldLabel {
   position:relative; padding-left:13px;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .field > .fieldLabel::before {
+:where([data-theme="night"]) .field > .fieldLabel::before {
   content:""; position:absolute; left:0; top:50%; transform:translateY(-50%);
   width:4px; height:13px; background:var(--red);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionField.is-locked .fieldLabel {
+:where([data-theme="night"]) .injectionField.is-locked .fieldLabel {
   color:var(--red);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionLockNotice {
+:where([data-theme="night"]) .injectionLockNotice {
   border:1.5px solid var(--red);
   border-radius:5px;
   background:var(--glass-2);
@@ -5272,48 +5233,48 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 /* GLASS — status/version blocks and author cards sit on liquid glass */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRow {
+:where([data-theme="night"]) .backendStatus,
+:where([data-theme="night"]) .authorRuleRow {
   border-radius:8px; border:1px solid var(--liquid-border); background:var(--liquid-surface);
   -webkit-backdrop-filter:blur(6px) saturate(1.5); backdrop-filter:blur(6px) saturate(1.5);
   box-shadow:var(--liquid-shadow);
 }
 @supports ((backdrop-filter: blur(1px) url(#liquid-lens)) or (-webkit-backdrop-filter: blur(1px) url(#liquid-lens))) {
-  :root[data-glass="liquid"]:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus {
+  :root[data-glass="liquid"]:where([data-theme="night"]) .railStatus {
     -webkit-backdrop-filter:blur(3px) url(#liquid-lens) saturate(1.55);
     backdrop-filter:blur(3px) url(#liquid-lens) saturate(1.55);
   }
 
-  :root[data-glass="liquid"]:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus,
-  :root[data-glass="liquid"]:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRow {
+  :root[data-glass="liquid"]:where([data-theme="night"]) .backendStatus,
+  :root[data-glass="liquid"]:where([data-theme="night"]) .authorRuleRow {
     -webkit-backdrop-filter:blur(2.5px) url(#liquid-lens) saturate(1.55);
     backdrop-filter:blur(2.5px) url(#liquid-lens) saturate(1.55);
   }
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus strong {
+:where([data-theme="night"]) .backendStatus strong {
   font-family:var(--cond); letter-spacing:0.02em;
 }
 /* PRINT inside the glass card — square ink swatch + printed name */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleSwatch {
+:where([data-theme="night"]) .authorRuleSwatch {
   border-radius:0; border:1.5px solid var(--ink);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleName {
+:where([data-theme="night"]) .authorRuleName {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleLock,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRemove { border-radius:3px; }
+:where([data-theme="night"]) .authorRuleLock,
+:where([data-theme="night"]) .authorRuleRemove { border-radius:3px; }
 
 /* ---------- help popup → print tooltip ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpPopup {
+:where([data-theme="night"]) .helpPopup {
   border-radius:0; border:1.5px solid var(--amber);
 }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .helpPopupTitle {
+:where([data-theme="night"]) .helpPopupTitle {
   color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
 
 /* ---------- view subtitle + rail sub → condensed ---------- */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewHead .viewSub,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railSub,
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusSub {
+:where([data-theme="night"]) .viewHead .viewSub,
+:where([data-theme="night"]) .railSub,
+:where([data-theme="night"]) .railStatusSub {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
 }

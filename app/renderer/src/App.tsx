@@ -63,12 +63,10 @@ const TAURI_CANVAS_CARTRIDGE_KEY = "bd-spinex:tauri-canvas-cartridge";
 const TAURI_CSS_CARTRIDGE_KEY = "bd-spinex:tauri-css-cartridge";
 type ModView = "grid" | "list";
 type CartSkin = "realistic" | "arcade";
-type Theme = "classic" | "night" | "riso" | "mono";
+type Theme = "night";
+const ACTIVE_THEME: Theme = "night";
 const THEMES: { key: Theme; label: string }[] = [
-  { key: "classic", label: "Classic" },
-  { key: "night", label: "Night Press" },
-  { key: "riso", label: "Risograph" },
-  { key: "mono", label: "Constructivist" }
+  { key: ACTIVE_THEME, label: "Night Press" }
 ];
 
 const AUTHOR_COLORS = [
@@ -179,15 +177,12 @@ export function App() {
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
   const [cartSkin, setCartSkin] = useState<CartSkin>(() => (localStorage.getItem(CARTSKIN_KEY) === "arcade" ? "arcade" : "realistic"));
   const [tauriCanvasCartridges] = useState(readTauriCanvasCartridgeMode);
-  const [theme, setTheme] = useState<Theme>(() => {
-    const t = localStorage.getItem(THEME_KEY);
-    // Night Press is the default; an explicit "classic" choice is still honored.
-    return t === "classic" || t === "night" || t === "riso" || t === "mono" ? t : "night";
-  });
+  const theme = ACTIVE_THEME;
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+    document.documentElement.setAttribute("data-theme", ACTIVE_THEME);
+    localStorage.setItem(THEME_KEY, ACTIVE_THEME);
+  }, []);
   const [authorRules, setAuthorRules] = useState<AuthorRule[]>(readAuthorRules);
   const [newAuthorName, setNewAuthorName] = useState("");
   const [migrationCheck, setMigrationCheck] = useState<LegacyRuntimeMigrationCheck | null>(null);
@@ -384,7 +379,7 @@ export function App() {
     localStorage.setItem(CARTSKIN_KEY, next);
   }
   function updateTheme(next: Theme) {
-    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem(THEME_KEY, next);
   }
   function updateAuthorColor(id: string, color: string) {
@@ -890,7 +885,7 @@ export function App() {
           <span className="fieldLabel">
             <span>Appearance · Theme</span>
             <HelpButton title="Theme">
-              Switch the interface skin. Classic is the original dark glass look; Night Press / Risograph / Constructivist are Soviet-print poster themes (warm ink, condensed type, flat-print buttons that turn to glass on hover). The cartridge artwork stays the same in every theme.
+              Night Press is the fixed interface skin: Soviet-print chrome layered over the original dark glass base. Cartridge artwork stays unchanged.
             </HelpButton>
           </span>
           <div className="themeSwitch segmentedControl" role="tablist" aria-label="Theme">
