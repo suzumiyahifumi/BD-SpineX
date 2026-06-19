@@ -526,6 +526,11 @@ fn runtime_launch() -> Result<ActionResult, String> {
     }
 }
 
+#[tauri::command]
+fn start_window_drag(window: tauri::WebviewWindow) -> Result<(), String> {
+    window.start_dragging().map_err(|e| e.to_string())
+}
+
 fn ok(message: &str) -> ActionResult {
     ActionResult { ok: true, message: message.to_string() }
 }
@@ -656,7 +661,8 @@ pub fn run() {
             runtime_uninstall,
             runtime_mount,
             runtime_unmount,
-            runtime_launch
+            runtime_launch,
+            start_window_drag
         ])
         .run(tauri::generate_context!())
         .expect("error while running BD-SpineX");

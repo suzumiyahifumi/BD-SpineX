@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type MouseEvent, type ReactNode, type SetStateAction } from "react";
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
 import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
 import characterAssetsJson from "./data/bd2-characters.json";
@@ -57,13 +57,11 @@ const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Runtime Mod Mana
 const MODSDIR_KEY = "bd-spinex:runtime-modsdir";
 const MIGRATION_DISMISSED_KEY = "bd-spinex:legacy-runtime-migration-dismissed";
 const MODVIEW_KEY = "bd-spinex:mod-view";
-const CARTSKIN_KEY = "bd-spinex:cart-skin";
 const AUTHOR_RULES_KEY = "bd-spinex:author-rules";
 const THEME_KEY = "bd-spinex:theme";
 const TAURI_CANVAS_CARTRIDGE_KEY = "bd-spinex:tauri-canvas-cartridge";
 const TAURI_CSS_CARTRIDGE_KEY = "bd-spinex:tauri-css-cartridge";
 type ModView = "grid" | "list";
-type CartSkin = "realistic" | "arcade";
 type Theme = "night";
 const ACTIVE_THEME: Theme = "night";
 const THEMES: { key: Theme; label: string }[] = [
@@ -176,7 +174,6 @@ export function App() {
   const [modFilter, setModFilter] = useState("");
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
-  const [cartSkin, setCartSkin] = useState<CartSkin>(() => (localStorage.getItem(CARTSKIN_KEY) === "arcade" ? "arcade" : "realistic"));
   const [tauriCanvasCartridges] = useState(readTauriCanvasCartridgeMode);
   const theme = ACTIVE_THEME;
 
@@ -273,7 +270,7 @@ export function App() {
   const modsLocked = busy || versionLocked || !appReady || injectionMissing || missingModsDir;
   const modsLockReason = formatModsLockReason(versionLocked, appReady, injectionMissing, missingModsDir, modsActionLocked);
   const showMigrationPanel = Boolean(migrationCheck?.needed && !migrationDismissed);
-  const useCanvasCartridges = cartSkin === "realistic" && tauriCanvasCartridges;
+  const useCanvasCartridges = tauriCanvasCartridges;
 
   const selectableVisibleMods = visibleMods;
   const allVisibleModsSelected = selectableVisibleMods.length > 0 && selectableVisibleMods.every((m) => isDesired(m.folder));
@@ -374,10 +371,6 @@ export function App() {
   function updateModView(next: ModView) {
     setModView(next);
     localStorage.setItem(MODVIEW_KEY, next);
-  }
-  function updateCartSkin(next: CartSkin) {
-    setCartSkin(next);
-    localStorage.setItem(CARTSKIN_KEY, next);
   }
   function updateTheme(next: Theme) {
     document.documentElement.setAttribute("data-theme", next);
@@ -671,16 +664,6 @@ export function App() {
                   <span>List</span>
                 </button>
               </div>
-              {modView === "grid" && (
-                <div className="cartSkinToggle segmentedControl" role="tablist" aria-label="Cartridge style">
-                  <button className={cartSkin === "realistic" ? "active" : ""} onClick={() => updateCartSkin("realistic")} type="button" aria-pressed={cartSkin === "realistic"}>
-                    <span>Collector</span>
-                  </button>
-                  <button className={cartSkin === "arcade" ? "active" : ""} onClick={() => updateCartSkin("arcade")} type="button" aria-pressed={cartSkin === "arcade"}>
-                    <span>Arcade</span>
-                  </button>
-                </div>
-              )}
             </div>
             <div className="modsHeaderControls cartridgeToolbarActions">
               <label className="modFilterField">
@@ -701,13 +684,13 @@ export function App() {
 
           <div className={`modsTableFrame ${modView === "grid" ? "is-grid" : "is-list"} ${modsLocked ? "locked" : ""}`}>
             {modView === "grid" ? (
-              <div className={`cartShelf ${cartSkin === "realistic" ? "cartShelf--collector" : ""} ${useCanvasCartridges ? "cartShelf--canvas" : ""}`}>
+              <div className={`cartShelf cartShelf--collector ${useCanvasCartridges ? "cartShelf--canvas" : ""}`}>
                 {library.length === 0 ? (
                   <div className="cartEmpty">{modsDir ? "No mods found." : "Choose a Mods Folder in Settings to load your cartridges."}</div>
                 ) : visibleMods.length === 0 ? (
                   <div className="cartEmpty">No mods match this filter.</div>
                 ) : visibleMods.map((mod) => {
-                  const CartComp = useCanvasCartridges ? CanvasCartridge : cartSkin === "realistic" ? CartridgeRealistic : Cartridge;
+                  const CartComp = useCanvasCartridges ? CanvasCartridge : CartridgeRealistic;
                   const pendingLinked = hoveredPendingFolder === mod.folder || spotlitPendingFolder === mod.folder;
                   return (
                     <CartComp
@@ -1018,13 +1001,15 @@ export function App() {
 
   return (
     <div className="appShell">
-      <nav className="appRail">
+      <div className="tauriTitlebarDragRegion" data-tauri-drag-region aria-hidden="true" onMouseDown={startTauriWindowDrag} />
+      <nav className="appRail" onMouseDown={startTauriWindowDrag}>
+        <div className="tauriRailDragRegion" data-tauri-drag-region aria-hidden="true" onMouseDown={startTauriWindowDrag} />
         <div className="railBrand">
           <span className="railLogo">B</span>
           <div>
             <div className="railName">{appInfo.name}</div>
             <div className="railSub">{appInfo.subtitle}</div>
-            <div className="railEdition"><i aria-hidden="true" />印刷局</div>
+            <div className="railEdition"><i aria-hidden="true" />Brown Dust Ⅱ</div>
           </div>
         </div>
 
@@ -1074,11 +1059,17 @@ export function App() {
           <div className="railGauge" aria-hidden="true">
             <i style={{ width: `${library.length ? Math.min(100, Math.round((mountedMods.length / library.length) * 100)) : 0}%` }} />
           </div>
-          <span className={`railVersion ${versionLocked ? "locked" : ""}`} title={formatVersionTitle(appInfo, gameVersionInfo)}>
+          <button
+            type="button"
+            className={`railVersion ${versionLocked ? "locked" : ""}`}
+            title={`${formatVersionTitle(appInfo, gameVersionInfo)}\nOpen Settings`}
+            aria-label="Open Settings"
+            onClick={() => setView("settings")}
+          >
             <span className="railReg" aria-hidden="true" />
             <span className="railVersionLabel">Version</span>
             <strong>{formatVersionBadge(appInfo, gameVersionInfo)}</strong>
-          </span>
+          </button>
         </div>
       </nav>
 
@@ -1112,6 +1103,15 @@ export function App() {
 }
 
 // ===== logic helpers =====
+function startTauriWindowDrag(event: MouseEvent<HTMLElement>) {
+  if (event.button !== 0 || document.documentElement.getAttribute("data-runtime") !== "tauri") return;
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (target.closest("button,a,input,textarea,select,summary,[contenteditable='true'],[role='button'],[data-no-tauri-drag]")) return;
+  event.preventDefault();
+  void window.bd2.startWindowDrag?.().catch(() => undefined);
+}
+
 function isElementFullyInViewport(element: HTMLElement) {
   const rect = element.getBoundingClientRect();
   const width = window.innerWidth || document.documentElement.clientWidth;

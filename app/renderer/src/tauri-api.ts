@@ -61,7 +61,8 @@ export const bd2Api = {
   runtimeListLibrary: (dir: string) => invoke<RuntimeMod[]>("runtime_list_library", { dir }),
   runtimeMount: (srcDir: string, folder?: string) => invoke<ActionResult>("runtime_mount", { srcDir, folder }),
   runtimeUnmount: (folder: string) => invoke<ActionResult>("runtime_unmount", { folder }),
-  runtimeLaunch: () => invoke<ActionResult>("runtime_launch")
+  runtimeLaunch: () => invoke<ActionResult>("runtime_launch"),
+  startWindowDrag: () => invoke<void>("start_window_drag")
 };
 
 export type Bd2Api = typeof bd2Api;

@@ -4,9 +4,10 @@ import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const DEFAULT_IDS = ["000201", "067702", "000101"];
+const DEMO_IDS = ["000201", "067702", "000101"];
 const DEFAULT_INPUT_DIR = "app/renderer/public/characters/standing";
 const DEFAULT_OUTPUT_DIR = "app/renderer/public/characters/halftone/standing";
+const ARTIFACT_MODES = new Set(["app", "full"]);
 const PREVIEW_HEIGHT = 1280;
 const PREVIEW_MIN_WIDTH = 820;
 const MODE_PRESETS = {
@@ -51,6 +52,7 @@ const INK = {
 };
 
 const options = parseArgs(process.argv.slice(2));
+options.ids = await resolveIds(options.inputDir, options.ids);
 await fs.mkdir(options.outputDir, { recursive: true });
 
 const manifest = {
@@ -65,7 +67,9 @@ const manifest = {
     edgeWeight: options.edgeWeight,
     maxDots: options.maxDots,
     contourAlphaThreshold: options.contourAlphaThreshold,
-    lineArt: options.lineArt
+    lineArt: options.lineArt,
+    artifacts: options.artifacts,
+    fullVariantIds: [...options.fullVariantIds]
   },
   characters: []
 };
@@ -78,18 +82,27 @@ for (const id of options.ids) {
   const dataName = `${id}.json`;
   const previewName = `${id}.preview.png`;
   const lineArtName = `${id}.lineart.png`;
-  const lineArtVariantNames = {
-    contour: `${id}.contour.lineart.png`,
-    duotone: `${id}.duotone.lineart.png`,
-    ...Object.fromEntries(DUOTONE_PROFILE_KEYS.map((key) => [
-      key,
-      `${id}.${DUOTONE_PROFILES[key].file}.lineart.png`
-    ]))
-  };
+  const fullArtifacts = options.artifacts === "full" || options.fullVariantIds.has(id);
+  const writePreview = fullArtifacts || options.preview;
+  const lineArtVariantNames = fullArtifacts
+    ? {
+      contour: `${id}.contour.lineart.png`,
+      duotone: `${id}.duotone.lineart.png`,
+      ...Object.fromEntries(DUOTONE_PROFILE_KEYS.map((key) => [
+        key,
+        `${id}.${DUOTONE_PROFILES[key].file}.lineart.png`
+      ]))
+    }
+    : {
+      duotone: lineArtName,
+      [options.lineArt]: lineArtName
+    };
   const dataPath = path.join(options.outputDir, dataName);
   const previewPath = path.join(options.outputDir, previewName);
   const lineArtPath = path.join(options.outputDir, lineArtName);
-  const lineArtVariants = createLineArtVariants(image, crop);
+  const lineArtVariants = fullArtifacts
+    ? createLineArtVariants(image, crop)
+    : createOfficialLineArtVariants(image, crop, options.lineArt);
   const lineArt = lineArtVariants[options.lineArt];
   result.lineArt = lineArt;
   const dotFormat = options.mode === "layered"
@@ -152,11 +165,15 @@ for (const id of options.ids) {
   })}\n`);
 
   await fs.writeFile(lineArtPath, PNG.sync.write(lineArt.png));
-  await Promise.all(Object.entries(lineArtVariants).map(([key, variant]) => (
-    fs.writeFile(path.join(options.outputDir, lineArtVariantNames[key]), PNG.sync.write(variant.png))
-  )));
-  await fs.writeFile(previewPath, PNG.sync.write(drawPreview(result, crop, id)));
-  manifest.characters.push({
+  if (fullArtifacts) {
+    await Promise.all(Object.entries(lineArtVariants).map(([key, variant]) => (
+      fs.writeFile(path.join(options.outputDir, lineArtVariantNames[key]), PNG.sync.write(variant.png))
+    )));
+  }
+  if (writePreview) {
+    await fs.writeFile(previewPath, PNG.sync.write(drawPreview(result, crop, id)));
+  }
+  const characterEntry = {
     id,
     dots: result.dots.length,
     lineArt: relativeFromRoot(lineArtPath),
@@ -167,9 +184,12 @@ for (const id of options.ids) {
       relativeFromRoot(path.join(options.outputDir, fileName))
     ])),
     aspect: round(crop.width / crop.height, 5),
-    data: relativeFromRoot(dataPath),
-    preview: relativeFromRoot(previewPath)
-  });
+    data: relativeFromRoot(dataPath)
+  };
+  if (writePreview) {
+    characterEntry.preview = relativeFromRoot(previewPath);
+  }
+  manifest.characters.push(characterEntry);
 
   console.log(`${id}: ${result.dots.length} dots, ${options.lineArt} ${lineArt.inkPixels} ink pixels -> ${relativeFromRoot(dataPath)}`);
 }
@@ -180,9 +200,12 @@ function parseArgs(args) {
   const parsed = {
     inputDir: path.join(ROOT, DEFAULT_INPUT_DIR),
     outputDir: path.join(ROOT, DEFAULT_OUTPUT_DIR),
-    ids: DEFAULT_IDS,
+    ids: undefined,
     mode: "classic",
     lineArt: DEFAULT_DUOTONE_PROFILE,
+    artifacts: "app",
+    fullVariantIds: new Set(DEMO_IDS),
+    preview: false,
     grid: 3,
     density: undefined,
     edgeWeight: 1.25,
@@ -203,7 +226,21 @@ function parseArgs(args) {
     };
 
     if (arg === "--ids") {
-      parsed.ids = readValue().split(",").map((id) => id.trim()).filter(Boolean);
+      const ids = readValue();
+      parsed.ids = ids === "all" ? undefined : ids.split(",").map((id) => id.trim()).filter(Boolean);
+    } else if (arg === "--artifacts") {
+      const artifacts = readValue();
+      if (!ARTIFACT_MODES.has(artifacts)) {
+        throw new Error(`Invalid artifact mode: ${artifacts}. Use "app" or "full".`);
+      }
+      parsed.artifacts = artifacts;
+    } else if (arg === "--full-ids") {
+      const fullIds = readValue();
+      parsed.fullVariantIds = new Set(fullIds === "none"
+        ? []
+        : fullIds.split(",").map((id) => id.trim()).filter(Boolean));
+    } else if (arg === "--preview") {
+      parsed.preview = true;
     } else if (arg === "--mode") {
       const mode = readValue();
       if (!MODE_PRESETS[mode]) {
@@ -240,6 +277,15 @@ function parseArgs(args) {
   parsed.density ??= MODE_PRESETS[parsed.mode].density;
   parsed.maxDots ??= MODE_PRESETS[parsed.mode].maxDots;
   return parsed;
+}
+
+async function resolveIds(inputDir, ids) {
+  if (ids?.length) return ids;
+  const entries = await fs.readdir(inputDir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && /^\d+\.png$/.test(entry.name))
+    .map((entry) => path.basename(entry.name, ".png"))
+    .sort((a, b) => a.localeCompare(b, "en"));
 }
 
 function createHalftone(image, crop, settings) {
@@ -543,6 +589,19 @@ function createLineArtVariants(image, crop) {
     posterGhost,
     detailInk: createSourceDuotoneArt(image, crop, DUOTONE_PROFILES.detailInk, "detailInk"),
     backdropTrace
+  };
+}
+
+function createOfficialLineArtVariants(image, crop, lineArtKey) {
+  if (lineArtKey === "contour") {
+    return { contour: createMangaLineArt(image, crop) };
+  }
+
+  const profileKey = DUOTONE_PROFILES[lineArtKey] ? lineArtKey : DEFAULT_DUOTONE_PROFILE;
+  const lineArt = createSourceDuotoneArt(image, crop, DUOTONE_PROFILES[profileKey], profileKey);
+  return {
+    duotone: lineArt,
+    [profileKey]: lineArt
   };
 }
 

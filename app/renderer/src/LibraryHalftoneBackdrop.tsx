@@ -9,6 +9,9 @@ type HalftoneData = {
   lineArt?: LineArtMeta;
   lineArtVariants?: Record<string, LineArtMeta>;
 };
+type HalftoneManifest = {
+  characters?: Array<{ id?: string }>;
+};
 type HalftoneShape = HalftoneData & {
   lineArtImage: HTMLImageElement;
 };
@@ -35,19 +38,20 @@ type Particle = ParticleTarget & {
 type Transition = {
   start: number;
   duration: number;
-  fromIndex: number;
+  fromShape: HalftoneShape;
+  nextShape: HalftoneShape;
   nextIndex: number;
 };
 
-const LIBRARY_HALFTONE_IDS = ["000201", "067702", "000101"];
-const LIBRARY_HALFTONE_START_INDEX = 1;
+const LIBRARY_HALFTONE_FALLBACK_IDS = ["000201", "067702", "000101"];
 const LIBRARY_HALFTONE_DIR = publicAssetPath("characters/halftone/standing");
+const LIBRARY_HALFTONE_MANIFEST = `${LIBRARY_HALFTONE_DIR}/manifest.json`;
 const DOT_STRENGTH = 0.35;
 const LINE_STRENGTH = 2;
 const LINE_WIDTH = 1;
 const TRANSITION_DURATION = 4200;
-const SETTLED_HOLD_DURATION = 10400;
-const INITIAL_HOLD_DURATION = 9600;
+const SETTLED_HOLD_DURATION = 16000;
+const INITIAL_HOLD_DURATION = 14000;
 const LINE_FADE_IN_DURATION = 3200;
 const LINE_FADE_OUT_DURATION = 520;
 const DOT_COLORS = {
@@ -69,10 +73,13 @@ export function LibraryHalftoneBackdrop() {
     let width = 0;
     let height = 0;
     let dpr = 1;
-    let current = LIBRARY_HALFTONE_START_INDEX;
+    let ids = LIBRARY_HALFTONE_FALLBACK_IDS;
+    let currentIndex = 0;
+    let currentShape: HalftoneShape | null = null;
     let nextAt = 0;
     let lineVisibleSince = 0;
-    let shapes: HalftoneShape[] = [];
+    let loadingTransition = false;
+    const shapeCache = new Map<string, HalftoneShape>();
     let particles: Particle[] = [];
     let transition: Transition | null = null;
     const ctx = canvas.getContext("2d", { alpha: true });
@@ -88,10 +95,10 @@ export function LibraryHalftoneBackdrop() {
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      if (shapes.length) {
-        particles = mapShapeToCanvas(shapes[current], width, height).map((target, index) => ({
+      if (currentShape) {
+        particles = mapShapeToCanvas(currentShape, width, height).map((target, index) => ({
           ...target,
-          seed: hash(index, current + 7)
+          seed: hash(index, currentIndex + 7)
         }));
         transition = null;
         lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
@@ -104,38 +111,47 @@ export function LibraryHalftoneBackdrop() {
       frame = 0;
     };
 
-    const beginTransition = (nextIndex: number) => {
-      if (!shapes[nextIndex]) return;
-      const fromIndex = current;
-      const targets = mapShapeToCanvas(shapes[nextIndex], width, height);
-      const count = Math.max(particles.length, targets.length);
-      const nextParticles: Particle[] = [];
+    const beginTransition = async (nextIndex: number) => {
+      if (!ids[nextIndex] || !currentShape || loadingTransition) return;
+      loadingTransition = true;
 
-      for (let index = 0; index < count; index += 1) {
-        const particle = particles[index] ?? createDormantParticle(index, nextIndex, width, height);
-        const target = targets[index % targets.length];
-        const scatter = scatterPoint(index, particle, width, height);
-        nextParticles.push({
-          ...particle,
-          fromX: particle.x,
-          fromY: particle.y,
-          fromAlpha: particle.alpha,
-          fromSize: particle.size,
-          scatterX: scatter.x,
-          scatterY: scatter.y,
-          tx: target.x,
-          ty: target.y,
-          targetAlpha: index < targets.length ? target.alpha : 0,
-          targetSize: index < targets.length ? target.size : 0,
-          tone: index < targets.length ? target.tone : particle.tone,
-          seed: particle.seed || hash(index, nextIndex + 7)
-        });
+      try {
+        const nextShape = await loadHalftoneShape(ids[nextIndex], shapeCache);
+        if (cancelled || !currentShape) return;
+        const targets = mapShapeToCanvas(nextShape, width, height);
+        const count = Math.max(particles.length, targets.length);
+        const nextParticles: Particle[] = [];
+
+        for (let index = 0; index < count; index += 1) {
+          const particle = particles[index] ?? createDormantParticle(index, nextIndex, width, height);
+          const target = targets[index % targets.length];
+          const scatter = scatterPoint(index, particle, width, height);
+          nextParticles.push({
+            ...particle,
+            fromX: particle.x,
+            fromY: particle.y,
+            fromAlpha: particle.alpha,
+            fromSize: particle.size,
+            scatterX: scatter.x,
+            scatterY: scatter.y,
+            tx: target.x,
+            ty: target.y,
+            targetAlpha: index < targets.length ? target.alpha : 0,
+            targetSize: index < targets.length ? target.size : 0,
+            tone: index < targets.length ? target.tone : particle.tone,
+            seed: particle.seed || hash(index, nextIndex + 7)
+          });
+        }
+
+        particles = nextParticles;
+        const start = performance.now();
+        transition = { start, duration: TRANSITION_DURATION, fromShape: currentShape, nextShape, nextIndex };
+        nextAt = start + TRANSITION_DURATION + SETTLED_HOLD_DURATION;
+      } catch {
+        nextAt = performance.now() + SETTLED_HOLD_DURATION;
+      } finally {
+        loadingTransition = false;
       }
-
-      particles = nextParticles;
-      const start = performance.now();
-      transition = { start, duration: TRANSITION_DURATION, fromIndex, nextIndex };
-      nextAt = start + TRANSITION_DURATION + SETTLED_HOLD_DURATION;
     };
 
     const tick = (now: number) => {
@@ -144,8 +160,8 @@ export function LibraryHalftoneBackdrop() {
       if (transition) updateParticles(now);
       draw(now);
 
-      if (!transition && shapes.length && now > nextAt) {
-        beginTransition((current + 1) % shapes.length);
+      if (!transition && ids.length && now > nextAt && !loadingTransition) {
+        void beginTransition(pickRandomIndex(ids, currentIndex));
       }
 
       if (!cancelled) frame = window.requestAnimationFrame(tick);
@@ -187,7 +203,8 @@ export function LibraryHalftoneBackdrop() {
       }
 
       if (t >= 1) {
-        current = transition.nextIndex;
+        currentIndex = transition.nextIndex;
+        currentShape = transition.nextShape;
         transition = null;
         lineVisibleSince = now;
         particles = particles.filter((particle) => particle.targetAlpha === undefined || particle.targetAlpha > 0.01);
@@ -200,22 +217,24 @@ export function LibraryHalftoneBackdrop() {
 
       if (transition) {
         const fadeOut = 1 - easeInOutCubic(clamp((now - transition.start) / LINE_FADE_OUT_DURATION, 0, 1));
-        drawLineArt(ctx, shapes[transition.fromIndex], width, height, fadeOut);
+        drawLineArt(ctx, transition.fromShape, width, height, fadeOut);
       } else {
         const fadeIn = easeInOutCubic(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
-        drawLineArt(ctx, shapes[current], width, height, fadeIn);
+        drawLineArt(ctx, currentShape, width, height, fadeIn);
       }
     };
 
-    void loadHalftoneShapes().then((loadedShapes) => {
+    void (async () => {
+      ids = await loadHalftoneIds();
       if (cancelled) return;
-      shapes = loadedShapes;
-      current = Math.min(LIBRARY_HALFTONE_START_INDEX, shapes.length - 1);
+      currentIndex = pickRandomIndex(ids);
+      currentShape = await loadHalftoneShape(ids[currentIndex], shapeCache);
+      if (cancelled) return;
       resize();
       lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
       nextAt = performance.now() + INITIAL_HOLD_DURATION;
       if (!frame) frame = window.requestAnimationFrame(tick);
-    }).catch(() => {
+    })().catch(() => {
       // Keep Library usable if optional background assets fail to load.
     });
 
@@ -237,16 +256,41 @@ function publicAssetPath(path: string) {
   return `${normalizedBase}${path.replace(/^\/+/, "")}`;
 }
 
-async function loadHalftoneShapes() {
-  return Promise.all(LIBRARY_HALFTONE_IDS.map(async (id) => {
-    const response = await fetch(`${LIBRARY_HALFTONE_DIR}/${id}.json`);
-    if (!response.ok) throw new Error(`Failed to load halftone data for ${id}`);
-    const data = await response.json() as HalftoneData;
-    const lineArt = data.lineArtVariants?.posterGhost ?? data.lineArt;
-    if (!lineArt?.image) throw new Error(`Missing line art for ${id}`);
-    const lineArtImage = await loadImage(`${LIBRARY_HALFTONE_DIR}/${lineArt.image}`);
-    return { ...data, lineArtImage };
-  }));
+async function loadHalftoneIds() {
+  try {
+    const response = await fetch(LIBRARY_HALFTONE_MANIFEST);
+    if (!response.ok) throw new Error("Missing halftone manifest");
+    const manifest = await response.json() as HalftoneManifest;
+    const ids = manifest.characters?.map((character) => character.id).filter(Boolean) as string[] | undefined;
+    return ids?.length ? ids : LIBRARY_HALFTONE_FALLBACK_IDS;
+  } catch {
+    return LIBRARY_HALFTONE_FALLBACK_IDS;
+  }
+}
+
+function pickRandomIndex(ids: string[], exceptIndex = -1) {
+  if (ids.length <= 1) return 0;
+
+  let nextIndex = Math.floor(Math.random() * ids.length);
+  while (nextIndex === exceptIndex) {
+    nextIndex = Math.floor(Math.random() * ids.length);
+  }
+  return nextIndex;
+}
+
+async function loadHalftoneShape(id: string, cache: Map<string, HalftoneShape>) {
+  const cached = cache.get(id);
+  if (cached) return cached;
+
+  const response = await fetch(`${LIBRARY_HALFTONE_DIR}/${id}.json`);
+  if (!response.ok) throw new Error(`Failed to load halftone data for ${id}`);
+  const data = await response.json() as HalftoneData;
+  const lineArt = data.lineArtVariants?.posterGhost ?? data.lineArt;
+  if (!lineArt?.image) throw new Error(`Missing line art for ${id}`);
+  const lineArtImage = await loadImage(`${LIBRARY_HALFTONE_DIR}/${lineArt.image}`);
+  const shape = { ...data, lineArtImage };
+  cache.set(id, shape);
+  return shape;
 }
 
 function loadImage(src: string) {
@@ -311,7 +355,7 @@ function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], now
   ctx.restore();
 }
 
-function drawLineArt(ctx: CanvasRenderingContext2D, shape: HalftoneShape | undefined, width: number, height: number, visibility: number) {
+function drawLineArt(ctx: CanvasRenderingContext2D, shape: HalftoneShape | null | undefined, width: number, height: number, visibility: number) {
   if (!shape?.lineArtImage || visibility <= 0) return;
   const layout = shapeLayout(shape, width, height);
   const opacity = clamp(LINE_STRENGTH * 0.82 * visibility, 0, 1);

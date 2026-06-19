@@ -2055,6 +2055,47 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   margin: 0 auto;
 }
 
+.tauriTitlebarDragRegion {
+  display: none;
+}
+
+.tauriRailDragRegion {
+  display: none;
+}
+
+:root[data-runtime="tauri"] .tauriTitlebarDragRegion {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 86px;
+  right: 0;
+  z-index: 10000;
+  height: 38px;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+:root[data-runtime="tauri"] .tauriRailDragRegion {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+:root[data-runtime="tauri"] button,
+:root[data-runtime="tauri"] a,
+:root[data-runtime="tauri"] input,
+:root[data-runtime="tauri"] textarea,
+:root[data-runtime="tauri"] select,
+:root[data-runtime="tauri"] [role="button"],
+:root[data-runtime="tauri"] [data-no-tauri-drag] {
+  -webkit-app-region: no-drag;
+}
+
 /* ============================================================
    Sidebar — "The Press Spine" (Variant A · Index Spine)
    Self-contained Night-Press styling. This single block fully
@@ -2075,6 +2116,10 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   border-right: 1px solid var(--stroke);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
   backdrop-filter: blur(16px) saturate(1.3);
+}
+
+:root[data-runtime="tauri"] .appRail {
+  padding-top: 46px;
 }
 .appRail::before {
   content: "";
@@ -2112,6 +2157,12 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   align-items: center;
   gap: 11px;
   padding: 4px 6px 2px 2px;
+}
+
+.railNav,
+.railFoot {
+  position: relative;
+  z-index: 1;
 }
 .railLogo {
   flex: none;
@@ -2171,6 +2222,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   flex-direction: column;
   gap: 2px;
   align-content: start;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 .railGroup {
@@ -2201,6 +2253,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   align-items: center;
   gap: 10px;
   width: 100%;
+  max-width: 100%;
   padding: 9px 10px 9px 9px;
   text-align: left;
   cursor: pointer;
@@ -2263,7 +2316,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--amber) 16%, transparent), transparent 64%),
     var(--glass);
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--red-deep) 46%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--red-deep) 46%, transparent);
+  transform: none;
 }
 .railItem:hover:not(:disabled) .railTick,
 .railItem:focus-visible .railTick {
@@ -2375,12 +2429,20 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   display: flex;
   align-items: center;
   gap: 9px;
+  width: 100%;
   min-height: 34px;
   padding: 6px 9px 6px 14px;
   border: 0;
+  border-radius: 0;
   background: var(--paper);
   color: var(--ink);
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.36);
+  cursor: pointer;
+  text-align: left;
+  text-transform: none;
+  transform: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .railVersion::before {
   content: "";
@@ -2435,9 +2497,24 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   white-space: nowrap;
   color: var(--ink);
 }
+.railVersion:hover:not(:disabled),
+.railVersion:focus-visible {
+  outline: 0;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.42), inset 0 0 0 1.5px var(--amber);
+  transform: none;
+}
 .railVersion.locked {
   background: var(--red);
   box-shadow: 3px 3px 0 var(--red-deep);
+}
+.railVersion.locked:hover:not(:disabled),
+.railVersion.locked:focus-visible {
+  background: var(--red);
+  color: var(--paper);
+  box-shadow: 2px 2px 0 var(--red-deep), inset 0 0 0 1.5px var(--amber);
 }
 .railVersion.locked::before {
   background: var(--amber);
@@ -2458,6 +2535,10 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .appMain {
   min-width: 0;
   padding: 26px 28px 176px;
+}
+
+:root[data-runtime="tauri"] .appMain {
+  padding-top: 42px;
 }
 
 .viewHead {
@@ -2937,36 +3018,35 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .dockCover {
   position: relative;
-  width: 30px;
-  height: 30px;
+  width: 27px;
+  height: 21px;
   flex: none;
-  border-radius: 9px;
+  border-radius: 3px;
   overflow: hidden;
-  background: conic-gradient(from 210deg, #6a5bff, #33e0e6, #ff5ca8, #6a5bff);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  background: linear-gradient(180deg, #7193c8, #4d73aa, #31598d);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 1px 0 #244674;
 }
 
 .dockCover::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: repeating-radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 0 3px, rgba(0, 0, 0, 0.18) 3px 4px);
-  animation: dockSpin 6s linear infinite;
-  animation-play-state: paused;
+  display: none;
 }
 
 .dockCover.spinning::before {
-  animation-play-state: running;
+  animation-play-state: paused;
 }
 
 .dockCover::after {
   content: "";
   position: absolute;
-  inset: 38%;
-  border-radius: 50%;
-  background: #0a0c16;
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.15);
+  left: 4px;
+  right: 4px;
+  top: 4px;
+  bottom: 5px;
+  border-radius: 1px;
+  background: rgba(7, 8, 12, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 @keyframes dockSpin {
@@ -5253,7 +5333,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     0 0;
 }
 
-:where([data-theme="night"]) .appMain.view-library > :not(.libraryHalftoneBackdrop) {
+:where([data-theme="night"]) .appMain.view-library > :not(.libraryHalftoneBackdrop):not(.dock):not(.pendingDiffDock) {
   position: relative;
   z-index: 2;
 }
@@ -5270,7 +5350,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 :where([data-theme="night"]) .appMain.view-library::before {
-  content: "BD";
+  content: "BDⅡ";
   position: fixed;
   top: 0;
   right: 0;

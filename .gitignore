@@ -188,6 +188,8 @@ doc/
 # Runtime loader (product code lives in native/bd2loader; build outputs & devkit are local)
 native/bd2loader/target/
 native/frida-gum/
+native/BDSpineXMac/.build/
+native/BDSpineXMac/.swiftpm/
 
 # Claude Code local skills/config (not project)
 .claude/
