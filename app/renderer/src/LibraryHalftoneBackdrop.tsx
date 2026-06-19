@@ -24,8 +24,8 @@ type Particle = ParticleTarget & {
   fromY?: number;
   fromAlpha?: number;
   fromSize?: number;
-  chaosX?: number;
-  chaosY?: number;
+  scatterX?: number;
+  scatterY?: number;
   tx?: number;
   ty?: number;
   targetAlpha?: number;
@@ -35,6 +35,8 @@ type Particle = ParticleTarget & {
 type Transition = {
   start: number;
   duration: number;
+  fromIndex: number;
+  nextIndex: number;
 };
 
 const LIBRARY_HALFTONE_IDS = ["000201", "067702", "000101"];
@@ -43,6 +45,11 @@ const LIBRARY_HALFTONE_DIR = publicAssetPath("characters/halftone/standing");
 const DOT_STRENGTH = 0.35;
 const LINE_STRENGTH = 2;
 const LINE_WIDTH = 1;
+const TRANSITION_DURATION = 4200;
+const SETTLED_HOLD_DURATION = 10400;
+const INITIAL_HOLD_DURATION = 9600;
+const LINE_FADE_IN_DURATION = 3200;
+const LINE_FADE_OUT_DURATION = 520;
 const DOT_COLORS = {
   red: [226, 64, 42],
   redDeep: [158, 35, 23],
@@ -64,6 +71,7 @@ export function LibraryHalftoneBackdrop() {
     let dpr = 1;
     let current = LIBRARY_HALFTONE_START_INDEX;
     let nextAt = 0;
+    let lineVisibleSince = 0;
     let shapes: HalftoneShape[] = [];
     let particles: Particle[] = [];
     let transition: Transition | null = null;
@@ -86,6 +94,7 @@ export function LibraryHalftoneBackdrop() {
           seed: hash(index, current + 7)
         }));
         transition = null;
+        lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
         draw(performance.now());
       }
     };
@@ -97,6 +106,7 @@ export function LibraryHalftoneBackdrop() {
 
     const beginTransition = (nextIndex: number) => {
       if (!shapes[nextIndex]) return;
+      const fromIndex = current;
       const targets = mapShapeToCanvas(shapes[nextIndex], width, height);
       const count = Math.max(particles.length, targets.length);
       const nextParticles: Particle[] = [];
@@ -104,15 +114,15 @@ export function LibraryHalftoneBackdrop() {
       for (let index = 0; index < count; index += 1) {
         const particle = particles[index] ?? createDormantParticle(index, nextIndex, width, height);
         const target = targets[index % targets.length];
-        const chaos = chaosPoint(index, nextIndex, width, height);
+        const scatter = scatterPoint(index, particle, width, height);
         nextParticles.push({
           ...particle,
           fromX: particle.x,
           fromY: particle.y,
           fromAlpha: particle.alpha,
           fromSize: particle.size,
-          chaosX: chaos.x,
-          chaosY: chaos.y,
+          scatterX: scatter.x,
+          scatterY: scatter.y,
           tx: target.x,
           ty: target.y,
           targetAlpha: index < targets.length ? target.alpha : 0,
@@ -122,10 +132,10 @@ export function LibraryHalftoneBackdrop() {
         });
       }
 
-      current = nextIndex;
       particles = nextParticles;
-      transition = { start: performance.now(), duration: 3600 };
-      nextAt = performance.now() + 8800;
+      const start = performance.now();
+      transition = { start, duration: TRANSITION_DURATION, fromIndex, nextIndex };
+      nextAt = start + TRANSITION_DURATION + SETTLED_HOLD_DURATION;
     };
 
     const tick = (now: number) => {
@@ -144,37 +154,42 @@ export function LibraryHalftoneBackdrop() {
     const updateParticles = (now: number) => {
       if (!transition) return;
       const t = clamp((now - transition.start) / transition.duration, 0, 1);
-      const split = 0.48;
+      const scatterEnd = 0.46;
 
       for (const particle of particles) {
         const fromX = particle.fromX ?? particle.x;
         const fromY = particle.fromY ?? particle.y;
         const fromAlpha = particle.fromAlpha ?? particle.alpha;
         const fromSize = particle.fromSize ?? particle.size;
-        const chaosX = particle.chaosX ?? particle.x;
-        const chaosY = particle.chaosY ?? particle.y;
+        const scatterX = particle.scatterX ?? particle.x;
+        const scatterY = particle.scatterY ?? particle.y;
         const tx = particle.tx ?? particle.x;
         const ty = particle.ty ?? particle.y;
         const targetAlpha = particle.targetAlpha ?? particle.alpha;
         const targetSize = particle.targetSize ?? particle.size;
+        const phase = (particle.seed % 6283) / 1000;
 
-        if (t < split) {
-          const q = easeInOutCubic(t / split);
-          particle.x = lerp(fromX, chaosX, q);
-          particle.y = lerp(fromY, chaosY, q);
-          particle.size = lerp(fromSize, Math.max(fromSize, targetSize) * 0.72, q);
-          particle.alpha = lerp(fromAlpha, Math.max(0.12, (fromAlpha || targetAlpha) * 0.52), q);
+        if (t < scatterEnd) {
+          const q = easeOutCubic(t / scatterEnd);
+          const drift = Math.sin(now * 0.01 + phase) * 12 * q;
+          particle.x = lerp(fromX, scatterX, q) + drift;
+          particle.y = lerp(fromY, scatterY, q) + Math.cos(now * 0.008 + phase) * 9 * q;
+          particle.size = lerp(fromSize, Math.max(fromSize, targetSize) * 0.82, q);
+          particle.alpha = lerp(fromAlpha, Math.max(0.14, (fromAlpha || targetAlpha) * 0.54), q);
         } else {
-          const q = easeOutExpo((t - split) / (1 - split));
-          particle.x = lerp(chaosX, tx, q);
-          particle.y = lerp(chaosY, ty, q);
-          particle.size = lerp(Math.max(fromSize, targetSize) * 0.72, targetSize, q);
-          particle.alpha = lerp(Math.max(0.12, (fromAlpha || targetAlpha) * 0.52), targetAlpha, q);
+          const q = easeOutExpo((t - scatterEnd) / (1 - scatterEnd));
+          const settle = Math.sin((1 - q) * Math.PI) * (1 - q);
+          particle.x = lerp(scatterX, tx, q) + Math.sin(phase + q * Math.PI) * 22 * settle;
+          particle.y = lerp(scatterY, ty, q) + Math.cos(phase + q * Math.PI) * 16 * settle;
+          particle.size = lerp(Math.max(fromSize, targetSize) * 0.82, targetSize, q);
+          particle.alpha = lerp(Math.max(0.14, targetAlpha * 0.48), targetAlpha, q);
         }
       }
 
       if (t >= 1) {
+        current = transition.nextIndex;
         transition = null;
+        lineVisibleSince = now;
         particles = particles.filter((particle) => particle.targetAlpha === undefined || particle.targetAlpha > 0.01);
       }
     };
@@ -182,7 +197,14 @@ export function LibraryHalftoneBackdrop() {
     const draw = (now: number) => {
       ctx.clearRect(0, 0, width, height);
       drawParticles(ctx, particles, now);
-      if (!transition) drawLineArt(ctx, shapes[current], width, height);
+
+      if (transition) {
+        const fadeOut = 1 - easeInOutCubic(clamp((now - transition.start) / LINE_FADE_OUT_DURATION, 0, 1));
+        drawLineArt(ctx, shapes[transition.fromIndex], width, height, fadeOut);
+      } else {
+        const fadeIn = easeInOutCubic(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
+        drawLineArt(ctx, shapes[current], width, height, fadeIn);
+      }
     };
 
     void loadHalftoneShapes().then((loadedShapes) => {
@@ -190,7 +212,8 @@ export function LibraryHalftoneBackdrop() {
       shapes = loadedShapes;
       current = Math.min(LIBRARY_HALFTONE_START_INDEX, shapes.length - 1);
       resize();
-      nextAt = performance.now() + 7800;
+      lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
+      nextAt = performance.now() + INITIAL_HOLD_DURATION;
       if (!frame) frame = window.requestAnimationFrame(tick);
     }).catch(() => {
       // Keep Library usable if optional background assets fail to load.
@@ -288,10 +311,10 @@ function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], now
   ctx.restore();
 }
 
-function drawLineArt(ctx: CanvasRenderingContext2D, shape: HalftoneShape | undefined, width: number, height: number) {
-  if (!shape?.lineArtImage) return;
+function drawLineArt(ctx: CanvasRenderingContext2D, shape: HalftoneShape | undefined, width: number, height: number, visibility: number) {
+  if (!shape?.lineArtImage || visibility <= 0) return;
   const layout = shapeLayout(shape, width, height);
-  const opacity = clamp(LINE_STRENGTH * 0.82, 0, 1);
+  const opacity = clamp(LINE_STRENGTH * 0.82 * visibility, 0, 1);
   const spread = Math.max(0, LINE_WIDTH - 0.76) * Math.max(1, layout.baseSize * 0.18);
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
@@ -333,23 +356,20 @@ function createDormantParticle(index: number, nextIndex: number, width: number, 
   };
 }
 
-function chaosPoint(index: number, nextIndex: number, width: number, height: number) {
-  const a = seeded(index, nextIndex + 17);
-  const b = seeded(index, nextIndex + 29);
-  const edgeBias = seeded(index, nextIndex + 41);
-  const margin = Math.max(70, Math.min(width, height) * 0.12);
-
-  if (edgeBias < 0.7) {
-    const side = Math.floor(a * 4);
-    if (side === 0) return { x: lerp(-margin, width + margin, b), y: -margin * seeded(index, nextIndex + 53) };
-    if (side === 1) return { x: width + margin * seeded(index, nextIndex + 61), y: lerp(-margin, height + margin, b) };
-    if (side === 2) return { x: lerp(-margin, width + margin, b), y: height + margin * seeded(index, nextIndex + 67) };
-    return { x: -margin * seeded(index, nextIndex + 71), y: lerp(-margin, height + margin, b) };
-  }
+function scatterPoint(index: number, particle: Particle, width: number, height: number) {
+  const centerX = width * (width < 760 ? 0.54 : 0.62);
+  const centerY = height * 0.54;
+  const dx = particle.x - centerX;
+  const dy = particle.y - centerY;
+  const length = Math.hypot(dx, dy) || 1;
+  const scatterDistance = lerp(96, 280, seeded(index, 11)) * (width < 760 ? 0.7 : 1);
+  const randomX = lerp(-140, 160, seeded(index, 17)) * (width < 760 ? 0.62 : 1);
+  const randomY = lerp(-120, 130, seeded(index, 23)) * (height < 720 ? 0.72 : 1);
+  const margin = Math.max(90, Math.min(width, height) * 0.14);
 
   return {
-    x: lerp(-margin, width + margin, a),
-    y: lerp(-margin, height + margin, b)
+    x: clamp(particle.x + (dx / length) * scatterDistance + randomX, -margin, width + margin),
+    y: clamp(particle.y + (dy / length) * scatterDistance + randomY, -margin, height + margin)
   };
 }
 
@@ -380,6 +400,10 @@ function hash(a: number, b: number) {
 
 function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
+}
+
+function easeOutCubic(t: number) {
+  return 1 - ((1 - t) ** 3);
 }
 
 function easeOutExpo(t: number) {
