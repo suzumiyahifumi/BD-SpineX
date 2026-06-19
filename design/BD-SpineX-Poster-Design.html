@@ -152,6 +152,151 @@ code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;color:va
 .code pre{margin:0;padding:13px 15px;overflow:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.65;color:#d9cda8}
 .code .k{color:var(--amber)} .code .v{color:#e98}
 
+/* ===== §08 sidebar redesign sketch — "The Press Spine" ===== */
+.sbgrid{display:grid;grid-template-columns:250px 250px 1fr;gap:22px;align-items:start}
+@media(max-width:980px){.sbgrid{grid-template-columns:1fr}}
+.sbcap{font-family:var(--cond);font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-size:13px;color:var(--paper);margin-bottom:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sbcap .pill{font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.1em;border:1.5px solid var(--red);color:var(--red);padding:2px 7px}
+.sbcap .pill.amber{border-color:var(--amber);color:var(--amber)}
+
+/* rail shell */
+.sbrail{position:relative;display:flex;flex-direction:column;gap:13px;min-height:592px;padding:16px 14px 14px 22px;border:2px solid var(--paper);background:linear-gradient(180deg,#141009,#0b0a08);font-family:var(--cond);overflow:hidden}
+.sbrail::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red);box-shadow:2px 0 0 var(--red-deep);z-index:2}
+.sbrail::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.05;background-image:radial-gradient(var(--paper) 1px,transparent 1.5px);background-size:7px 7px}
+
+/* brand / masthead */
+.sbbrand{position:relative;z-index:1;display:flex;align-items:center;gap:11px}
+.sbmark{flex:none;width:38px;height:38px;background:var(--red);color:var(--paper);display:grid;place-items:center;font-family:var(--cond);font-weight:800;font-size:21px;clip-path:polygon(0 0,100% 0,100% 100%,24% 100%)}
+.sbmark.light{background:var(--paper);color:var(--red-deep)}
+.sbname{font-weight:800;font-size:19px;letter-spacing:.04em;color:var(--paper);line-height:1}
+.sbsub{margin-top:4px;font-weight:700;font-size:10px;letter-spacing:.15em;color:var(--paper-dim);text-transform:uppercase}
+.sbedition{margin-top:5px;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:9.5px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase}
+.sbedition i{width:20px;height:1px;background:var(--amber);opacity:.6}
+
+/* nav */
+.sbnav{position:relative;z-index:1;display:flex;flex-direction:column;gap:2px}
+.sbgroup{display:flex;align-items:center;gap:8px;margin:11px 2px 3px;font-weight:700;font-size:10px;letter-spacing:.2em;color:var(--red);text-transform:uppercase}
+.sbgroup .tc{font-family:var(--tc);letter-spacing:.04em;color:var(--paper-dim)}
+.sbgroup i{flex:1;height:1px;background:var(--stroke)}
+.sbitem{position:relative;display:flex;align-items:center;gap:11px;padding:9px 10px 9px 9px;border-left:3px solid color-mix(in srgb,var(--red) 30%,transparent);background:linear-gradient(90deg,color-mix(in srgb,var(--red) 6%,transparent),transparent 60%);color:var(--paper-dim)}
+.sbitem .ix{flex:none;width:18px;font-weight:800;font-size:12px;opacity:.7}
+.sbitem .nm{flex:1;font-weight:700;font-size:15.5px;letter-spacing:.04em;text-transform:uppercase}
+.sbitem .tick{flex:none;width:13px;height:2px;background:color-mix(in srgb,var(--red) 45%,transparent);transform:skewX(-18deg)}
+.sbitem .cnt{flex:none;font-weight:800;font-size:11px;color:var(--ink);background:var(--amber);padding:1px 6px}
+.sbitem .st{flex:none;color:var(--amber);font-size:13px}
+.sbitem.hov,.sbitem:hover{color:var(--paper);border-left-color:var(--amber);background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 16%,transparent),transparent 64%);box-shadow:2px 2px 0 color-mix(in srgb,var(--red-deep) 46%,transparent)}
+.sbitem.on{color:var(--paper);border-left-color:var(--amber);background:linear-gradient(100deg,var(--red) 0 78%,transparent 78%)}
+.sbitem.on .ix{color:var(--paper);opacity:.92}
+.sbitem.on .tick{display:none}
+
+/* foot */
+.sbfoot{margin-top:auto;position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;padding-top:13px;border-top:3px solid var(--red)}
+.sbstamp{display:flex;align-items:center;gap:11px}
+.sbstamp .seal{flex:none;width:34px;height:34px;border-radius:50%;border:2.4px solid var(--amber);color:var(--amber);display:grid;place-items:center;font-weight:800;font-size:17px;transform:rotate(-9deg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--amber) 28%,transparent)}
+.sbstamp .seal.bad{border-color:var(--red);color:var(--red);transform:rotate(7deg)}
+.sbstamp .lbl b{display:block;font-weight:800;font-size:13px;letter-spacing:.04em;color:var(--paper);text-transform:uppercase;line-height:1}
+.sbstamp .lbl span{display:block;margin-top:3px;font-weight:700;font-size:9.5px;letter-spacing:.13em;color:var(--paper-dim);text-transform:uppercase}
+.sbcount{display:flex;align-items:baseline;gap:11px}
+.sbcount b{font-weight:800;font-size:74px;line-height:.78;color:var(--amber);text-shadow:4px 4px 0 var(--red-deep)}
+.sbcount span{font-weight:700;font-size:11px;letter-spacing:.16em;color:var(--paper-dim);text-transform:uppercase;line-height:1.2}
+.sbcount.big b{font-size:104px}
+.sbgauge{position:relative;height:9px;border:1.5px solid var(--stroke);background:#070605;overflow:hidden}
+.sbgauge i{position:absolute;inset:0 59% 0 0;background:repeating-linear-gradient(90deg,var(--red) 0 6px,var(--red-deep) 6px 9px)}
+.sbcolo{position:relative;display:flex;align-items:center;gap:9px;padding:6px 9px;background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 rgba(0,0,0,.36)}
+.sbcolo::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
+.sbcolo .k{padding-left:7px;font-weight:800;font-size:9px;letter-spacing:.12em;color:var(--red-deep);text-transform:uppercase}
+.sbcolo .v{margin-left:auto;font-family:var(--cond);font-weight:700;font-size:12px;color:var(--ink)}
+.sbreg{flex:none;position:relative;width:14px;height:14px;border:1.5px solid var(--red-deep);border-radius:50%}
+.sbreg::before,.sbreg::after{content:"";position:absolute;background:var(--red-deep)}
+.sbreg::before{left:50%;top:-3px;bottom:-3px;width:1.5px;transform:translateX(-50%)}
+.sbreg::after{top:50%;left:-3px;right:-3px;height:1.5px;transform:translateY(-50%)}
+
+/* variant B masthead */
+.sbrail.masthead .mast{position:relative;z-index:1;margin:-16px -14px 4px -22px;padding:16px 16px 14px 22px;background:linear-gradient(110deg,var(--red) 0 72%,var(--red-deep) 72%);display:grid;grid-template-columns:auto 1fr;column-gap:11px;align-items:center}
+.sbrail.masthead .mast .sbmark{grid-row:1 / span 2}
+.sbrail.masthead .mname{align-self:end;font-weight:800;font-size:20px;letter-spacing:.04em;color:var(--paper);line-height:1}
+.sbrail.masthead .msub{align-self:start;margin-top:3px;font-weight:700;font-size:9.5px;letter-spacing:.14em;color:color-mix(in srgb,var(--paper) 80%,transparent);text-transform:uppercase}
+.sbnav.tight .sbitem{padding:7px 10px}
+.sbnav.tight .sbitem .nm{font-size:14px}
+.sbfoot.tight{border-top:0;padding-top:4px}
+
+/* annotations */
+.sbanno{border:2px solid var(--paper);background:var(--ink-2);padding:14px 15px;margin-bottom:14px}
+.sbanno h4{color:var(--paper);font-size:15px;margin:0 0 9px}
+.sbanno ol{margin:0;padding-left:20px;color:var(--paper-dim);font-size:13px;line-height:1.66}
+.sbanno ol b{color:var(--amber)}
+.sbanno ol .tc{color:var(--paper)}
+
+/* ===== §09 LIBRARY page tuning sketch ===== */
+@keyframes lbspin{to{transform:rotate(360deg)}}
+.lbcols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media(max-width:860px){.lbcols{grid-template-columns:1fr}}
+.lbcap{font-family:var(--cond);font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-size:13px;color:var(--paper);margin:0 0 9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lbcap .pill{font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.1em;padding:2px 7px;border:1.5px solid var(--amber);color:var(--amber)}
+.lbcap .pill.keep{border-color:#67c98a;color:#8fe0ad}
+
+/* press-bed background */
+.lbbed{position:relative;overflow:hidden;border:2px solid var(--paper);min-height:288px;padding:20px;display:flex;gap:20px;align-items:flex-end;
+  background:radial-gradient(420px 300px at 12% -12%, #241a10, transparent 60%),radial-gradient(360px 280px at 102% -6%, #2a120b, transparent 55%),#0b0a08}
+.lbbed::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:radial-gradient(var(--red) 1px,transparent 1.5px),radial-gradient(var(--amber) 1px,transparent 1.5px);background-size:16px 16px,16px 16px;background-position:0 0,8px 8px}
+.lbbed::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);background-size:40px 40px}
+.lbwm{position:absolute;right:10px;top:-40px;z-index:0;font-family:var(--cond);font-weight:800;font-size:200px;line-height:1;letter-spacing:-.02em;color:rgba(237,224,196,.045)}
+.lbreg{position:absolute;z-index:1;width:18px;height:18px;border:1.5px solid rgba(237,224,196,.32);border-radius:50%}
+.lbreg::before,.lbreg::after{content:"";position:absolute;background:rgba(237,224,196,.32)}
+.lbreg::before{left:50%;top:-4px;bottom:-4px;width:1.5px;transform:translateX(-50%)}
+.lbreg::after{top:50%;left:-4px;right:-4px;height:1.5px;transform:translateY(-50%)}
+.lbslot{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px}
+.lbcart{width:150px;height:100px;border-radius:7px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 4px 0 #244674,0 10px 16px rgba(0,0,0,.5);position:relative}
+.lbcart::after{content:"卡帶不動";font-family:var(--tc);position:absolute;inset:auto 0 7px;text-align:center;font-size:9px;color:rgba(255,255,255,.5)}
+
+/* nameplate (cart label) */
+.lbplate{position:relative;width:172px;overflow:hidden;background:var(--paper);box-shadow:3px 3px 0 rgba(0,0,0,.42)}
+.lbplate::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:transparent;z-index:2}
+.lbplate.mounted{box-shadow:3px 3px 0 var(--red-deep)}
+.lbplate.mounted::before{background:var(--red)}
+.lbplate.staged::before{background:var(--amber)}
+.lbkind{display:flex;align-items:center;justify-content:space-between;gap:6px;background:#171511;padding:4px 8px}
+.lbkind span{font-family:var(--cond);font-weight:700;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.lbkind i{font-family:var(--cond);font-style:normal;font-weight:800;font-size:10px;width:15px;height:15px;display:grid;place-items:center;background:var(--paper-dim);color:var(--ink)}
+.lbplate.mounted .lbkind i{background:var(--red);color:var(--paper)}
+.lbplate.staged .lbkind i{background:var(--amber);color:var(--ink)}
+.lbttl{font-family:var(--cond);font-weight:800;font-size:15px;line-height:1.06;letter-spacing:.02em;text-transform:uppercase;color:var(--ink);padding:7px 9px 9px;text-align:left}
+.lbplates{display:flex;gap:16px;flex-wrap:wrap}
+
+/* dock */
+/* dock = one glass strip; the page (cartridges) scrolls & refracts THROUGH every element, buttons included */
+.lbstage{position:relative;overflow:hidden;border:1px solid var(--stroke);background:#0b0a08}
+.lbback{position:absolute;inset:0;z-index:0;display:flex;align-items:center;gap:12px;padding:0 14px;width:max-content;opacity:.95;animation:lbconvey 18s linear infinite}
+.lbmini{flex:none;position:relative;width:64px;height:38px;border-radius:4px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 0 #244674}
+.lbmini::after{content:"";position:absolute;left:7px;right:7px;top:7px;bottom:8px;border-radius:2px;background:rgba(7,8,12,.72)}
+@keyframes lbconvey{to{transform:translateX(-50%)}}
+.lbbar{position:relative;z-index:2;display:flex;align-items:center;gap:11px;padding:12px}
+.lbnowg{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:7px 12px;border:1px solid var(--stroke);border-left:3px solid var(--red);background:linear-gradient(100deg,rgba(237,224,196,.05),rgba(237,224,196,.012));-webkit-backdrop-filter:blur(3px) saturate(1.5);backdrop-filter:blur(3px) saturate(1.5)}
+.lbcartIco{flex:none;position:relative;width:27px;height:21px;border-radius:3px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.lbcartIco::after{content:"";position:absolute;left:4px;right:4px;top:4px;bottom:5px;border-radius:1px;background:rgba(7,8,12,.7)}
+.lbmeta .eb{font-family:var(--cond);font-weight:700;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.lbmeta .ti{font-family:var(--cond);font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:var(--paper);line-height:1.05;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.lbgbtn{flex:none;height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;border:1px solid rgba(237,224,196,.3);background:rgba(237,224,196,.05);color:var(--paper);font-family:var(--cond);font-weight:700;font-size:14px;letter-spacing:.05em;text-transform:uppercase;cursor:default;-webkit-backdrop-filter:blur(6px) saturate(1.4);backdrop-filter:blur(6px) saturate(1.4)}
+.lbgbtn.ic{width:38px;padding:0;font-size:15px}
+.lbgbtn.on{border-color:var(--amber);color:var(--amber)}
+.lbgbtn.apply{border:1.5px solid var(--red);background:linear-gradient(160deg,rgba(226,64,42,.44),rgba(158,35,23,.30));box-shadow:3px 3px 0 rgba(158,35,23,.5),0 0 18px rgba(226,64,42,.34)}
+.lbgbtn.apply .cnt{font-style:normal;font-weight:800;font-size:11px;background:var(--amber);color:var(--ink);padding:1px 6px}
+.lbgbtn.launch{border-color:color-mix(in srgb,var(--amber) 58%,transparent);color:var(--amber)}
+.lbdiv{flex:none;width:2px;height:30px;background:var(--red);transform:skewX(-12deg);opacity:.7}
+@supports ((backdrop-filter:blur(1px) url(#lens)) or (-webkit-backdrop-filter:blur(1px) url(#lens))){.lbnowg,.lbgbtn{-webkit-backdrop-filter:blur(2px) url(#lens) saturate(1.55);backdrop-filter:blur(2px) url(#lens) saturate(1.55)}}
+
+/* pending with halftone ground */
+.lbpending{position:relative;overflow:hidden;border:1.5px solid rgba(237,224,196,.28);background:rgba(14,13,12,.62);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);padding:11px}
+.lbpending::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.6;background:repeating-linear-gradient(0deg,rgba(237,224,196,.05) 0 1px,transparent 1px 5px),radial-gradient(60px 26px at 90% 6%,color-mix(in srgb,var(--amber) 22%,transparent),transparent 72%);mix-blend-mode:screen}
+.lbpending::after{content:"";position:absolute;top:0;right:0;width:42px;height:5px;background:var(--red);clip-path:polygon(12px 0,100% 0,100% 100%,0 100%)}
+.lbpHead{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.lbpHead b{font-family:var(--cond);font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.lbpHead em{font-style:normal;font-family:var(--cond);font-weight:800;font-size:13px;color:var(--paper);background:var(--red);padding:1px 8px}
+.lbpRow{position:relative;z-index:1;display:flex;align-items:center;gap:9px;padding:5px 8px;margin-bottom:5px;background:rgba(237,224,196,.05)}
+.lbpRow i{flex:none;width:8px;height:18px;background:var(--amber)}
+.lbpRow.rm i{background:var(--red)}
+.lbpRow span{font-family:var(--cond);font-weight:700;font-size:13px;letter-spacing:.02em;text-transform:uppercase;color:var(--paper)}
+
 footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
 .reveal{opacity:0;transform:translateY(16px);transition:.6s cubic-bezier(.2,.7,.2,1)}
 .reveal.in{opacity:1;transform:none}
@@ -175,7 +320,7 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
     <div class="brand"><span class="mark">B</span> BD-SpineX · 印刷局</div>
     <nav>
       <a href="#thesis">主張</a><a href="#schemes">配色</a><a href="#buttons">按鈕</a>
-      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a>
+      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a><a href="#sidebar">側欄</a><a href="#library">Library頁</a>
     </nav>
   </div>
 </div>
@@ -365,6 +510,247 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
     <div class="note"><span class="n">9</span><h3 class="tc">zero-specificity 主題層</h3><p class="tc">用 <code>:where([data-theme=…])</code> 覆寫，不會誤蓋 <code>.dockBtn</code> 等高權重元件；Classic 為預設 <code>:root</code>，可無痕切回。</p></div>
     <div class="note"><span class="n">10</span><h3 class="tc">卡帶神聖不可侵</h3><p class="tc">擬物卡帶（形狀、3D 厚度、角色封面、廠牌、接觸點）在所有主題完全一致；主題只動 chrome。</p></div>
   </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- SIDEBAR REDESIGN -->
+<section id="sidebar" class="wrap reveal">
+  <div class="secnum">08 — 側欄重製 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷局側脊 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Spine</span></h2>
+  <p class="tc" style="max-width:66ch">把側欄從「套了印刷皮的垂直清單」升級成<strong style="color:var(--paper)">一份印刷品的書脊／刊頭</strong>：左緣是裝訂紅規，每個元件都變成海報傢俱——報頭、活版目錄、蓋章狀態、巨數印量、版次扉頁。兩個方向並陳，挑一個或混搭即可。最大膽的一刀：<strong style="color:var(--amber)">丟掉 emoji 圖示</strong>，改用編號＋幾何蓋章，才真的像印刷局而不是 app 範本。</p>
+
+  <div class="sbgrid" style="margin-top:26px">
+
+    <!-- Variant A · INDEX SPINE -->
+    <div>
+      <div class="sbcap">A · 印刷目錄 Index Spine <span class="pill amber">導航優先</span></div>
+      <div class="sbrail">
+        <div class="sbbrand">
+          <span class="sbmark">B</span>
+          <div>
+            <div class="sbname">BD-SPINEX</div>
+            <div class="sbsub">Runtime Mod Manager</div>
+            <div class="sbedition"><i></i>印刷局 · ED.2.0</div>
+          </div>
+        </div>
+
+        <div class="sbnav">
+          <div class="sbgroup"><span class="tc">收藏</span> Collection <i></i></div>
+          <div class="sbitem on"><span class="ix">01</span><span class="nm">Library</span><span class="cnt">3</span><span class="st">★</span></div>
+          <div class="sbitem"><span class="ix">02</span><span class="nm">Roster</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="ix">03</span><span class="nm">Profiles</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">工具</span> Tools <i></i></div>
+          <div class="sbitem"><span class="ix">04</span><span class="nm">Preview</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="ix">05</span><span class="nm">Stats</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="ix">06</span><span class="nm">Logs</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">系統</span> System <i></i></div>
+          <div class="sbitem"><span class="ix">07</span><span class="nm">Settings</span><span class="tick"></span></div>
+        </div>
+
+        <div class="sbfoot">
+          <div class="sbstamp">
+            <span class="seal">✓</span>
+            <div class="lbl"><b>Runtime Installed</b><span>Loader · Mac PlayCover</span></div>
+          </div>
+          <div class="sbcount"><b>31</b><span>Mounted<br>of 75</span></div>
+          <div class="sbgauge"><i></i></div>
+          <div class="sbcolo"><span class="sbreg"></span><span class="k">Edition</span><span class="v">v2.27.19</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variant B · GIANT MASTHEAD -->
+    <div>
+      <div class="sbcap">B · 巨數刊頭 Giant Masthead <span class="pill">海報優先</span></div>
+      <div class="sbrail masthead">
+        <div class="mast">
+          <span class="sbmark light">B</span>
+          <div class="mname">BD-SPINEX</div>
+          <div class="msub">Runtime Mod Manager</div>
+        </div>
+
+        <div class="sbcount big"><b>31</b><span>Cartridges<br>Mounted</span></div>
+        <div class="sbgauge"><i></i></div>
+        <div class="sbstamp"><span class="seal">✓</span><div class="lbl"><b>Runtime Installed</b><span>31 / 75 · Ready</span></div></div>
+
+        <div class="sbnav tight">
+          <div class="sbgroup"><span class="tc">收藏</span> Collection <i></i></div>
+          <div class="sbitem on"><span class="nm">Library</span><span class="cnt">3</span><span class="st">★</span></div>
+          <div class="sbitem"><span class="nm">Roster</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="nm">Profiles</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">工具</span> Tools <i></i></div>
+          <div class="sbitem"><span class="nm">Preview</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="nm">Stats</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="nm">Logs</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">系統</span> System <i></i></div>
+          <div class="sbitem"><span class="nm">Settings</span><span class="tick"></span></div>
+        </div>
+
+        <div class="sbfoot tight">
+          <div class="sbcolo"><span class="sbreg"></span><span class="k">Edition</span><span class="v">v2.27.19 [2.28.10]</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- annotations -->
+    <div>
+      <div class="sbanno">
+        <h4 class="tc">七個設計動作</h4>
+        <ol>
+          <li><b>書脊紅規</b> — 左緣 5px 紅油墨直線＋套色偏移，像裝訂線；整條 rail 被讀成一份印刷品。</li>
+          <li><b>報頭</b> — 斜切「B」＋<span class="tc">版次標 ED.2.0</span>，取代一般 app logo；B 案再把它鋪成斜切紅帶刊頭。</li>
+          <li><b>活版目錄</b> — <span class="tc">01–07 流水編號</span>＋全大寫壓縮字；分組改成髮絲線＋中英雙標籤。<b>丟掉 emoji。</b></li>
+          <li><b>紅帶選取</b> — active＝整條朱紅出血帶＋琥珀星＋琥珀計數章；hover＝琥珀左框＋套色偏移；rest＝斜切紅 tick。</li>
+          <li><b>蓋章狀態</b> — Runtime 狀態做成<span class="tc">旋轉圓形蓋章</span>（✓／✗），比小圓點更有印刷感。</li>
+          <li><b>巨數印量</b> — 掛載數＝琥珀巨數＋紅套色陰影＋油墨量計 bar；B 案把它放大成側欄主角。</li>
+          <li><b>版次扉頁</b> — 底部 colophon：奶油紙條＋紅左條＋<span class="tc">套准記號 ⊕</span>＋版本號，像書末版權頁。</li>
+        </ol>
+      </div>
+      <div class="sbanno">
+        <h4 class="tc">兩案怎麼選</h4>
+        <ol style="list-style:none;padding-left:0">
+          <li style="margin-bottom:7px"><b>A 導航優先</b> — <span class="tc">日常主力</span>。編號目錄好掃讀，巨數收在腳；穩中帶狠。</li>
+          <li><b>B 海報優先</b> — <span class="tc">最大膽</span>。刊頭斜切＋104px 巨數當門面，導航壓緊；開 app 像翻開海報。</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- component breakdown -->
+  <h3 class="tc" style="font-size:18px;color:var(--paper);margin:30px 0 4px">零件拆解</h3>
+  <p class="tc" style="max-width:60ch;margin-bottom:18px">把新側欄拆成可重用的印刷零件，方便逐一落地到 <code>styles.css</code> 的 <code>.railItem / .railStatus / .railVersion</code>。</p>
+  <div class="lib">
+    <div class="demo"><h4 class="tc">導航三態</h4>
+      <div class="sbnav" style="gap:6px">
+        <div class="sbitem"><span class="ix">02</span><span class="nm">Roster</span><span class="tick"></span></div>
+        <div class="sbitem hov"><span class="ix">05</span><span class="nm">Stats</span><span class="tick"></span></div>
+        <div class="sbitem on"><span class="ix">01</span><span class="nm">Library</span><span class="cnt">3</span><span class="st">★</span></div>
+      </div>
+      <p class="tc" style="margin:10px 0 0;font-size:12px">rest（斜切 tick）→ hover（琥珀左框＋偏移）→ active（紅出血帶＋星＋計數章）</p>
+    </div>
+    <div class="demo"><h4 class="tc">蓋章狀態</h4>
+      <div style="display:flex;gap:20px;align-items:center">
+        <div class="sbstamp"><span class="seal">✓</span><div class="lbl"><b>Installed</b><span>31 mounted</span></div></div>
+        <div class="sbstamp"><span class="seal bad">✗</span><div class="lbl"><b>Not installed</b><span>0 mounted</span></div></div>
+      </div>
+      <p class="tc" style="margin:12px 0 0;font-size:12px">旋轉印章取代小圓點：琥珀＝已安裝、朱紅＝未安裝。</p>
+    </div>
+    <div class="demo"><h4 class="tc">巨數印量 + 油墨量計</h4>
+      <div class="sbcount"><b>31</b><span>Mounted<br>of 75</span></div>
+      <div class="sbgauge" style="margin-top:10px"><i></i></div>
+      <p class="tc" style="margin:10px 0 0;font-size:12px">琥珀巨數＋紅套色陰影；量計用紅／深紅油墨條表示掛載比例。</p>
+    </div>
+    <div class="demo"><h4 class="tc">版次扉頁 + 套准記號</h4>
+      <div class="sbcolo"><span class="sbreg"></span><span class="k">Edition</span><span class="v">v2.27.19 [2.28.10]</span></div>
+      <p class="tc" style="margin:12px 0 0;font-size:12px">奶油紙條＋紅左條＋偏移陰影；⊕ 套准記號是印刷對位符號，鎖定版本時轉紅。</p>
+    </div>
+  </div>
+
+  <!-- keep / change -->
+  <div class="map" style="margin-top:22px">
+    <div class="col keep"><div class="tagline">KEEP · 沿用</div><h4 class="tc">既有骨架</h4>
+      <ul class="tc"><li>三分組 收藏／工具／系統、七個路由不變</li><li>整條 rail 維持深色＋玻璃模糊（液態折射照舊）</li><li>紅為主墨、琥珀為輔的克制用色</li><li>active 紅底、版次奶油紙條的既有方向</li></ul></div>
+    <div class="col change"><div class="tagline">CHANGE · 重做</div><h4 class="tc">側欄 chrome</h4>
+      <ul class="tc"><li>emoji 圖示 → 流水編號 01–07</li><li>小圓點狀態 → 旋轉圓形蓋章</li><li>分組標題 → 髮絲線＋中英雙標籤</li><li>新增：書脊紅規、巨數印量、油墨量計、⊕ 套准記號</li></ul></div>
+  </div>
+
+  <p class="tc" style="margin-top:20px"><strong style="color:var(--paper)">落地對應：</strong>主要改 <code>app/renderer/src/App.tsx</code> 的 <code>.appRail</code> 標記（加編號／蓋章／巨數）與 <code>styles.css</code> 的 <code>:where([data-theme="night"]) .rail*</code> 區塊。<strong style="color:var(--amber)">卡帶、dock、主畫面完全不動</strong>——這仍是 chrome 層的事。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- LIBRARY PAGE TUNING -->
+<section id="library" class="wrap reveal">
+  <div class="secnum">09 — LIBRARY 頁面調校 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷台面 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Bed</span></h2>
+  <p class="tc" style="max-width:66ch"><strong style="color:var(--amber)">卡帶本體神聖不動。</strong>這頁只動 chrome：卡帶下的標籤、頁面背景網底、dock 的零件。沿用你已經喜歡的——<strong style="color:var(--paper)">玻璃＋印刷紅分段按鈕</strong>、<strong style="color:var(--paper)">PENDING CHANGES</strong>、<strong style="color:var(--paper)">mod power 玻璃細邊框</strong>。dock 最在意的是<strong style="color:var(--amber)">卡帶隨頁面滾動、在玻璃下折射穿過的美感</strong>——所以 dock 與<strong style="color:var(--paper)">每一顆按鈕都維持玻璃</strong>（連 APPLY 也是紅染玻璃而非實色），並拿掉與側欄重複的進度條。</p>
+
+  <!-- background + nameplate -->
+  <div class="lbcols" style="margin-top:26px">
+    <div>
+      <div class="lbcap">背景 · 印刷台面網底 <span class="pill">可調強弱</span></div>
+      <div class="lbbed">
+        <span class="lbwm">BD</span>
+        <span class="lbreg" style="left:12px;top:12px"></span>
+        <span class="lbreg" style="right:12px;bottom:12px"></span>
+        <div class="lbslot">
+          <div class="lbcart"></div>
+          <div class="lbplate mounted"><span class="lbkind"><span>Dating Pack</span><i>✓</i></span><div class="lbttl">Sylvia Dating</div></div>
+        </div>
+        <div class="lbslot">
+          <div class="lbcart"></div>
+          <div class="lbplate"><span class="lbkind"><span>Cutscene Pack</span><i>·</i></span><div class="lbttl">Diana Innovator Skill</div></div>
+        </div>
+      </div>
+      <p class="tc" style="margin:11px 0 0;font-size:13px">近黑暖底 + <strong style="color:var(--paper)">雙色半色調網點</strong>（紅／琥珀，極低透明）+ <strong style="color:var(--paper)">藍圖排版格線</strong> + 角落 <strong style="color:var(--paper)">⊕ 套准記號</strong> + 巨大 <code>BD</code> 浮水印。卡帶從「浮在黑底上」變成「躺在印刷台上」。網點／格線濃度都能調，要更收斂可只留網點。</p>
+    </div>
+
+    <div>
+      <div class="lbcap">卡帶標籤 · 三態 <span class="pill">重設計</span></div>
+      <div class="demo" style="display:flex;align-items:flex-end;justify-content:center;min-height:178px;gap:18px">
+        <div class="lbplates" style="justify-content:center">
+          <div class="lbplate"><span class="lbkind"><span>NPC Pack</span><i>·</i></span><div class="lbttl">Girls Magic Illust</div></div>
+          <div class="lbplate staged"><span class="lbkind"><span>Character Pack</span><i>+</i></span><div class="lbttl">Eclipse Dream Bride</div></div>
+          <div class="lbplate mounted"><span class="lbkind"><span>Cutscene Pack</span><i>✓</i></span><div class="lbttl">Palette Miracle Violet</div></div>
+        </div>
+      </div>
+      <p class="tc" style="margin:11px 0 0;font-size:13px">塑膠奶油牌 → <strong style="color:var(--paper)">活版紙標</strong>：深墨類別條（琥珀類別字＋狀態方塊）＋壓縮字大寫標題＋套色偏移陰影。狀態靠<strong style="color:var(--paper)">左緣油墨條＋方塊章</strong>編碼：<span style="color:var(--paper-dim)">· 待命</span>、<span style="color:var(--amber)">＋ 暫存</span>、<span style="color:var(--red)">✓ 已掛載</span>（陰影也轉深紅）。</p>
+    </div>
+  </div>
+
+  <!-- dock -->
+  <div class="lbcap" style="margin:30px 0 9px">DOCK · 卡帶播放器列</div>
+  <div class="lbstage">
+    <div class="lbback">
+      <span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span>
+    </div>
+    <div class="lbbar">
+      <div class="lbnowg">
+        <span class="lbcartIco"></span>
+        <div class="lbmeta">
+          <div class="eb">Now Loading</div>
+          <div class="ti">11 changes staged</div>
+        </div>
+      </div>
+      <button class="lbgbtn ic on" title="Mod Power">⏻</button>
+      <button class="lbgbtn ic" title="Restore all">↩</button>
+      <span class="lbdiv"></span>
+      <button class="lbgbtn apply">▶ Apply <span class="cnt">11</span></button>
+      <button class="lbgbtn launch">Launch ▸</button>
+    </div>
+  </div>
+  <div class="lib" style="margin-top:16px">
+    <div class="sbanno" style="margin:0">
+      <h4 class="tc">Dock 四個動作</h4>
+      <ol>
+        <li><b>全玻璃、自然折射</b>：dock 與<span class="tc">每一顆按鈕都是玻璃底</span>，頁面自然滾動時卡帶在底下折射穿過（上方示意：卡帶在所有按鈕下方透出）。這是你本來就要的美感，整條 dock 一致。</li>
+        <li><b>迷你卡帶標記</b>：彩虹唱片／⊕ 都拿掉，now-loading 用一顆<span class="tc">迷你卡帶</span>當標記，最貼合這個 app。</li>
+        <li><b>進度條拿掉</b>：側欄已有同款油墨量計，dock 不重複；空間留給玻璃。<span class="tc">（想在 dock 也看到數字，可留一行小字 31/75。）</span></li>
+        <li><b>APPLY＝紅液態玻璃</b>：紅邊＋紅染玻璃＋<span class="tc">3px 套色偏移</span>＋紅光暈——顯眼、最該按，但<span class="tc">仍透光、內容照樣折射穿過</span>（待套用時可更亮/脈動引導）。<b>啟動＝琥珀邊玻璃</b>，次級、與 APPLY 區隔。mod power（⏻ ↩）維持玻璃。</li>
+      </ol>
+    </div>
+    <div>
+      <div class="lbcap" style="margin-bottom:9px">PENDING CHANGES · 加網底 <span class="pill keep">保留結構</span></div>
+      <div class="lbpending">
+        <div class="lbpHead"><b>Pending Changes</b><em>11</em></div>
+        <div class="lbpRow"><i></i><span>Eclipse Dream Bride Standing</span></div>
+        <div class="lbpRow rm"><i></i><span>Palette Dating 帕萊特约会</span></div>
+        <div class="lbpRow"><i></i><span>Sylvia Dating Xray</span></div>
+      </div>
+      <p class="tc" style="margin:11px 0 0;font-size:13px">結構不動，加<strong style="color:var(--paper)">掃描線網底</strong>＋右上<strong style="color:var(--paper)">紅角切</strong>＋琥珀光暈，跟側欄狀態卡同一套印刷肌理。</p>
+    </div>
+  </div>
+
+  <!-- keep / change -->
+  <div class="map" style="margin-top:22px">
+    <div class="col keep"><div class="tagline">KEEP · 沿用</div><h4 class="tc">你已經喜歡的</h4>
+      <ul class="tc"><li>卡帶造型／封面／3D 厚度（完全不動）</li><li><strong style="color:var(--amber)">dock 全玻璃：卡帶隨頁面滾動在每顆按鈕下折射穿過（強化）</strong></li><li>玻璃＋印刷紅分段切換（Cartridges/List·Collector/Arcade）</li><li>PENDING CHANGES 結構與互動</li><li>mod power（⏻ ↩）玻璃＋細邊框</li></ul></div>
+    <div class="col change"><div class="tagline">CHANGE · 重做</div><h4 class="tc">這頁的 chrome</h4>
+      <ul class="tc"><li>卡帶標籤：塑膠牌 → 活版紙標（三態）</li><li>背景：純黑 → 印刷台面（網點＋格線＋⊕＋浮水印）</li><li>dock disc：彩虹唱片 → 迷你卡帶標記（dock 全玻璃）</li><li>dock 進度條：拿掉（側欄已有油墨量計）</li><li>APPLY → 紅液態玻璃（仍透光、內容折射）；啟動 → 琥珀邊玻璃</li><li>PENDING 加掃描線網底＋紅角切</li></ul></div>
+  </div>
+
+  <p class="tc" style="margin-top:20px"><strong style="color:var(--paper)">落地對應：</strong><code>App.tsx</code> 的 <code>.rcartNamePlate / .dock*</code> 標記，與 <code>styles.css</code> 的 <code>:where([data-theme="night"]) .dock* / .pendingDiff* / .rcartName*</code>＋ <code>.appMain</code> 背景。分段按鈕與 mod power 既有樣式幾乎不動。</p>
 </section>
 
 <footer class="wrap">

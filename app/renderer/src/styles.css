@@ -2055,7 +2055,12 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   margin: 0 auto;
 }
 
-/* ---- Left glass rail ---- */
+/* ============================================================
+   Sidebar — "The Press Spine" (Variant A · Index Spine)
+   Self-contained Night-Press styling. This single block fully
+   defines the sidebar on its own — no Classic base + night
+   override stacking. Tokens come from :root[data-theme="night"].
+   ============================================================ */
 .appRail {
   position: sticky;
   top: 0;
@@ -2064,13 +2069,34 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 14px;
-  padding: 20px 14px;
+  padding: 16px 14px 14px 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(20, 16, 9, 0.66), rgba(11, 10, 8, 0.74));
   border-right: 1px solid var(--stroke);
-  background: rgba(11, 13, 24, 0.36);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
   backdrop-filter: blur(16px) saturate(1.3);
 }
-
+.appRail::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--red);
+  box-shadow: 2px 0 0 var(--red-deep);
+  z-index: 3;
+}
+.appRail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: radial-gradient(var(--paper) 1px, transparent 1.5px);
+  background-size: 7px 7px;
+}
 @supports ((backdrop-filter: blur(1px) url(#liquid-lens)) or (-webkit-backdrop-filter: blur(1px) url(#liquid-lens))) {
   :root[data-glass="liquid"] .appRail {
     -webkit-backdrop-filter: blur(8px) url(#liquid-lens) saturate(1.42);
@@ -2078,248 +2104,353 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   }
 }
 
+/* brand / masthead */
 .railBrand {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 4px 8px 8px;
+  padding: 4px 6px 2px 2px;
 }
-
 .railLogo {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  flex: none;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
-  background: linear-gradient(160deg, var(--gold), var(--gold-deep));
-  color: #1a1206;
-  font-weight: 900;
-  font-size: 17px;
-  box-shadow: 0 4px 14px rgba(246, 198, 107, 0.4);
-}
-
-.railName {
-  font-size: 15px;
+  background: var(--red);
+  color: var(--paper);
+  font-family: var(--cond);
   font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text);
+  font-size: 20px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 24% 100%);
 }
-
-.railSub {
-  font-size: 11px;
-  color: var(--text-faint);
-  font-weight: 600;
-}
-
-.railNav {
-  display: grid;
-  align-content: start;
-  gap: 3px;
-}
-
-.railGroup {
-  font-size: 10px;
-  letter-spacing: 0.18em;
+.railName {
+  font-family: var(--cond);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-faint);
-  font-weight: 700;
-  padding: 14px 12px 6px;
+  line-height: 1;
+  color: var(--paper);
 }
-
-.railItem {
+.railSub {
+  margin-top: 3px;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.railEdition {
+  margin-top: 5px;
   display: flex;
   align-items: center;
-  gap: 11px;
-  width: 100%;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 9px 12px;
-  background: transparent;
+  gap: 6px;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.railEdition i {
+  width: 18px;
+  height: 1px;
+  background: var(--amber);
+  opacity: 0.55;
+}
+
+/* nav — letterpress index */
+.railNav {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-content: start;
+  overflow-y: auto;
+}
+.railGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 11px 4px 3px;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.railGroupCjk {
+  font-family: "BD Label TC", "PingFang TC", "Noto Sans TC", var(--cond);
+  letter-spacing: 0.04em;
   color: var(--text-dim);
-  font-size: 13.5px;
-  font-weight: 650;
+}
+.railGroup i {
+  flex: 1;
+  height: 1px;
+  background: var(--stroke);
+}
+.railItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px 9px 9px;
   text-align: left;
   cursor: pointer;
+  border: 0;
+  border-left: 3px solid color-mix(in srgb, var(--red) 30%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--red) 6%, transparent), transparent 60%);
+  color: var(--text-dim);
+  font-family: var(--cond);
 }
-
-.railItem:hover:not(:disabled) {
-  background: var(--glass);
-  color: var(--text);
-  transform: none;
-  border-color: transparent;
-}
-
-.railItem.active {
-  background: linear-gradient(120deg, rgba(246, 198, 107, 0.18), rgba(246, 198, 107, 0.04));
-  color: var(--gold-2);
-  border-color: rgba(246, 198, 107, 0.28);
-}
-
-.railIco {
-  width: 18px;
-  text-align: center;
-  font-size: 15px;
+.railNum {
   flex: none;
+  width: 19px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
 }
-
 .railLabel {
   flex: 1;
   min-width: 0;
-}
-
-.railBadge {
-  flex: none;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  display: inline-grid;
-  place-items: center;
-  background: var(--gold);
-  color: #1a1206;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.railItem.active .railBadge {
-  background: var(--gold);
-}
-
-.railFoot {
-  display: grid;
-  gap: 9px;
-  padding: 2px 2px 0;
-}
-
-.railStatus {
-  position: relative;
-  display: grid;
-  gap: 7px;
   overflow: hidden;
-  padding: 11px 12px 12px;
-  border: 1px solid var(--liquid-border);
-  border-radius: 14px;
-  background: var(--liquid-surface);
-  -webkit-backdrop-filter: blur(8px) saturate(1.35);
-  backdrop-filter: blur(8px) saturate(1.35);
-  box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-.railStatus::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 32%),
-    radial-gradient(80px 34px at 88% 0%, rgba(246, 198, 107, 0.12), transparent 72%);
-  opacity: 0.72;
-}
-
-.railStatusKicker,
-.railStatusLine,
-.railStatusSub {
-  position: relative;
-  z-index: 1;
-}
-
-.railStatusKicker {
-  color: var(--gold);
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+.railTick {
+  flex: none;
+  width: 12px;
+  height: 2px;
+  background: color-mix(in srgb, var(--red) 45%, transparent);
+  transform: skewX(-18deg);
+}
+.railBadge {
+  flex: none;
+  min-width: 18px;
+  padding: 1px 6px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--amber);
+  color: var(--ink);
+  font-family: var(--cond);
+  font-weight: 800;
+  font-size: 11px;
+}
+.railStar {
+  flex: none;
+  color: var(--amber);
+  font-size: 13px;
+  line-height: 1;
+}
+.railItem:hover:not(:disabled),
+.railItem:focus-visible {
+  outline: 0;
+  color: var(--paper);
+  border-left-color: var(--amber);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 16%, transparent), transparent 64%),
+    var(--glass);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--red-deep) 46%, transparent);
+}
+.railItem:hover:not(:disabled) .railTick,
+.railItem:focus-visible .railTick {
+  background: var(--red);
+}
+.railItem.active {
+  color: var(--paper);
+  border-left-color: var(--amber);
+  background: linear-gradient(100deg, var(--red) 0 78%, transparent 78%);
+}
+.railItem.active .railNum {
+  color: var(--paper);
+  opacity: 0.92;
+}
+.railItem:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
-.railStatusLine {
+/* foot — stamp + giant count + ink gauge + colophon */
+.railFoot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 13px 2px 0;
+  border-top: 3px solid var(--red);
+}
+.railStamp {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.railSeal {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2.4px solid var(--amber);
+  color: var(--amber);
+  font-weight: 800;
+  font-size: 17px;
+  transform: rotate(-9deg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--amber) 28%, transparent);
+}
+.railStamp.is-missing .railSeal {
+  border-color: var(--red);
+  color: var(--red);
+  transform: rotate(7deg);
+}
+.railStampMain {
+  font-family: var(--cond);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--paper);
+}
+.railStampSub {
+  margin-top: 3px;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.railCount {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+.railCount b {
+  font-family: var(--cond);
+  font-weight: 800;
+  font-size: 56px;
+  line-height: 0.78;
+  color: var(--amber);
+  text-shadow: 4px 4px 0 var(--red-deep);
+}
+.railCount span {
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--text-dim);
+}
+.railGauge {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+  border: 1.5px solid var(--stroke);
+  background: #070605;
+}
+.railGauge i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--red) 0 6px, var(--red-deep) 6px 9px);
+}
+.railVersion {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 0;
+  min-height: 34px;
+  padding: 6px 9px 6px 14px;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.36);
 }
-
-.railStatus .statusDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.railVersion::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--red);
+}
+.railReg {
   flex: none;
-  background: var(--err);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.12),
-    0 0 10px currentColor;
-  color: var(--err);
-}
-
-.railStatus .statusDot.ok {
-  background: var(--ok);
-  color: var(--ok);
-}
-
-.railStatusMain {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.railStatusSub {
-  color: var(--text-faint);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.railVersion {
   position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  width: 100%;
-  align-items: baseline;
-  gap: 8px;
-  overflow: hidden;
-  padding: 7px 10px;
-  border: 1px solid var(--stroke);
-  border-radius: 11px;
-  background: var(--glass-2);
-  color: var(--text-dim);
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--red-deep);
+  border-radius: 50%;
 }
-
+.railReg::before,
+.railReg::after {
+  content: "";
+  position: absolute;
+  background: var(--red-deep);
+}
+.railReg::before {
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1.5px;
+  transform: translateX(-50%);
+}
+.railReg::after {
+  top: 50%;
+  left: -3px;
+  right: -3px;
+  height: 1.5px;
+  transform: translateY(-50%);
+}
 .railVersionLabel {
-  color: var(--text-faint);
-  font-size: 9.5px;
+  font-family: var(--cond);
   font-weight: 800;
-  letter-spacing: 0.16em;
-  line-height: 1;
+  font-size: 9px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--red-deep);
 }
-
 .railVersion strong {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-  text-align: right;
-  text-overflow: ellipsis;
+  margin-left: auto;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 12px;
   white-space: nowrap;
+  color: var(--ink);
 }
-
 .railVersion.locked {
-  border-color: rgba(255, 122, 138, 0.4);
-  background: var(--err-bg);
+  background: var(--red);
+  box-shadow: 3px 3px 0 var(--red-deep);
 }
-
+.railVersion.locked::before {
+  background: var(--amber);
+}
 .railVersion.locked .railVersionLabel,
 .railVersion.locked strong {
-  color: var(--err);
+  color: var(--paper);
+}
+.railVersion.locked .railReg {
+  border-color: var(--paper);
+}
+.railVersion.locked .railReg::before,
+.railVersion.locked .railReg::after {
+  background: var(--paper);
 }
 
 /* ---- Main content column ---- */
@@ -4583,192 +4714,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     #0E0D0C;
 }
 
-[data-theme="night"] .appRail { background:rgba(23,21,15,0.55); }
-
-/* ============ print chrome ============ */
-:where([data-theme="night"]) .railName,
-:where([data-theme="night"]) .railGroup,
-:where([data-theme="night"]) .railItem,
-:where([data-theme="night"]) .railStatusKicker,
-:where([data-theme="night"]) .railStatusMain,
-:where([data-theme="night"]) .railVersionLabel,
+/* ============ print chrome (shared, non-rail) ============ */
 :where([data-theme="night"]) .viewHead h1,
 :where([data-theme="night"]) .panelTitle,
 :where([data-theme="night"]) .statusPill {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.05em;
-}
-
-/* rail */
-:where([data-theme="night"]) .railLogo {
-  border-radius:0; background:var(--red); color:var(--paper);
-  clip-path:polygon(0 0,100% 0,100% 100%,24% 100%);
-}
-:where([data-theme="night"]) .railName { letter-spacing:0.06em; }
-:where([data-theme="night"]) .railGroup { letter-spacing:0.16em; color:var(--red); }
-:where([data-theme="night"]) .railItem {
-  position:relative;
-  overflow:hidden;
-  border-radius:0;
-  border-left:3px solid transparent;
-  font-weight:700;
-}
-:where([data-theme="night"]) .railItem:not(.active) {
-  border-color:transparent;
-  border-left-color:color-mix(in srgb, var(--red) 32%, transparent);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--red) 7%, transparent), transparent 62%),
-    linear-gradient(180deg, color-mix(in srgb, var(--paper) 5%, transparent), transparent);
-  color:var(--text-dim);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--paper) 9%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--ink) 18%, transparent);
-}
-:where([data-theme="night"]) .railItem:not(.active)::after {
-  content:"";
-  position:absolute;
-  right:9px;
-  top:50%;
-  z-index:0;
-  width:12px;
-  height:2px;
-  background:color-mix(in srgb, var(--red) 40%, transparent);
-  transform:translateY(-50%) skewX(-18deg);
-  opacity:0.58;
-}
-:where([data-theme="night"]) .railItem:not(.active):hover:not(:disabled),
-:where([data-theme="night"]) .railItem:not(.active):focus-visible {
-  border-color:color-mix(in srgb, var(--red) 30%, transparent);
-  border-left-color:var(--amber);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--amber) 18%, transparent), transparent 64%),
-    var(--glass);
-  color:var(--text);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--paper) 10%, transparent),
-    2px 2px 0 color-mix(in srgb, var(--red-deep) 46%, transparent);
-  outline:0;
-  transform:none;
-}
-:where([data-theme="night"]) .railItem:not(.active):hover:not(:disabled)::after,
-:where([data-theme="night"]) .railItem:not(.active):focus-visible::after {
-  background:var(--red);
-  opacity:0.95;
-}
-:where([data-theme="night"]) .railItem .railIco,
-:where([data-theme="night"]) .railItem .railLabel,
-:where([data-theme="night"]) .railItem .railBadge {
-  position:relative;
-  z-index:1;
-}
-:where([data-theme="night"]) .railItem.active {
-  background:var(--red); color:var(--paper); border-color:transparent; border-left-color:var(--amber);
-}
-:where([data-theme="night"]) .railBadge { border-radius:0; background:var(--amber); color:var(--ink); }
-:where([data-theme="night"]) .railFoot {
-  gap:9px;
-  padding:12px 4px 0;
-  border-top:3px solid var(--red);
-}
-:where([data-theme="night"]) .railStatus {
-  gap:8px;
-  border-radius:8px;
-  border:1px solid rgba(237,224,196,0.18);
-  background:
-    linear-gradient(135deg, rgba(237,224,196,0.13), transparent 34%),
-    linear-gradient(180deg, rgba(237,224,196,0.08), rgba(237,224,196,0.025)),
-    rgba(14,13,12,0.58);
-  -webkit-backdrop-filter:blur(7px) saturate(1.45);
-  backdrop-filter:blur(7px) saturate(1.45);
-  box-shadow:var(--liquid-shadow);
-}
-:where([data-theme="night"]) .railStatus::before {
-  background:
-    radial-gradient(80px 32px at 90% 0%, color-mix(in srgb, var(--amber) 25%, transparent), transparent 74%),
-    repeating-linear-gradient(0deg, rgba(237,224,196,0.045) 0 1px, transparent 1px 5px);
-  opacity:0.7;
-  mix-blend-mode:screen;
-}
-:where([data-theme="night"]) .railStatus::after {
-  content:"";
-  position:absolute;
-  top:0;
-  right:0;
-  width:42px;
-  height:5px;
-  background:var(--red);
-  clip-path:polygon(12px 0,100% 0,100% 100%,0 100%);
-}
-:where([data-theme="night"]) .railStatusKicker {
-  color:var(--amber);
-  letter-spacing:0.2em;
-}
-:where([data-theme="night"]) .railStatusMain {
-  color:var(--paper);
-  font-size:14px;
-  line-height:0.96;
-}
-:where([data-theme="night"]) .railStatusSub {
-  color:color-mix(in srgb, var(--paper) 64%, transparent);
-  letter-spacing:0.08em;
-}
-:where([data-theme="night"]) .railStatus .statusDot {
-  width:10px;
-  height:10px;
-  border-radius:0;
-  background:var(--red);
-  color:var(--red);
-  box-shadow:
-    2px 2px 0 var(--red-deep),
-    0 0 10px color-mix(in srgb, var(--red) 46%, transparent);
-}
-:where([data-theme="night"]) .railStatus .statusDot.ok {
-  background:var(--amber);
-  color:var(--amber);
-  box-shadow:
-    2px 2px 0 var(--red-deep),
-    0 0 10px color-mix(in srgb, var(--amber) 42%, transparent);
-}
-:where([data-theme="night"]) .railVersion {
-  min-height:35px;
-  border-radius:0;
-  border:1.5px solid var(--ink);
-  background:var(--paper);
-  color:var(--ink);
-  padding:7px 9px 7px 15px;
-  box-shadow:3px 3px 0 rgba(0,0,0,0.36);
-}
-:where([data-theme="night"]) .railVersion::before {
-  content:"";
-  position:absolute;
-  left:0;
-  top:0;
-  bottom:0;
-  width:5px;
-  background:var(--red);
-}
-:where([data-theme="night"]) .railVersionLabel {
-  color:var(--red-deep);
-  font-size:10px;
-  letter-spacing:0.12em;
-}
-:where([data-theme="night"]) .railVersion strong {
-  color:var(--ink);
-  font-family:var(--cond);
-  font-size:13px;
-  letter-spacing:0.02em;
-  text-transform:none;
-}
-:where([data-theme="night"]) .railVersion.locked {
-  border-color:var(--red-deep);
-  background:var(--red);
-  box-shadow:3px 3px 0 var(--red-deep);
-}
-:where([data-theme="night"]) .railVersion.locked::before {
-  background:var(--amber);
-}
-:where([data-theme="night"]) .railVersion.locked .railVersionLabel,
-:where([data-theme="night"]) .railVersion.locked strong {
-  color:var(--paper);
 }
 
 /* title + giant count */
@@ -5240,11 +5190,6 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   box-shadow:var(--liquid-shadow);
 }
 @supports ((backdrop-filter: blur(1px) url(#liquid-lens)) or (-webkit-backdrop-filter: blur(1px) url(#liquid-lens))) {
-  :root[data-glass="liquid"]:where([data-theme="night"]) .railStatus {
-    -webkit-backdrop-filter:blur(3px) url(#liquid-lens) saturate(1.55);
-    backdrop-filter:blur(3px) url(#liquid-lens) saturate(1.55);
-  }
-
   :root[data-glass="liquid"]:where([data-theme="night"]) .backendStatus,
   :root[data-glass="liquid"]:where([data-theme="night"]) .authorRuleRow {
     -webkit-backdrop-filter:blur(2.5px) url(#liquid-lens) saturate(1.55);
@@ -5272,9 +5217,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
 
-/* ---------- view subtitle + rail sub → condensed ---------- */
-:where([data-theme="night"]) .viewHead .viewSub,
-:where([data-theme="night"]) .railSub,
-:where([data-theme="night"]) .railStatusSub {
+/* ---------- view subtitle -> condensed ---------- */
+:where([data-theme="night"]) .viewHead .viewSub {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
 }

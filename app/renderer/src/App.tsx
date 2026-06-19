@@ -46,10 +46,10 @@ const NAV_ITEMS: NavItem[] = [
   { key: "logs", label: "Logs", icon: "🧾", group: "tools" },
   { key: "settings", label: "Settings", icon: "⚙️", group: "system" }
 ];
-const NAV_GROUPS: { id: NavItem["group"]; label: string }[] = [
-  { id: "collection", label: "收藏" },
-  { id: "tools", label: "工具" },
-  { id: "system", label: "系統" }
+const NAV_GROUPS: { id: NavItem["group"]; label: string; en: string }[] = [
+  { id: "collection", label: "收藏", en: "Collection" },
+  { id: "tools", label: "工具", en: "Tools" },
+  { id: "system", label: "系統", en: "System" }
 ];
 
 const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Runtime Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0", development: false };
@@ -1026,26 +1026,34 @@ export function App() {
           <div>
             <div className="railName">{appInfo.name}</div>
             <div className="railSub">{appInfo.subtitle}</div>
+            <div className="railEdition"><i aria-hidden="true" />印刷局</div>
           </div>
         </div>
 
         <div className="railNav">
           {NAV_GROUPS.map((group) => (
             <div key={group.id}>
-              <div className="railGroup">{group.label}</div>
+              <div className="railGroup">
+                <span className="railGroupCjk">{group.label}</span>
+                <span>{group.en}</span>
+                <i aria-hidden="true" />
+              </div>
               {NAV_ITEMS.filter((item) => item.group === group.id).map((item) => {
+                const isActive = view === item.key;
                 const badge = item.key === "library" && pendingChanges.length > 0 ? pendingChanges.length : undefined;
+                const num = String(NAV_ITEMS.indexOf(item) + 1).padStart(2, "0");
                 return (
                   <button
                     key={item.key}
                     type="button"
-                    className={`railItem ${view === item.key ? "active" : ""}`}
+                    className={`railItem ${isActive ? "active" : ""}`}
                     onClick={() => setView(item.key)}
-                    aria-current={view === item.key ? "page" : undefined}
+                    aria-current={isActive ? "page" : undefined}
                   >
-                    <span className="railIco" aria-hidden="true">{item.icon}</span>
+                    <span className="railNum" aria-hidden="true">{num}</span>
                     <span className="railLabel">{item.label}</span>
                     {badge ? <span className="railBadge">{badge}</span> : null}
+                    {isActive ? <span className="railStar" aria-hidden="true">★</span> : <span className="railTick" aria-hidden="true" />}
                   </button>
                 );
               })}
@@ -1054,15 +1062,22 @@ export function App() {
         </div>
 
         <div className="railFoot">
-          <div className={`railStatus ${status?.injected ? "is-installed" : "is-missing"} ${gameRunning ? "is-running" : ""}`}>
-            <div className="railStatusKicker">Runtime</div>
-            <div className="railStatusLine">
-              <span className={`statusDot ${status?.injected ? "ok" : ""}`} aria-hidden="true" />
-              <div className="railStatusMain">{status?.injected ? "Runtime installed" : "Not installed"}</div>
+          <div className={`railStamp ${status?.injected ? "is-installed" : "is-missing"}`}>
+            <span className="railSeal" aria-hidden="true">{status?.injected ? "✓" : "✗"}</span>
+            <div>
+              <div className="railStampMain">{status?.injected ? "Runtime installed" : "Not installed"}</div>
+              <div className="railStampSub">Loader · Mac PlayCover{gameRunning ? " · running" : ""}</div>
             </div>
-            <div className="railStatusSub">{mountedMods.length} mounted{gameRunning ? " · running" : ""}</div>
+          </div>
+          <div className="railCount" aria-hidden="true">
+            <b>{mountedMods.length}</b>
+            <span>Mounted<br />of {library.length}</span>
+          </div>
+          <div className="railGauge" aria-hidden="true">
+            <i style={{ width: `${library.length ? Math.min(100, Math.round((mountedMods.length / library.length) * 100)) : 0}%` }} />
           </div>
           <span className={`railVersion ${versionLocked ? "locked" : ""}`} title={formatVersionTitle(appInfo, gameVersionInfo)}>
+            <span className="railReg" aria-hidden="true" />
             <span className="railVersionLabel">Version</span>
             <strong>{formatVersionBadge(appInfo, gameVersionInfo)}</strong>
           </span>
