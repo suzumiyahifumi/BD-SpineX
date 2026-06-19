@@ -163,6 +163,8 @@ function typeToCategory(type: RuntimeMod["type"]): ModCategory {
 }
 
 export function App() {
+  useTauriCustomScrollbars();
+
   const [appInfo, setAppInfo] = useState<AppInfo>(defaultAppInfo);
   const [gameVersionInfo, setGameVersionInfo] = useState<GameVersionInfo | null>(null);
   const [view, setView] = useState<ViewKey>("library");
@@ -191,6 +193,11 @@ export function App() {
   const [migrationCheck, setMigrationCheck] = useState<LegacyRuntimeMigrationCheck | null>(null);
   const [migrationRunning, setMigrationRunning] = useState(false);
   const [migrationDismissed, setMigrationDismissed] = useState(false);
+  const [hoveredPendingFolder, setHoveredPendingFolder] = useState<string | null>(null);
+  const [pendingScrollTarget, setPendingScrollTarget] = useState<string | null>(null);
+  const [spotlitPendingFolder, setSpotlitPendingFolder] = useState<string | null>(null);
+  const cartNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const pendingSpotlightTimerRef = useRef<number | null>(null);
 
   const log = useCallback((message: string, tone?: LogEntry["tone"]) => pushLog(setLogs, message, tone), []);
 
@@ -226,6 +233,12 @@ export function App() {
     })();
   }, [refreshStatus, scanLibrary]);
 
+  useEffect(() => {
+    return () => {
+      if (pendingSpotlightTimerRef.current) window.clearTimeout(pendingSpotlightTimerRef.current);
+    };
+  }, []);
+
   const mountedMods = useMemo(() => status?.mountedMods ?? [], [status]);
   const mountedFolders = useMemo(() => new Set(mountedMods.map((m) => m.folder)), [mountedMods]);
   const isDesired = useCallback((folder: string) => desired[folder] ?? mountedFolders.has(folder), [desired, mountedFolders]);
@@ -245,19 +258,87 @@ export function App() {
   const hasConflict = useMemo(() => pendingChanges.some((c) => c.conflict), [pendingChanges]);
 
   const versionLocked = isGameVersionMismatch(appInfo, gameVersionInfo);
+  const injectionVersionLocked = isDetectedGameVersionMismatch(appInfo, gameVersionInfo);
+  const injectionVersionLockMessage = formatInjectionVersionLockMessage(appInfo, gameVersionInfo);
   const appReady = Boolean(status?.appFound && status?.loaderAvailable);
   const injectionMissing = Boolean(status && appReady && !status.injected);
   const gameRunning = Boolean(status?.gameRunning);
   const injectionActionLocked = busy || gameRunning;
+  const injectionLocked = injectionActionLocked || injectionVersionLocked;
+  const injectionLockTitle = injectionVersionLocked
+    ? injectionVersionLockMessage
+    : gameRunning
+      ? "Close BrownDust II before changing injection"
+      : busy
+        ? "Action running"
+        : "";
   const missingModsDir = !modsDir;
   const modsActionLocked = busy;
   const modsLocked = busy || versionLocked || !appReady || injectionMissing || missingModsDir;
+  const modsLockReason = formatModsLockReason(versionLocked, appReady, injectionMissing, missingModsDir, modsActionLocked);
   const showMigrationPanel = Boolean(migrationCheck?.needed && !migrationDismissed);
   const useCanvasCartridges = cartSkin === "realistic" && tauriCanvasCartridges;
 
   const selectableVisibleMods = visibleMods;
   const allVisibleModsSelected = selectableVisibleMods.length > 0 && selectableVisibleMods.every((m) => isDesired(m.folder));
   const hasChanges = pendingChanges.some((c) => !c.implicit);
+
+  const registerCartNode = useCallback((folder: string, node: HTMLButtonElement | null) => {
+    if (node) cartNodeRefs.current.set(folder, node);
+    else cartNodeRefs.current.delete(folder);
+  }, []);
+
+  const spotlightPendingFolder = useCallback((folder: string) => {
+    setSpotlitPendingFolder(folder);
+    if (pendingSpotlightTimerRef.current) window.clearTimeout(pendingSpotlightTimerRef.current);
+    pendingSpotlightTimerRef.current = window.setTimeout(() => {
+      setSpotlitPendingFolder((current) => current === folder ? null : current);
+      pendingSpotlightTimerRef.current = null;
+    }, 1400);
+  }, []);
+
+  const scrollCartIntoView = useCallback((folder: string) => {
+    const node = cartNodeRefs.current.get(folder);
+    if (!node) return false;
+    if (!isElementFullyInViewport(node)) {
+      node.scrollIntoView({
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+        block: "center",
+        inline: "nearest"
+      });
+    }
+    spotlightPendingFolder(folder);
+    return true;
+  }, [spotlightPendingFolder]);
+
+  useEffect(() => {
+    if (!pendingScrollTarget || view !== "library" || modView !== "grid") return;
+    if (!library.some((mod) => mod.folder === pendingScrollTarget)) {
+      setPendingScrollTarget(null);
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      if (scrollCartIntoView(pendingScrollTarget)) setPendingScrollTarget(null);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [library, modView, pendingScrollTarget, scrollCartIntoView, view, visibleMods]);
+
+  const handlePendingChangeClick = useCallback((folder: string) => {
+    setHoveredPendingFolder(folder);
+    setPendingScrollTarget(folder);
+    spotlightPendingFolder(folder);
+    if (view !== "library") setView("library");
+    if (modView !== "grid") {
+      setModView("grid");
+      localStorage.setItem(MODVIEW_KEY, "grid");
+    }
+    if (!visibleMods.some((mod) => mod.folder === folder) && library.some((mod) => mod.folder === folder)) {
+      setModFilter("");
+    }
+    window.requestAnimationFrame(() => {
+      if (scrollCartIntoView(folder)) setPendingScrollTarget(null);
+    });
+  }, [library, modView, scrollCartIntoView, spotlightPendingFolder, view, visibleMods]);
 
   const selectDir = useCallback(async () => {
     const dir = await window.bd2.selectDirectory();
@@ -348,12 +429,16 @@ export function App() {
   );
 
   const installLoader = useCallback(() => {
+    if (injectionVersionLocked) {
+      log(injectionVersionLockMessage, "err");
+      return;
+    }
     if (!window.confirm("Install Runtime Injection into the BrownDust II executable? Close the game before continuing.")) return;
     void runTask(async () => {
       const r = await window.bd2.runtimeInstall();
       log(r.message, r.ok ? "ok" : "err");
     });
-  }, [runTask, log]);
+  }, [injectionVersionLocked, injectionVersionLockMessage, runTask, log]);
 
   const uninstallLoader = useCallback(() => {
     if (!window.confirm("Remove Runtime Injection and restore the original BrownDust II executable? Close the game before continuing.")) return;
@@ -529,12 +614,25 @@ export function App() {
         <strong>{pendingChanges.length}</strong>
       </div>
       <div className="pendingDiffList">
-        {pendingChanges.map((c) => (
-          <div key={c.folder} className={`pendingDiffItem ${formatPendingToneClass(tones[c.folder])}`} title={c.folder}>
-            <span className="pendingDiffColor" aria-hidden="true" />
-            <span className="pendingDiffName">{formatFolderName(c.folder)}</span>
-          </div>
-        ))}
+        {pendingChanges.map((c) => {
+          const active = hoveredPendingFolder === c.folder || spotlitPendingFolder === c.folder;
+          return (
+            <button
+              key={c.folder}
+              type="button"
+              className={`pendingDiffItem ${formatPendingToneClass(tones[c.folder])} ${active ? "is-active" : ""}`}
+              title={`${c.folder}\nClick to locate cartridge`}
+              onMouseEnter={() => setHoveredPendingFolder(c.folder)}
+              onMouseLeave={() => setHoveredPendingFolder((current) => current === c.folder ? null : current)}
+              onFocus={() => setHoveredPendingFolder(c.folder)}
+              onBlur={() => setHoveredPendingFolder((current) => current === c.folder ? null : current)}
+              onClick={() => handlePendingChangeClick(c.folder)}
+            >
+              <span className="pendingDiffColor" aria-hidden="true" />
+              <span className="pendingDiffName">{formatFolderName(c.folder)}</span>
+            </button>
+          );
+        })}
       </div>
     </aside>
   ) : null;
@@ -613,6 +711,7 @@ export function App() {
                   <div className="cartEmpty">No mods match this filter.</div>
                 ) : visibleMods.map((mod) => {
                   const CartComp = useCanvasCartridges ? CanvasCartridge : cartSkin === "realistic" ? CartridgeRealistic : Cartridge;
+                  const pendingLinked = hoveredPendingFolder === mod.folder || spotlitPendingFolder === mod.folder;
                   return (
                     <CartComp
                       key={mod.path}
@@ -621,11 +720,23 @@ export function App() {
                       selected={isDesired(mod.folder)}
                       tone={tones[mod.folder]}
                       locked={modsLocked}
+                      lockedReason={modsLocked ? modsLockReason : undefined}
                       onToggle={() => updateDesired(mod.folder, !isDesired(mod.folder))}
                       authorRules={authorRules}
+                      buttonRef={(node) => registerCartNode(mod.folder, node)}
+                      isPendingLinked={pendingLinked}
+                      isPendingTarget={spotlitPendingFolder === mod.folder}
                     />
                   );
                 })}
+                {modsLocked && (
+                  <div className="cartShelfLockOverlay" role="status">
+                    <div className="cartShelfLockCard">
+                      <strong>Mod actions locked</strong>
+                      <span>{modsLockReason}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
             <table>
@@ -661,8 +772,9 @@ export function App() {
                   const have = mountedFolders.has(mod.folder);
                   const category = typeToCategory(mod.type);
                   const folderName = formatFolderName(mod.folder);
+                  const pendingLinked = hoveredPendingFolder === mod.folder || spotlitPendingFolder === mod.folder;
                   return (
-                    <tr key={mod.path} className={tone ? `pendingPatchChange ${formatPendingToneClass(tone)}` : ""}>
+                    <tr key={mod.path} className={`${tone ? `pendingPatchChange ${formatPendingToneClass(tone)}` : ""} ${pendingLinked ? "is-pending-linked" : ""}`}>
                       <td className="patchColumn">
                         <input
                           aria-label={`Mount ${mod.folder}`}
@@ -684,9 +796,9 @@ export function App() {
               </tbody>
             </table>
             )}
-            {modsLocked && (
+            {modsLocked && modView === "list" && (
               <div className="modsLockOverlay" aria-hidden="true">
-                <span>{formatModsLockReason(versionLocked, appReady, injectionMissing, missingModsDir, modsActionLocked)}</span>
+                <span>{modsLockReason}</span>
               </div>
             )}
           </div>
@@ -698,34 +810,39 @@ export function App() {
   const settingsView = (
     <>
       <section className="panel settingsGrid">
-        <div className="field">
+        <div className={`field injectionField ${injectionVersionLocked ? "is-locked" : ""}`}>
           <span className="fieldLabel">
             <span>Runtime Injection (BepInEx)</span>
             <HelpButton title="Runtime Injection">
               Installs the loader into the game executable after backing up and re-signing it. Close BrownDust II before installing or removing injection. Mounted mods take effect the next time the game starts. Removing injection restores the original executable but keeps mounted mod files in place. Reinstall injection after a game update.
             </HelpButton>
           </span>
-          <div className="pathRow">
+          <div className="pathRow injectionRow" aria-disabled={injectionLocked || !appReady}>
             <span className={`badge injectionBadge ${status?.injected ? "injected" : "notInjected"}`} style={{ alignSelf: "center" }}>
               {status?.injected ? "Injected" : "Not injected"}
             </span>
             <button
               type="button"
-              disabled={injectionActionLocked || !appReady || Boolean(status?.injected)}
+              disabled={injectionLocked || !appReady || Boolean(status?.injected)}
               onClick={installLoader}
-              title={gameRunning ? "Close BrownDust II before changing injection" : ""}
+              title={injectionLockTitle}
             >
               Install Injection
             </button>
             <button
               type="button"
-              disabled={injectionActionLocked || !status?.injected}
+              disabled={injectionLocked || !status?.injected}
               onClick={uninstallLoader}
-              title={gameRunning ? "Close BrownDust II before changing injection" : ""}
+              title={injectionLockTitle}
             >
               Remove Injection
             </button>
           </div>
+          {injectionVersionLocked && (
+            <div className="injectionLockNotice" role="status">
+              {injectionVersionLockMessage}
+            </div>
+          )}
         </div>
         <PathField
           label="Mods Folder"
@@ -942,15 +1059,17 @@ export function App() {
         </div>
 
         <div className="railFoot">
-          <div className="railStatus">
-            <span className={`statusDot ${status?.injected ? "ok" : ""}`} aria-hidden="true" />
-            <div>
+          <div className={`railStatus ${status?.injected ? "is-installed" : "is-missing"} ${gameRunning ? "is-running" : ""}`}>
+            <div className="railStatusKicker">Runtime</div>
+            <div className="railStatusLine">
+              <span className={`statusDot ${status?.injected ? "ok" : ""}`} aria-hidden="true" />
               <div className="railStatusMain">{status?.injected ? "Runtime installed" : "Not installed"}</div>
-              <div className="railStatusSub">{mountedMods.length} mounted{gameRunning ? " · running" : ""}</div>
             </div>
+            <div className="railStatusSub">{mountedMods.length} mounted{gameRunning ? " · running" : ""}</div>
           </div>
           <span className={`railVersion ${versionLocked ? "locked" : ""}`} title={formatVersionTitle(appInfo, gameVersionInfo)}>
-            {formatVersionBadge(appInfo, gameVersionInfo)}
+            <span className="railVersionLabel">Version</span>
+            <strong>{formatVersionBadge(appInfo, gameVersionInfo)}</strong>
           </span>
         </div>
       </nav>
@@ -985,6 +1104,269 @@ export function App() {
 }
 
 // ===== logic helpers =====
+function isElementFullyInViewport(element: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+  const width = window.innerWidth || document.documentElement.clientWidth;
+  const height = window.innerHeight || document.documentElement.clientHeight;
+  return rect.top >= 0 && rect.left >= 0 && rect.bottom <= height && rect.right <= width;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function useTauriCustomScrollbars() {
+  useEffect(() => {
+    if (document.documentElement.getAttribute("data-runtime") !== "tauri") return;
+    return installTauriCustomScrollbars();
+  }, []);
+}
+
+type CustomScrollbarEntry = {
+  target: HTMLElement;
+  bar: HTMLDivElement;
+  thumb: HTMLDivElement;
+  scrollListenerTarget: HTMLElement | Window;
+  isDocument: boolean;
+};
+
+const TAURI_SCROLL_CONTAIN_SELECTOR = ".pendingDiffList, .modsPanel table, .sharedPanel table, .historyTableFrame, .logStream";
+
+function installTauriCustomScrollbars() {
+  const layer = document.createElement("div");
+  layer.className = "tauriScrollbarLayer";
+  layer.setAttribute("aria-hidden", "true");
+  document.body.appendChild(layer);
+
+  const entries = new Map<HTMLElement, CustomScrollbarEntry>();
+  let raf = 0;
+  let rescanTimer = 0;
+  let activeDrag: {
+    entry: CustomScrollbarEntry;
+    pointerId: number;
+    startY: number;
+    startScrollTop: number;
+  } | null = null;
+
+  const getMetrics = (entry: CustomScrollbarEntry) => {
+    if (entry.isDocument) {
+      const root = entry.target;
+      return {
+        rect: new DOMRect(0, 0, window.innerWidth, window.innerHeight),
+        scrollTop: root.scrollTop,
+        scrollHeight: Math.max(root.scrollHeight, document.body.scrollHeight),
+        clientHeight: window.innerHeight
+      };
+    }
+
+    return {
+      rect: entry.target.getBoundingClientRect(),
+      scrollTop: entry.target.scrollTop,
+      scrollHeight: entry.target.scrollHeight,
+      clientHeight: entry.target.clientHeight
+    };
+  };
+
+  const renderEntry = (entry: CustomScrollbarEntry) => {
+    const { rect, scrollTop, scrollHeight, clientHeight } = getMetrics(entry);
+    const maxScroll = Math.max(0, scrollHeight - clientHeight);
+    const visible =
+      maxScroll > 2 &&
+      rect.width > 0 &&
+      rect.height > 36 &&
+      rect.bottom > 0 &&
+      rect.top < window.innerHeight &&
+      rect.right > 0 &&
+      rect.left < window.innerWidth;
+
+    entry.bar.classList.toggle("is-visible", visible);
+    if (!visible) return;
+
+    const width = 8;
+    const inset = entry.isDocument ? 2 : 3;
+    const top = Math.max(2, rect.top + inset);
+    const bottom = Math.min(window.innerHeight - 2, rect.bottom - inset);
+    const trackHeight = Math.max(0, bottom - top);
+    const thumbHeight = Math.max(28, Math.round(trackHeight * Math.min(1, clientHeight / scrollHeight)));
+    const travel = Math.max(1, trackHeight - thumbHeight);
+    const thumbTop = top + (scrollTop / maxScroll) * travel;
+    const right = entry.isDocument ? window.innerWidth - 3 : Math.min(window.innerWidth - 3, rect.right - 3);
+
+    entry.bar.style.left = `${Math.round(right - width)}px`;
+    entry.bar.style.top = `${Math.round(top)}px`;
+    entry.bar.style.width = `${width}px`;
+    entry.bar.style.height = `${Math.round(trackHeight)}px`;
+    entry.thumb.style.height = `${Math.round(thumbHeight)}px`;
+    entry.thumb.style.transform = `translateY(${Math.round(thumbTop - top)}px)`;
+  };
+
+  const render = () => {
+    raf = 0;
+    for (const entry of entries.values()) renderEntry(entry);
+  };
+
+  const scheduleRender = () => {
+    if (raf) return;
+    raf = window.requestAnimationFrame(render);
+  };
+
+  const isScrollable = (element: HTMLElement) => {
+    if (element === layer || layer.contains(element)) return false;
+    if (element.clientHeight <= 0 || element.scrollHeight <= element.clientHeight + 2) return false;
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    return /(auto|scroll|overlay)/.test(style.overflowY);
+  };
+
+  const collectTargets = () => {
+    const root = (document.scrollingElement || document.documentElement) as HTMLElement;
+    const targets: HTMLElement[] = [];
+    if (root.scrollHeight > window.innerHeight + 2) targets.push(root);
+    for (const element of Array.from(document.body.querySelectorAll<HTMLElement>("*"))) {
+      if (isScrollable(element)) targets.push(element);
+    }
+    return targets;
+  };
+
+  const removeEntry = (entry: CustomScrollbarEntry) => {
+    entry.scrollListenerTarget.removeEventListener("scroll", scheduleRender);
+    entry.target.classList.remove("tauriNativeScrollbarHidden");
+    entry.bar.remove();
+  };
+
+  const ensureEntry = (target: HTMLElement) => {
+    const current = entries.get(target);
+    if (current) return current;
+
+    const isDocument = target === document.scrollingElement || target === document.documentElement || target === document.body;
+    const bar = document.createElement("div");
+    const thumb = document.createElement("div");
+    bar.className = "tauriCustomScrollbar";
+    thumb.className = "tauriCustomScrollbarThumb";
+    bar.appendChild(thumb);
+    layer.appendChild(bar);
+
+    const entry: CustomScrollbarEntry = {
+      target,
+      bar,
+      thumb,
+      isDocument,
+      scrollListenerTarget: isDocument ? window : target
+    };
+
+    if (!isDocument) {
+      target.classList.add("tauriNativeScrollbarHidden");
+    }
+
+    entry.scrollListenerTarget.addEventListener("scroll", scheduleRender, { passive: true });
+    thumb.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      thumb.setPointerCapture(event.pointerId);
+      activeDrag = {
+        entry,
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        startScrollTop: getMetrics(entry).scrollTop
+      };
+      thumb.classList.add("is-dragging");
+    });
+
+    entries.set(target, entry);
+    return entry;
+  };
+
+  const rescan = () => {
+    rescanTimer = 0;
+    const targets = new Set(collectTargets());
+    for (const target of targets) ensureEntry(target);
+    for (const [target, entry] of entries) {
+      if (!targets.has(target) || !target.isConnected) {
+        removeEntry(entry);
+        entries.delete(target);
+      }
+    }
+    scheduleRender();
+  };
+
+  const scheduleRescan = () => {
+    if (rescanTimer) return;
+    rescanTimer = window.setTimeout(rescan, 80);
+  };
+
+  const onPointerMove = (event: PointerEvent) => {
+    if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
+    const { entry, startY, startScrollTop } = activeDrag;
+    const { scrollHeight, clientHeight } = getMetrics(entry);
+    const maxScroll = Math.max(1, scrollHeight - clientHeight);
+    const trackHeight = Math.max(1, entry.bar.getBoundingClientRect().height);
+    const thumbHeight = Math.max(1, entry.thumb.getBoundingClientRect().height);
+    const travel = Math.max(1, trackHeight - thumbHeight);
+    entry.target.scrollTop = startScrollTop + ((event.clientY - startY) / travel) * maxScroll;
+    scheduleRender();
+  };
+
+  const stopDrag = (event: PointerEvent) => {
+    if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
+    activeDrag.entry.thumb.classList.remove("is-dragging");
+    activeDrag = null;
+  };
+
+  const normalizeWheelDelta = (event: WheelEvent, target: HTMLElement) => {
+    if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) return event.deltaY * 16;
+    if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) return event.deltaY * target.clientHeight;
+    return event.deltaY;
+  };
+
+  const onWheel = (event: WheelEvent) => {
+    if (event.ctrlKey || Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+    const path = event.composedPath();
+    const entry = path
+      .filter((node): node is HTMLElement => node instanceof HTMLElement)
+      .map((node) => entries.get(node))
+      .find((item): item is CustomScrollbarEntry => Boolean(item && !item.isDocument && item.target.matches(TAURI_SCROLL_CONTAIN_SELECTOR)));
+    if (!entry) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = getMetrics(entry);
+    const maxScroll = Math.max(0, scrollHeight - clientHeight);
+    if (maxScroll <= 2) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    const nextScrollTop = Math.min(maxScroll, Math.max(0, scrollTop + normalizeWheelDelta(event, entry.target)));
+    if (nextScrollTop !== scrollTop) {
+      entry.target.scrollTop = nextScrollTop;
+      scheduleRender();
+    }
+  };
+
+  const observer = new MutationObserver(scheduleRescan);
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden"] });
+  const resizeObserver = new ResizeObserver(scheduleRescan);
+  resizeObserver.observe(document.body);
+  window.addEventListener("resize", scheduleRescan);
+  window.addEventListener("wheel", onWheel, { capture: true, passive: false });
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", stopDrag);
+  window.addEventListener("pointercancel", stopDrag);
+
+  rescan();
+
+  return () => {
+    if (raf) window.cancelAnimationFrame(raf);
+    if (rescanTimer) window.clearTimeout(rescanTimer);
+    observer.disconnect();
+    resizeObserver.disconnect();
+    window.removeEventListener("resize", scheduleRescan);
+    window.removeEventListener("wheel", onWheel, { capture: true });
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", stopDrag);
+    window.removeEventListener("pointercancel", stopDrag);
+    for (const entry of entries.values()) removeEntry(entry);
+    entries.clear();
+    layer.remove();
+  };
+}
+
 function getRuntimePendingRows(library: RuntimeMod[], mountedMods: RuntimeMod[], isDesired: (folder: string) => boolean): RuntimeChange[] {
   const mountedFolders = new Set(mountedMods.map((m) => m.folder));
   const rows: RuntimeChange[] = [];
@@ -1238,6 +1620,16 @@ function categoryTypeLabel(category: ModCategory) {
 function normalizeVersionForCompare(version?: string) {
   return version?.trim().replace(/^v/i, "").split(/[+-]/)[0];
 }
+function isDetectedGameVersionMismatch(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
+  const g = normalizeVersionForCompare(gameVersionInfo?.version);
+  const s = normalizeVersionForCompare(appInfo.supportedGameVersion || appInfo.version);
+  return Boolean(g && s && g !== s);
+}
+function formatInjectionVersionLockMessage(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
+  const supported = appInfo.supportedGameVersion || appInfo.version;
+  const detected = gameVersionInfo?.version ?? "unknown";
+  return `Runtime Injection is locked: this BD-SpineX app supports BrownDust II ${supported}, but the detected game version is ${detected}. Update BD-SpineX to the matching app version.`;
+}
 function formatVersionBadge(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
   const managerVersion = `v${appInfo.version}`;
   const gameVersion = gameVersionInfo?.version;
@@ -1251,9 +1643,7 @@ function formatVersionTitle(appInfo: AppInfo, gameVersionInfo: GameVersionInfo |
 }
 function isGameVersionMismatch(appInfo: AppInfo, gameVersionInfo: GameVersionInfo | null) {
   if (appInfo.development) return false;
-  const g = normalizeVersionForCompare(gameVersionInfo?.version);
-  const s = normalizeVersionForCompare(appInfo.supportedGameVersion || appInfo.version);
-  return Boolean(g && s && g !== s);
+  return isDetectedGameVersionMismatch(appInfo, gameVersionInfo);
 }
 
 function migrationSignature(migration: LegacyRuntimeMigrationCheck) {
@@ -1280,10 +1670,14 @@ function Cartridge(props: {
   selected: boolean;
   tone?: PendingTone;
   locked: boolean;
+  lockedReason?: string;
   onToggle: () => void;
   authorRules?: AuthorRule[];
+  buttonRef?: (node: HTMLButtonElement | null) => void;
+  isPendingLinked?: boolean;
+  isPendingTarget?: boolean;
 }) {
-  const { mod, have, selected, tone, locked, onToggle } = props;
+  const { mod, have, selected, tone, locked, lockedReason, onToggle, buttonRef, isPendingLinked = false, isPendingTarget = false } = props;
   const category = typeToCategory(mod.type);
   const folderName = formatFolderName(mod.folder);
   const stateClass =
@@ -1296,11 +1690,12 @@ function Cartridge(props: {
     tone === "added" ? "staged · mount" :
     tone === "removed" ? "staged · unmount" :
     have ? "mounted" : "available";
-  const title = `${folderName}\n${mod.key} · ${category}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}`;
+  const title = `${folderName}\n${mod.key} · ${category}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}${lockedReason ? `\nLocked: ${lockedReason}` : ""}`;
   return (
     <button
       type="button"
-      className={`cart cat-${category} ${stateClass} ${selected ? "is-selected" : ""}`}
+      ref={buttonRef}
+      className={`cart cat-${category} ${stateClass} ${selected ? "is-selected" : ""} ${isPendingLinked ? "is-pending-linked" : ""} ${isPendingTarget ? "is-pending-target" : ""}`}
       disabled={locked}
       onClick={onToggle}
       aria-pressed={selected}
@@ -1334,10 +1729,14 @@ function CartridgeRealistic(props: {
   selected: boolean;
   tone?: PendingTone;
   locked: boolean;
+  lockedReason?: string;
   onToggle: () => void;
   authorRules?: AuthorRule[];
+  buttonRef?: (node: HTMLButtonElement | null) => void;
+  isPendingLinked?: boolean;
+  isPendingTarget?: boolean;
 }) {
-  const { mod, have, selected, tone, locked, onToggle, authorRules = DEFAULT_AUTHOR_RULES } = props;
+  const { mod, have, selected, tone, locked, lockedReason, onToggle, authorRules = DEFAULT_AUTHOR_RULES, buttonRef, isPendingLinked = false, isPendingTarget = false } = props;
   const meta = mod as RuntimeMod & { author?: string; cover?: string };
   const category = typeToCategory(mod.type);
   const folderName = formatFolderName(mod.folder);
@@ -1363,14 +1762,15 @@ function CartridgeRealistic(props: {
     tone === "added" ? "STAGED MOUNT" :
     tone === "removed" ? "STAGED UNMOUNT" :
     have ? "MOUNTED" : "AVAILABLE";
-  const title = `${folderName}\n${mod.key} · ${category}\nAuthor: ${detectedAuthor.name}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}${mod.skeleton === "unknown" ? "\nMissing .json or .skel skeleton file" : ""}`;
+  const title = `${folderName}\n${mod.key} · ${category}\nAuthor: ${detectedAuthor.name}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}${mod.skeleton === "unknown" ? "\nMissing .json or .skel skeleton file" : ""}${lockedReason ? `\nLocked: ${lockedReason}` : ""}`;
   const coverStyle = meta.cover ? ({ "--rcart-cover": `url("${meta.cover}")` } as CSSProperties) : undefined;
   const podTone = tone === "removed" ? "minus" : have ? "check" : "plus";
   const podMark = podTone === "minus" ? "-" : podTone === "check" ? "✓" : "+";
   return (
     <button
       type="button"
-      className={`rcart cat-${category} ${stateClass} ${skinClass} ${selected ? "is-on" : ""}`}
+      ref={buttonRef}
+      className={`rcart cat-${category} ${stateClass} ${skinClass} ${have ? "is-have" : ""} ${selected ? "is-on" : ""} ${isPendingLinked ? "is-pending-linked" : ""} ${isPendingTarget ? "is-pending-target" : ""}`}
       disabled={locked || mountBlocked}
       onClick={onToggle}
       aria-pressed={selected}
@@ -1412,9 +1812,9 @@ function CartridgeRealistic(props: {
         <span className="rcartWarningSticker" aria-hidden="true">
           <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
             <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
-            <path className="rcartWarningInnerLine" d="M32 13 C33.4 13 34.1 14.1 35 15.6 L51.4 44.4 C52.2 45.9 51.3 47.7 49.6 47.7 H14.4 C12.7 47.7 11.8 45.9 12.6 44.4 L29 15.6 C29.9 14.1 30.6 13 32 13 Z" />
-            <path className="rcartWarningBang" d="M32 20 L32 36" />
-            <circle className="rcartWarningDot" cx="32" cy="44" r="3" />
+            <path className="rcartWarningInnerLine" d="M32 16 C33.1 16 33.8 17.1 34.5 18.4 L49.1 44.2 C49.9 45.6 49 47.2 47.4 47.2 H16.6 C15 47.2 14.1 45.6 14.9 44.2 L29.5 18.4 C30.2 17.1 30.9 16 32 16 Z" />
+            <path className="rcartWarningBang" d="M32 25.4 L32 34.6" />
+            <circle className="rcartWarningDot" cx="32" cy="40.9" r="1.8" />
           </svg>
         </span>
         <span className="rcartBottomGroove" aria-hidden="true" />
@@ -1453,10 +1853,14 @@ function CanvasCartridge(props: {
   selected: boolean;
   tone?: PendingTone;
   locked: boolean;
+  lockedReason?: string;
   onToggle: () => void;
   authorRules?: AuthorRule[];
+  buttonRef?: (node: HTMLButtonElement | null) => void;
+  isPendingLinked?: boolean;
+  isPendingTarget?: boolean;
 }) {
-  const { mod, have, selected, tone, locked, onToggle, authorRules = DEFAULT_AUTHOR_RULES } = props;
+  const { mod, have, selected, tone, locked, lockedReason, onToggle, authorRules = DEFAULT_AUTHOR_RULES, buttonRef, isPendingLinked = false, isPendingTarget = false } = props;
   const meta = mod as RuntimeMod & { author?: string; cover?: string };
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const plasticCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1487,7 +1891,7 @@ function CanvasCartridge(props: {
     tone === "added" ? "STAGED MOUNT" :
     tone === "removed" ? "STAGED UNMOUNT" :
     have ? "MOUNTED" : "AVAILABLE";
-  const title = `${folderName}\n${mod.key} · ${category}\nAuthor: ${detectedAuthor.name}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}${mod.skeleton === "unknown" ? "\nMissing .json or .skel skeleton file" : ""}`;
+  const title = `${folderName}\n${mod.key} · ${category}\nAuthor: ${detectedAuthor.name}\n${have ? "mounted" : "available"}${mod.skeleton === "skel" ? "\nBinary .skel (converted to .json on mount when possible)" : ""}${mod.skeleton === "unknown" ? "\nMissing .json or .skel skeleton file" : ""}${lockedReason ? `\nLocked: ${lockedReason}` : ""}`;
 
   useEffect(() => {
     const urls = [coverUrl, portraitUrl, HEATSEAL_FILM_OVERLAY_URL].filter(Boolean) as string[];
@@ -1544,7 +1948,8 @@ function CanvasCartridge(props: {
   return (
     <button
       type="button"
-      className={`rcart rcart--canvas cat-${category} ${stateClass} ${skinClass} ${selected ? "is-on" : ""}`}
+      ref={buttonRef}
+      className={`rcart rcart--canvas cat-${category} ${stateClass} ${skinClass} ${have ? "is-have" : ""} ${selected ? "is-on" : ""} ${isPendingLinked ? "is-pending-linked" : ""} ${isPendingTarget ? "is-pending-target" : ""}`}
       disabled={locked || mountBlocked}
       onClick={onToggle}
       aria-pressed={selected}
@@ -1577,9 +1982,9 @@ function CanvasCartridge(props: {
         <span className="rcartWarningSticker" aria-hidden="true">
           <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
             <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
-            <path className="rcartWarningInnerLine" d="M32 13 C33.4 13 34.1 14.1 35 15.6 L51.4 44.4 C52.2 45.9 51.3 47.7 49.6 47.7 H14.4 C12.7 47.7 11.8 45.9 12.6 44.4 L29 15.6 C29.9 14.1 30.6 13 32 13 Z" />
-            <path className="rcartWarningBang" d="M32 20 L32 36" />
-            <circle className="rcartWarningDot" cx="32" cy="44" r="3" />
+            <path className="rcartWarningInnerLine" d="M32 16 C33.1 16 33.8 17.1 34.5 18.4 L49.1 44.2 C49.9 45.6 49 47.2 47.4 47.2 H16.6 C15 47.2 14.1 45.6 14.9 44.2 L29.5 18.4 C30.2 17.1 30.9 16 32 16 Z" />
+            <path className="rcartWarningBang" d="M32 25.4 L32 34.6" />
+            <circle className="rcartWarningDot" cx="32" cy="40.9" r="1.8" />
           </svg>
         </span>
         <span className="rcartBottomGroove" aria-hidden="true" />
@@ -1648,18 +2053,22 @@ function drawCanvasCartridgeBase(ctx: CanvasRenderingContext2D, width: number, h
   ctx.clearRect(0, 0, width, height);
   const palette = canvasCartridgePalette(paint.category);
   const scale = width / 224;
+  const plugDepth = Math.min(12 * scale, height * 0.12);
+  const bodyHeight = height - plugDepth;
 
   ctx.save();
-  roundedRectPath(ctx, 0, 0, width, height, 7 * scale);
+  canvasCartridgeShellPath(ctx, width, bodyHeight, plugDepth, 7 * scale);
   ctx.clip();
   const shell = ctx.createLinearGradient(0, 0, 0, height);
+  const shoulderStop = bodyHeight / height;
   shell.addColorStop(0, palette.shellLight);
   shell.addColorStop(0.18, colorMixHex(palette.shellLight, "#ffffff", 0.16));
-  shell.addColorStop(0.52, palette.shellMid);
-  shell.addColorStop(0.76, colorMixHex(palette.shellDark, "#000000", 0.06));
-  shell.addColorStop(1, palette.shellDark);
+  shell.addColorStop(Math.min(0.52, shoulderStop - 0.26), palette.shellMid);
+  shell.addColorStop(Math.max(0.72, shoulderStop - 0.08), colorMixHex(palette.shellDark, "#000000", 0.06));
+  shell.addColorStop(shoulderStop, palette.shellDark);
+  shell.addColorStop(1, colorMixHex(palette.shellDark, palette.shellEdge, 0.22));
   ctx.fillStyle = shell;
-  ctx.fill();
+  ctx.fillRect(0, 0, width, height);
 
   const sideShade = ctx.createLinearGradient(0, 0, width, 0);
   sideShade.addColorStop(0, "rgba(7, 20, 42, 0.38)");
@@ -1671,13 +2080,19 @@ function drawCanvasCartridgeBase(ctx: CanvasRenderingContext2D, width: number, h
   ctx.fillStyle = sideShade;
   ctx.fillRect(0, 0, width, height);
 
+  const plugThickness = ctx.createLinearGradient(0, bodyHeight + plugDepth - 8 * scale, 0, bodyHeight + plugDepth);
+  plugThickness.addColorStop(0, "rgba(7, 20, 42, 0)");
+  plugThickness.addColorStop(1, paint.category === "char" ? "rgba(45, 52, 61, 0.38)" : "rgba(3, 12, 28, 0.46)");
+  ctx.fillStyle = plugThickness;
+  ctx.fillRect(0, bodyHeight + plugDepth - 8 * scale, width, 8 * scale);
+
   const moldedInset = ctx.createLinearGradient(0, 0, 0, height);
   moldedInset.addColorStop(0, "rgba(255, 255, 255, 0.26)");
   moldedInset.addColorStop(0.08, "rgba(255, 255, 255, 0)");
   moldedInset.addColorStop(0.86, "rgba(0, 0, 0, 0)");
   moldedInset.addColorStop(1, "rgba(5, 18, 39, 0.34)");
   ctx.fillStyle = moldedInset;
-  roundedRectPath(ctx, 7 * scale, 7 * scale, width - 14 * scale, height - 17 * scale, 4 * scale);
+  roundedRectPath(ctx, 7 * scale, 7 * scale, width - 14 * scale, bodyHeight - 17 * scale, 4 * scale);
   ctx.fill();
   ctx.restore();
 
@@ -1713,21 +2128,16 @@ function drawCanvasCartridgeBase(ctx: CanvasRenderingContext2D, width: number, h
     ctx.fillRect(width - 9.5 * scale, ridgeY + 1 * scale, 1 * scale, 3.5 * scale);
   }
 
-  drawCanvasShellScuffs(ctx, width, height, paint, scale);
-  drawCanvasCover(ctx, 29 * scale, 30 * scale, width - 60 * scale, height - 65 * scale, palette, paint, scale);
+  drawCanvasShellScuffs(ctx, width, bodyHeight, paint, scale);
+  drawCanvasCover(ctx, 29 * scale, 30 * scale, width - 60 * scale, bodyHeight - 65 * scale, palette, paint, scale);
 
   ctx.save();
   ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
   ctx.lineWidth = 1 * scale;
-  roundedRectPath(ctx, 8 * scale, 8 * scale, width - 15 * scale, height - 18 * scale, 4 * scale);
+  roundedRectPath(ctx, 8 * scale, 8 * scale, width - 15 * scale, bodyHeight - 18 * scale, 4 * scale);
   ctx.stroke();
   ctx.restore();
 
-  ctx.save();
-  ctx.fillStyle = palette.shellEdge;
-  roundedRectPath(ctx, 26 * scale, height - 18 * scale, width - 52 * scale, 3 * scale, 2 * scale);
-  ctx.fill();
-  ctx.restore();
 }
 
 function drawCanvasCover(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, palette: ReturnType<typeof canvasCartridgePalette>, paint: CanvasCartridgePaint, scale: number) {
@@ -2466,9 +2876,38 @@ function canvasCartridgePalette(category: ModCategory) {
     return { shellLight: "#595e6c", shellMid: "#343845", shellDark: "#20232d", shellEdge: "#151822", labelRed: "#92dce9", labelRedDeep: "#4f8e9d" };
   }
   if (category === "other") {
-    return { shellLight: "#76807d", shellMid: "#515f5a", shellDark: "#323d39", shellEdge: "#222c29", labelRed: "#d6b75c", labelRedDeep: "#8d7133" };
+    return { shellLight: "#ff9a4a", shellMid: "#f36b21", shellDark: "#b8491c", shellEdge: "#7d2614", labelRed: "#ff8a2a", labelRedDeep: "#b94119" };
   }
   return { shellLight: "#7193c8", shellMid: "#4d73aa", shellDark: "#31598d", shellEdge: "#244674", labelRed: "#d3192e", labelRedDeep: "#8d0f20" };
+}
+
+function canvasCartridgeShellPath(ctx: CanvasRenderingContext2D, width: number, bodyHeight: number, plugDepth: number, radius: number) {
+  const r = Math.min(radius, width / 2, bodyHeight / 2);
+  const plugTopLeft = width * 0.07;
+  const plugTopRight = width * 0.93;
+  const plugBottomLeft = width * 0.068;
+  const plugBottomRight = width * 0.932;
+  const plugCorner = Math.min(2.5 * (width / 224), plugDepth * 0.35);
+  const shoulderCorner = Math.min(4 * (width / 224), plugDepth * 0.48);
+  const totalHeight = bodyHeight + plugDepth;
+
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(width - r, 0);
+  ctx.quadraticCurveTo(width, 0, width, r);
+  ctx.lineTo(width, bodyHeight - shoulderCorner);
+  ctx.quadraticCurveTo(width, bodyHeight, width - shoulderCorner, bodyHeight);
+  ctx.lineTo(plugTopRight, bodyHeight);
+  ctx.lineTo(plugBottomRight, totalHeight - plugCorner);
+  ctx.quadraticCurveTo(plugBottomRight, totalHeight, plugBottomRight - plugCorner, totalHeight);
+  ctx.lineTo(plugBottomLeft + plugCorner, totalHeight);
+  ctx.quadraticCurveTo(plugBottomLeft, totalHeight, plugBottomLeft, totalHeight - plugCorner);
+  ctx.lineTo(plugTopLeft, bodyHeight);
+  ctx.lineTo(shoulderCorner, bodyHeight);
+  ctx.quadraticCurveTo(0, bodyHeight, 0, bodyHeight - shoulderCorner);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
 }
 
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {

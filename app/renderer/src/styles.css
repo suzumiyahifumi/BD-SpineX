@@ -82,6 +82,10 @@
   --gold: #f6c66b;
   --gold-2: #ffdf9e;
   --gold-deep: #d29a3e;
+  --cosmic-orange: #f36b21;
+  --cosmic-orange-light: #ff9a4a;
+  --cosmic-orange-deep: #b94119;
+  --cosmic-orange-edge: #7d2614;
   --violet: #9b7bff;
   --cyan: #5ff3f6;
   --magenta: #ff5ca8;
@@ -100,9 +104,17 @@
   --err-bg: rgba(255, 122, 138, 0.12);
   --conflict: #c79bff;
   --conflict-bg: rgba(199, 155, 255, 0.16);
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(255, 122, 138, 0.68);
+  --scrollbar-thumb-hover: rgba(255, 122, 138, 0.86);
+  --scrollbar-thumb-active: #ff7a8a;
+  --scrollbar-border: transparent;
+  --scrollbar-radius: 999px;
 
   background: var(--bg-0);
   color: var(--text);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
 }
 
 * {
@@ -119,6 +131,157 @@ body {
     radial-gradient(900px 700px at 60% 110%, #2a103a 0%, transparent 55%),
     var(--bg-0);
   background-attachment: fixed;
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  background-color: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border: 3px solid var(--scrollbar-border);
+  border-radius: var(--scrollbar-radius);
+  background: var(--scrollbar-thumb);
+  background-color: var(--scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+  background-color: var(--scrollbar-thumb-active);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+  background-color: transparent;
+}
+
+:root[data-runtime="tauri"],
+:root[data-runtime="tauri"] * {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+:root[data-runtime="tauri"]::-webkit-scrollbar,
+:root[data-runtime="tauri"] body::-webkit-scrollbar,
+:root[data-runtime="tauri"] *::-webkit-scrollbar {
+  -webkit-appearance: none !important;
+  width: 12px !important;
+  height: 12px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+:root[data-runtime="tauri"]::-webkit-scrollbar-track,
+:root[data-runtime="tauri"] body::-webkit-scrollbar-track,
+:root[data-runtime="tauri"] *::-webkit-scrollbar-track,
+:root[data-runtime="tauri"]::-webkit-scrollbar-track-piece,
+:root[data-runtime="tauri"] body::-webkit-scrollbar-track-piece,
+:root[data-runtime="tauri"] *::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+:root[data-runtime="tauri"]::-webkit-scrollbar-thumb,
+:root[data-runtime="tauri"] body::-webkit-scrollbar-thumb,
+:root[data-runtime="tauri"] *::-webkit-scrollbar-thumb {
+  min-height: 48px !important;
+  border: 3px solid transparent !important;
+  border-radius: var(--scrollbar-radius) !important;
+  background: var(--scrollbar-thumb) !important;
+  background-color: var(--scrollbar-thumb) !important;
+  background-clip: padding-box !important;
+  box-shadow: none !important;
+}
+
+:root[data-runtime="tauri"]::-webkit-scrollbar-thumb:hover,
+:root[data-runtime="tauri"] body::-webkit-scrollbar-thumb:hover,
+:root[data-runtime="tauri"] *::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover) !important;
+  background-color: var(--scrollbar-thumb-hover) !important;
+}
+
+:root[data-runtime="tauri"]::-webkit-scrollbar-thumb:active,
+:root[data-runtime="tauri"] body::-webkit-scrollbar-thumb:active,
+:root[data-runtime="tauri"] *::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active) !important;
+  background-color: var(--scrollbar-thumb-active) !important;
+}
+
+:root[data-runtime="tauri"]::-webkit-scrollbar-button,
+:root[data-runtime="tauri"] body::-webkit-scrollbar-button,
+:root[data-runtime="tauri"] *::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+:root[data-runtime="tauri"]::-webkit-scrollbar-corner,
+:root[data-runtime="tauri"] body::-webkit-scrollbar-corner,
+:root[data-runtime="tauri"] *::-webkit-scrollbar-corner {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+:root[data-runtime="tauri"] .tauriNativeScrollbarHidden::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.tauriScrollbarLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+}
+
+.tauriCustomScrollbar {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s linear;
+}
+
+.tauriCustomScrollbar.is-visible {
+  opacity: 1;
+}
+
+.tauriCustomScrollbarThumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  min-height: 28px;
+  border-radius: var(--scrollbar-radius);
+  background: var(--scrollbar-thumb);
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.tauriCustomScrollbarThumb:hover,
+.tauriCustomScrollbarThumb.is-dragging {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.tauriCustomScrollbarThumb.is-dragging {
+  cursor: grabbing;
 }
 
 button,
@@ -364,6 +527,25 @@ input[type="checkbox"] {
   display: flex;
   gap: 8px;
   min-width: 0;
+}
+
+.injectionField.is-locked .fieldLabel {
+  color: var(--err);
+}
+
+.injectionField.is-locked .injectionRow {
+  opacity: 0.58;
+}
+
+.injectionLockNotice {
+  border: 1px solid rgba(255, 122, 138, 0.3);
+  border-radius: 10px;
+  padding: 9px 11px;
+  background: var(--err-bg);
+  color: var(--err);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
 }
 
 .toolbar {
@@ -663,35 +845,55 @@ progress {
   min-height: 0;
   max-height: 194px;
   overflow: auto;
+  overscroll-behavior: contain;
   padding-right: 2px;
 }
 
 .pendingDiffItem {
   --pending-diff-color: var(--err);
+  --pending-diff-bg: rgba(255, 122, 138, 0.1);
   display: grid;
   grid-template-columns: 8px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   min-height: 28px;
   padding: 5px 9px;
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: rgba(255, 122, 138, 0.1);
+  background: var(--pending-diff-bg);
+  box-shadow: none;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s ease;
 }
 
 .pendingDiffItem.pendingPatchAdd {
   --pending-diff-color: var(--ok);
-  background: rgba(103, 232, 160, 0.1);
+  --pending-diff-bg: rgba(103, 232, 160, 0.1);
 }
 
 .pendingDiffItem.pendingPatchRemove {
   --pending-diff-color: var(--err);
-  background: rgba(255, 122, 138, 0.1);
+  --pending-diff-bg: rgba(255, 122, 138, 0.1);
 }
 
 .pendingDiffItem.pendingPatchRepair,
 .pendingDiffItem.pendingPatchConflict {
   --pending-diff-color: var(--conflict);
-  background: var(--conflict-bg);
+  --pending-diff-bg: var(--conflict-bg);
+}
+
+button.pendingDiffItem:hover:not(:disabled),
+button.pendingDiffItem:focus-visible,
+button.pendingDiffItem.is-active {
+  background: var(--pending-diff-bg);
+  border-color: color-mix(in srgb, var(--pending-diff-color) 46%, transparent);
+  box-shadow: none;
+  outline: 0;
+  transform: none;
 }
 
 .pendingDiffColor {
@@ -862,6 +1064,7 @@ progress {
   display: block;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .modsPanel thead,
@@ -1022,9 +1225,9 @@ progress {
 }
 
 .categoryBadge.other {
-  background: rgba(246, 198, 107, 0.12);
-  border-color: rgba(246, 198, 107, 0.3);
-  color: var(--gold);
+  background: rgba(243, 107, 33, 0.14);
+  border-color: rgba(243, 107, 33, 0.34);
+  color: var(--cosmic-orange-light);
 }
 
 .panelTitle {
@@ -1187,6 +1390,35 @@ tr.pendingPatchChange.pendingPatchRepair td {
 
 tr.pendingPatchChange:hover td {
   background: rgba(255, 122, 138, 0.14);
+}
+
+tr.pendingPatchChange.is-pending-linked td {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 3px 0 0 var(--gold),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+tr.pendingPatchChange.pendingPatchAdd.is-pending-linked td {
+  background: rgba(103, 232, 160, 0.16);
+  box-shadow:
+    inset 3px 0 0 var(--ok),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+tr.pendingPatchChange.pendingPatchRemove.is-pending-linked td {
+  background: rgba(255, 122, 138, 0.16);
+  box-shadow:
+    inset 3px 0 0 var(--err),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+tr.pendingPatchChange.pendingPatchRepair.is-pending-linked td,
+tr.pendingPatchChange.pendingPatchConflict.is-pending-linked td {
+  background: rgba(199, 155, 255, 0.18);
+  box-shadow:
+    inset 3px 0 0 var(--conflict),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
 tr.pendingPatchChange.pendingPatchAdd:hover td {
@@ -1438,6 +1670,7 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
 .historyTableFrame {
   max-height: 360px;
   overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--stroke);
   border-radius: 12px;
 }
@@ -1570,6 +1803,7 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
   max-height: 220px;
   margin: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   color: var(--text-dim);
   font: 12px/1.5 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -1953,26 +2187,69 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .railFoot {
   display: grid;
-  gap: 10px;
+  gap: 9px;
+  padding: 2px 2px 0;
 }
 
 .railStatus {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  overflow: hidden;
+  padding: 11px 12px 12px;
+  border: 1px solid var(--liquid-border);
+  border-radius: 14px;
+  background: var(--liquid-surface);
+  -webkit-backdrop-filter: blur(8px) saturate(1.35);
+  backdrop-filter: blur(8px) saturate(1.35);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.railStatus::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 32%),
+    radial-gradient(80px 34px at 88% 0%, rgba(246, 198, 107, 0.12), transparent 72%);
+  opacity: 0.72;
+}
+
+.railStatusKicker,
+.railStatusLine,
+.railStatusSub {
+  position: relative;
+  z-index: 1;
+}
+
+.railStatusKicker {
+  color: var(--gold);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.railStatusLine {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  background: var(--glass);
+  gap: 9px;
+  min-width: 0;
 }
 
 .railStatus .statusDot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex: none;
   background: var(--err);
-  box-shadow: 0 0 8px currentColor;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 10px currentColor;
   color: var(--err);
 }
 
@@ -1982,34 +2259,67 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 .railStatusMain {
-  font-size: 12px;
-  font-weight: 750;
+  min-width: 0;
+  overflow: hidden;
   color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .railStatusSub {
-  font-size: 11px;
   color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .railVersion {
-  display: inline-flex;
-  align-self: start;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  width: 100%;
+  align-items: baseline;
+  gap: 8px;
+  overflow: hidden;
+  padding: 7px 10px;
   border: 1px solid var(--stroke);
+  border-radius: 11px;
   background: var(--glass-2);
   color: var(--text-dim);
+}
+
+.railVersionLabel {
+  color: var(--text-faint);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.railVersion strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
+  line-height: 1;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .railVersion.locked {
   border-color: rgba(255, 122, 138, 0.4);
-  color: var(--err);
   background: var(--err-bg);
+}
+
+.railVersion.locked .railVersionLabel,
+.railVersion.locked strong {
+  color: var(--err);
 }
 
 /* ---- Main content column ---- */
@@ -2144,12 +2454,68 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 .cartShelf {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
   align-items: start;
   gap: 18px;
   padding: 4px 4px 168px;
   overflow: visible;
+}
+
+.cartShelfLockOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  min-height: 260px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(18, 22, 34, 0.36), rgba(6, 7, 13, 0.72) 62%, rgba(6, 7, 13, 0.82)),
+    rgba(6, 7, 13, 0.54);
+  -webkit-backdrop-filter: blur(1.5px) saturate(0.85);
+  backdrop-filter: blur(1.5px) saturate(0.85);
+}
+
+.cartShelfLockCard {
+  position: sticky;
+  top: 46vh;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transform: translateY(-50%);
+  margin: 0 auto;
+  width: min(100%, 620px);
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 8px;
+  background: rgba(16, 18, 30, 0.82);
+  color: var(--text);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.cartShelfLockCard strong {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cartShelfLockCard span {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.modsTableFrame.is-grid.locked .cartShelf > :not(.cartShelfLockOverlay) {
+  filter: brightness(0.62) saturate(0.78);
 }
 
 .cart {
@@ -2187,7 +2553,9 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.07);
 }
 
-.cart:hover:not(:disabled) {
+.cart:hover:not(:disabled),
+.cart.is-pending-linked:not(:disabled),
+.cart.is-pending-target:not(:disabled) {
   transform: translateY(-6px) rotate(-0.5deg);
   border-color: var(--stroke-2);
   box-shadow: 0 20px 42px rgba(0, 0, 0, 0.55);
@@ -2296,7 +2664,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .cart.cat-char    { --art: #3aa8ff; --art2: #1d2c6e; }
 .cart.cat-dating  { --art: #ff5ca8; --art2: #5a1740; }
 .cart.cat-cutscene{ --art: #9b7bff; --art2: #2a1f57; }
-.cart.cat-other   { --art: #f6c66b; --art2: #4a3712; }
+.cart.cat-other   { --art: var(--cosmic-orange-light); --art2: var(--cosmic-orange-edge); }
 
 .cartBody {
   display: flex;
@@ -2342,7 +2710,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .cart.cat-char .cartCatDot    { background: var(--cyan); }
 .cart.cat-dating .cartCatDot  { background: var(--magenta); }
 .cart.cat-cutscene .cartCatDot{ background: var(--violet); }
-.cart.cat-other .cartCatDot   { background: var(--gold); }
+.cart.cat-other .cartCatDot   { background: var(--cosmic-orange); }
 
 /* contact pins */
 .cartPins {
@@ -2373,7 +2741,9 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cart:hover:not(:disabled) { transform: none; }
+  .cart:hover:not(:disabled),
+  .cart.is-pending-linked:not(:disabled),
+  .cart.is-pending-target:not(:disabled) { transform: none; }
 }
 
 /* ============================================================
@@ -2738,6 +3108,9 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --shell-mid: #4d73aa;
   --shell-dark: #31598d;
   --shell-edge: #244674;
+  --rcart-shell-base-shadow: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.46));
+  --rcart-shell-hover-shadow: drop-shadow(0 0 0 transparent);
+  --rcart-shell-state-shadow: drop-shadow(0 0 0 transparent);
   --label-red: #d3192e;
   --label-red-deep: #8d0f20;
   --label-paper: #f2f1ea;
@@ -2775,11 +3148,15 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 .rcartCanvasBase {
-  inset: 0;
+  inset: 0 0 -12px;
   z-index: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% + 12px);
   border-radius: 7px 7px 4px 4px;
+  filter:
+    var(--rcart-shell-state-shadow)
+    var(--rcart-shell-hover-shadow)
+    var(--rcart-shell-base-shadow);
 }
 
 .rcartCanvasPlastic {
@@ -2803,9 +3180,20 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   z-index: 10;
 }
 
-.rcart:hover:not(:disabled) {
-  transform: translateY(-5px);
+.rcart:hover:not(:disabled),
+.rcart.is-pending-linked:not(:disabled),
+.rcart.is-pending-target:not(:disabled) {
+  --rcart-shell-hover-shadow:
+    drop-shadow(0 0 3px rgba(255, 255, 255, 0.18))
+    drop-shadow(0 0 9px rgba(164, 203, 255, 0.16));
+  transform: translateY(-5px) rotate(-1.2deg);
   filter: saturate(1.04);
+}
+
+.rcart:focus-visible {
+  --rcart-shell-hover-shadow:
+    drop-shadow(0 0 3px rgba(255, 255, 255, 0.2))
+    drop-shadow(0 0 9px rgba(164, 203, 255, 0.18));
 }
 
 .rcart:disabled {
@@ -2818,37 +3206,39 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   inset: 0;
   overflow: visible;
   border-radius: 7px 7px 4px 4px;
-  background:
-    linear-gradient(90deg, rgba(17, 46, 82, 0.32) 0 13px, transparent 13px calc(100% - 13px), rgba(27, 56, 92, 0.3) calc(100% - 13px)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 16%),
-    linear-gradient(180deg, var(--shell-light) 0%, var(--shell-mid) 52%, var(--shell-dark) 100%);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -10px 12px rgba(6, 22, 44, 0.28),
-    inset 0 0 0 1px rgba(7, 20, 42, 0.24),
-    0 6px 0 var(--shell-edge),
-    0 10px 0 rgba(19, 41, 73, 0.84),
-    0 18px 26px rgba(0, 0, 0, 0.48);
+  background: transparent;
+  transform-origin: center;
+  transition: transform 0.24s cubic-bezier(.2,.7,.2,1);
 }
 
 .rcartShell::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 8px;
-  right: 8px;
-  height: 14px;
-  border-radius: 6px 6px 2px 2px;
-  background: linear-gradient(180deg, rgba(174, 202, 238, 0.4), rgba(78, 119, 178, 0.3));
+  inset: 0 0 -12px;
+  z-index: 0;
+  border-radius: 7px 7px 4px 4px;
+  background:
+    linear-gradient(180deg, rgba(174, 202, 238, 0.34) 0 14px, rgba(78, 119, 178, 0.2) 14px 15px, rgba(255, 255, 255, 0) 15px 16%),
+    linear-gradient(90deg, rgba(17, 46, 82, 0.32) 0 13px, transparent 13px calc(100% - 13px), rgba(27, 56, 92, 0.3) calc(100% - 13px)),
+    linear-gradient(180deg, transparent calc(100% - 9px), rgba(8, 22, 45, 0.24) calc(100% - 9px), rgba(3, 13, 29, 0.46) 100%),
+    linear-gradient(180deg, var(--shell-light) 0%, var(--shell-mid) 48%, var(--shell-dark) calc(100% - 12px), color-mix(in srgb, var(--shell-dark) 84%, var(--shell-edge) 16%) 100%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), 99.2% calc(100% - 12px), 93% calc(100% - 12px), 93.2% calc(100% - 2px), 93% 100%, 7% 100%, 6.8% calc(100% - 2px), 7% calc(100% - 12px), 0.8% calc(100% - 12px), 0 calc(100% - 16px));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.36),
-    inset 0 -1px 0 rgba(14, 40, 76, 0.32);
+    inset 0 2px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -15px 16px rgba(6, 22, 44, 0.32),
+    inset 0 0 0 1px rgba(7, 20, 42, 0.24);
+  filter:
+    var(--rcart-shell-state-shadow)
+    var(--rcart-shell-hover-shadow)
+    var(--rcart-shell-base-shadow);
+  pointer-events: none;
 }
 
 .rcartShell::after {
   content: "";
   position: absolute;
   inset: 8px 7px 10px;
+  z-index: 1;
   border-radius: 4px;
   pointer-events: none;
   box-shadow:
@@ -2886,10 +3276,36 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   box-shadow: inset 1px 0 0 rgba(180, 207, 240, 0.12);
 }
 
-.rcart.is-mounted .rcartShell { outline: 0; }
-.rcart.is-add .rcartShell { outline: 2px solid rgba(103, 232, 160, 0.82); outline-offset: 2px; }
-.rcart.is-remove .rcartShell { outline: 2px solid rgba(255, 122, 138, 0.82); outline-offset: 2px; }
-.rcart.is-warning .rcartShell { outline: 2px solid rgba(248, 194, 51, 0.88); outline-offset: 2px; }
+.rcart.is-mounted .rcartShell,
+.rcart.is-add .rcartShell,
+.rcart.is-remove .rcartShell,
+.rcart.is-warning .rcartShell {
+  outline: 0;
+}
+
+.rcart.is-on {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px rgba(246, 198, 107, 0.84))
+    drop-shadow(0 0 7px rgba(246, 198, 107, 0.44));
+}
+
+.rcart.is-add {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px rgba(103, 232, 160, 0.9))
+    drop-shadow(0 0 8px rgba(103, 232, 160, 0.52));
+}
+
+.rcart.is-remove {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px rgba(255, 122, 138, 0.92))
+    drop-shadow(0 0 8px rgba(255, 122, 138, 0.52));
+}
+
+.rcart.is-warning {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px rgba(248, 194, 51, 0.92))
+    drop-shadow(0 0 8px rgba(248, 194, 51, 0.48));
+}
 
 .rcartLabel {
   position: absolute;
@@ -3221,7 +3637,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   font-size: 5.8px;
   letter-spacing: 0;
   line-height: 1.24;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.92);
+  opacity: 0;
+  text-shadow: none;
 }
 
 .rcartCredits span {
@@ -3336,19 +3753,33 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .rcartBottomGroove {
   position: absolute;
-  left: 18%;
-  right: 18%;
+  left: 19%;
+  right: 19%;
   bottom: 14px;
   z-index: 2;
   height: 3px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(24, 49, 82, 0.78), rgba(100, 139, 192, 0.22));
+  opacity: 0.72;
+  background:
+    linear-gradient(90deg, transparent, rgba(29, 43, 62, 0.86) 9%, rgba(121, 137, 153, 0.54) 50%, rgba(29, 43, 62, 0.82) 91%, transparent);
   box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.5),
-    0 1px 0 rgba(180, 208, 240, 0.22);
+    inset 0 1px 1px rgba(0, 0, 0, 0.44),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rcart.is-have .rcartBottomGroove,
+.rcart.is-mounted .rcartBottomGroove {
+  opacity: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 248, 0.94), rgba(232, 236, 226, 0.86));
+  box-shadow:
+    0 0 2px rgba(255, 255, 246, 0.42),
+    0 0 8px rgba(235, 231, 207, 0.24),
+    inset 0 -1px 1px rgba(116, 112, 94, 0.18);
 }
 
 .rcartPod {
+  --rcart-pod-symbol: #d0a12b;
   position: absolute;
   top: 19px;
   right: 17px;
@@ -3366,16 +3797,58 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   transition: transform 0.2s cubic-bezier(.3,1.4,.5,1), box-shadow 0.2s;
 }
 
-.rcart:hover:not(:disabled) .rcartPod {
+.rcart:hover:not(:disabled) .rcartPod,
+.rcart.is-pending-linked:not(:disabled) .rcartPod,
+.rcart.is-pending-target:not(:disabled) .rcartPod {
   transform: scale(1.05);
 }
 
 .rcartPodMark {
-  color: #5a5d61;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--rcart-pod-symbol);
   font-size: 34px;
   font-weight: 800;
-  line-height: 0.78;
+  line-height: 1;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.rcartPod.is-plus .rcartPodMark,
+.rcartPod.is-minus .rcartPodMark {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  color: transparent;
+  font-size: 0;
+  text-shadow: none;
+}
+
+.rcartPod.is-plus .rcartPodMark::before,
+.rcartPod.is-plus .rcartPodMark::after,
+.rcartPod.is-minus .rcartPodMark::before {
+  content: "";
+  position: absolute;
+  background: var(--rcart-pod-symbol);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.54);
+}
+
+.rcartPod.is-plus .rcartPodMark::before,
+.rcartPod.is-minus .rcartPodMark::before {
+  top: 50%;
+  right: 2.5px;
+  left: 2.5px;
+  height: 4.6px;
+  transform: translateY(-50%);
+}
+
+.rcartPod.is-plus .rcartPodMark::after {
+  top: 2.5px;
+  bottom: 2.5px;
+  left: 50%;
+  width: 4.6px;
+  transform: translateX(-50%);
 }
 
 .rcartPod.is-plus.on {
@@ -3387,7 +3860,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 .rcartPod.is-plus.on .rcartPodMark {
-  color: #3d3423;
+  --rcart-pod-symbol: #b48318;
 }
 
 .rcartPod.is-check {
@@ -3406,6 +3879,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 .rcartPod.is-minus {
+  --rcart-pod-symbol: #b92d3d;
   background: linear-gradient(180deg, #fffafa, #f1e3e3);
   box-shadow:
     0 0 0 3px rgba(255, 122, 138, 0.86),
@@ -3414,24 +3888,22 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 .rcartPod.is-minus .rcartPodMark {
-  color: #b92d3d;
-  font-size: 38px;
-  line-height: 0.68;
+  --rcart-pod-symbol: #b92d3d;
 }
 
 .rcartNamePlate {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 17px);
   left: 50%;
   z-index: 4;
   display: grid;
-  grid-template-rows: 14px 32px;
-  width: 66%;
+  grid-template-rows: 14px minmax(32px, auto);
+  width: min(104%, 224px);
   min-width: 134px;
-  max-width: 166px;
-  max-height: 46px;
+  max-width: 224px;
+  max-height: 106px;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 6px;
   background:
     linear-gradient(180deg, rgba(151, 164, 188, 0.58) 0 14px, rgba(233, 228, 215, 0.93) 14px 100%),
     radial-gradient(52px 22px at 89% 84%, rgba(69, 79, 98, 0.07), transparent 68%),
@@ -3440,8 +3912,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     #eee8d8;
   background-blend-mode: normal, multiply, multiply, normal;
   filter:
-    drop-shadow(0 1px 1px rgba(50, 45, 36, 0.2))
-    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.18));
+    drop-shadow(0 2px 2px rgba(50, 45, 36, 0.18))
+    drop-shadow(0 10px 14px rgba(0, 0, 0, 0.24));
   cursor: pointer;
   pointer-events: auto;
   transform: translateX(-50%);
@@ -3500,7 +3972,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   z-index: 3;
   display: block;
   min-width: 0;
-  padding: 4px 8px 5px;
+  padding: 5px 12px 8px;
   color: rgba(48, 48, 45, 0.68);
   font-family: var(--label-cjk-font);
   font-size: 14px;
@@ -3508,37 +3980,28 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   line-height: 1.2;
   text-align: center;
   text-shadow: 0 0 0.6px rgba(72, 84, 110, 0.16);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
   transition:
     padding 0.26s cubic-bezier(.2,.8,.2,1),
     white-space 0s linear 0.16s;
 }
 
 .rcart:hover:not(:disabled) .rcartNamePlate,
+.rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
+.rcart.is-pending-target:not(:disabled) .rcartNamePlate,
 .rcart:focus-visible .rcartNamePlate,
 .rcartNamePlate:hover {
   z-index: 8;
-  grid-template-rows: 14px minmax(32px, auto);
-  width: min(104%, 224px);
-  max-width: 224px;
-  max-height: 106px;
-  border-radius: 6px;
-  filter:
-    drop-shadow(0 2px 2px rgba(50, 45, 36, 0.18))
-    drop-shadow(0 10px 14px rgba(0, 0, 0, 0.24));
-  transform: translateX(-50%) translateY(-2px);
+  transform: translateX(-50%);
 }
 
-.rcart:hover:not(:disabled) .rcartNamePlate strong,
-.rcart:focus-visible .rcartNamePlate strong,
-.rcartNamePlate:hover strong {
-  padding: 5px 12px 8px;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-  overflow-wrap: anywhere;
+.rcart:hover:not(:disabled) .rcartNamePlate,
+.rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
+.rcart.is-pending-target:not(:disabled) .rcartNamePlate {
+  transform: translateX(calc(-50% - 2.5px)) translateY(5px) rotate(1.2deg);
 }
 
 .rcart.cat-dating {
@@ -3571,20 +4034,25 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 .rcart.cat-other {
-  --shell-light: #76807d;
-  --shell-mid: #515f5a;
-  --shell-dark: #323d39;
-  --shell-edge: #222c29;
-  --label-red: #d6b75c;
-  --label-red-deep: #8d7133;
+  --shell-light: var(--cosmic-orange-light);
+  --shell-mid: var(--cosmic-orange);
+  --shell-dark: #b8491c;
+  --shell-edge: var(--cosmic-orange-edge);
+  --label-red: #ff8a2a;
+  --label-red-deep: var(--cosmic-orange-deep);
   --label-paper: #f2f1ea;
 }
 
 .rcart.cat-char .rcartShell::before {
-  background: linear-gradient(180deg, rgba(245, 248, 250, 0.42), rgba(125, 134, 145, 0.24));
+  background:
+    linear-gradient(180deg, rgba(245, 248, 250, 0.42) 0 14px, rgba(125, 134, 145, 0.24) 14px 15px, rgba(255, 255, 255, 0) 15px 16%),
+    linear-gradient(90deg, rgba(77, 84, 93, 0.26) 0 13px, transparent 13px calc(100% - 13px), rgba(77, 84, 93, 0.22) calc(100% - 13px)),
+    linear-gradient(180deg, transparent calc(100% - 9px), rgba(73, 81, 91, 0.22) calc(100% - 9px), rgba(48, 56, 66, 0.38) 100%),
+    linear-gradient(180deg, var(--shell-light) 0%, var(--shell-mid) 48%, var(--shell-dark) calc(100% - 12px), color-mix(in srgb, var(--shell-dark) 84%, var(--shell-edge) 16%) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.46),
-    inset 0 -1px 0 rgba(75, 83, 94, 0.3);
+    inset 0 2px 0 rgba(255, 255, 255, 0.46),
+    inset 0 -15px 16px rgba(75, 83, 94, 0.32),
+    inset 0 0 0 1px rgba(75, 83, 94, 0.28);
 }
 
 .rcart.cat-char .rcartRidges i {
@@ -3664,13 +4132,6 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rcart.cat-char .rcartCredits {
   color: rgba(41, 45, 49, 0.72);
   text-shadow: none;
-}
-
-.rcart.cat-char .rcartBottomGroove {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(225, 229, 230, 0.44));
-  box-shadow:
-    0 0 5px rgba(255, 255, 255, 0.42),
-    inset 0 -1px 2px rgba(74, 80, 88, 0.4);
 }
 
 .rcart.is-wrapped:not(.is-add) .rcartPod,
@@ -3781,20 +4242,19 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .rcartWarningSticker {
   position: absolute;
-  top: 17px;
-  right: 21px;
-  z-index: 8;
+  top: 19px;
+  right: 17px;
+  z-index: 12;
   display: grid;
-  width: 58px;
-  height: 52px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   opacity: 0;
   pointer-events: none;
-  transform: rotate(6deg);
+  transform: rotate(5deg) scale(1.1);
   filter:
-    drop-shadow(0 2px 0 rgba(94, 70, 22, 0.24))
-    drop-shadow(0 5px 5px rgba(0, 0, 0, 0.46))
-    drop-shadow(0 0 4px rgba(255, 224, 76, 0.18));
+    drop-shadow(0 1px 0 rgba(86, 66, 24, 0.18))
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.42));
 }
 
 .rcart.is-warning .rcartWarningSticker {
@@ -3805,71 +4265,69 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rcartWarningSticker::after {
   content: "";
   position: absolute;
-  inset: 2px 4px 3px;
+  inset: 3px 4px 4px;
   pointer-events: none;
-  clip-path: polygon(50% 2%, 98% 95%, 2% 95%);
+  clip-path: polygon(50% 4%, 96% 94%, 4% 94%);
 }
 
 .rcartWarningSticker::before {
-  z-index: 0;
+  z-index: 1;
   background:
-    radial-gradient(18px 10px at 48% 8%, rgba(255, 255, 255, 0.45), transparent 68%),
-    radial-gradient(26px 16px at 18% 78%, rgba(84, 74, 35, 0.12), transparent 72%),
-    linear-gradient(180deg, rgba(255, 229, 78, 0.18), rgba(190, 151, 42, 0.04));
-  transform: translate(1px, 2px) rotate(-1deg);
-  opacity: 0.66;
+    radial-gradient(17px 10px at 47% 13%, rgba(255, 244, 151, 0.52), transparent 66%),
+    radial-gradient(18px 13px at 21% 78%, rgba(103, 84, 32, 0.22), transparent 70%),
+    radial-gradient(10px 8px at 80% 75%, rgba(142, 105, 28, 0.16), transparent 72%),
+    linear-gradient(165deg, rgba(255, 235, 99, 0.26), rgba(184, 136, 37, 0.18) 58%, rgba(112, 83, 31, 0.12));
+  mix-blend-mode: multiply;
+  opacity: 0.82;
 }
 
 .rcartWarningSticker::after {
   z-index: 3;
   background:
-    radial-gradient(2px 2px at 28% 38%, rgba(65, 55, 22, 0.22), transparent 70%),
-    radial-gradient(1.5px 1.5px at 62% 72%, rgba(55, 48, 20, 0.2), transparent 72%),
-    radial-gradient(18px 10px at 84% 18%, rgba(255, 255, 255, 0.26), transparent 68%),
-    linear-gradient(118deg, transparent 0 38%, rgba(255, 255, 255, 0.12) 38% 40%, transparent 40%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .28 0 0 0 0 .12 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-blend-mode: multiply, multiply, screen, screen, multiply;
+    radial-gradient(1.6px 1.6px at 28% 36%, rgba(61, 48, 16, 0.26), transparent 72%),
+    radial-gradient(1.3px 1.3px at 67% 73%, rgba(73, 55, 16, 0.22), transparent 72%),
+    radial-gradient(10px 7px at 83% 19%, rgba(255, 255, 255, 0.22), transparent 70%),
+    linear-gradient(118deg, transparent 0 37%, rgba(255, 255, 255, 0.13) 37% 40%, transparent 40%),
+    linear-gradient(20deg, transparent 0 44%, rgba(87, 67, 24, 0.13) 44% 45%, transparent 45%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='54'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .30 0 0 0 0 .12 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-blend-mode: multiply, multiply, screen, screen, multiply, multiply;
   mix-blend-mode: multiply;
-  opacity: 0.58;
+  opacity: 0.64;
 }
 
 .rcartWarningIcon {
   position: relative;
   z-index: 2;
   display: block;
-  width: 98%;
-  height: 98%;
+  width: 100%;
+  height: 100%;
 }
 
 .rcartWarningTriangle {
-  fill: #f2c127;
-  stroke: #c9961c;
-  stroke-width: 8;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  paint-order: stroke fill;
+  fill: #d9ad31;
+  stroke: none;
   filter:
-    drop-shadow(0 -1px 0 rgba(255, 243, 133, 0.42))
-    drop-shadow(0 2px 0 rgba(93, 62, 18, 0.18));
+    drop-shadow(0 -1px 0 rgba(255, 245, 151, 0.28))
+    drop-shadow(0 1px 0 rgba(95, 69, 19, 0.18));
 }
 
 .rcartWarningInnerLine {
   fill: none;
-  stroke: #1e1a10;
-  stroke-width: 3.8;
+  stroke: rgba(32, 25, 12, 0.88);
+  stroke-width: 3;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .rcartWarningBang {
   fill: none;
-  stroke: #16120a;
-  stroke-width: 6;
+  stroke: rgba(22, 18, 10, 0.88);
+  stroke-width: 3.7;
   stroke-linecap: round;
 }
 
 .rcartWarningDot {
-  fill: #16120a;
+  fill: rgba(22, 18, 10, 0.88);
 }
 
 @media (max-width: 720px) {
@@ -3893,10 +4351,6 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     height: 38px;
   }
 
-  .rcartPod.is-plus .rcartPodMark {
-    font-size: 31px;
-  }
-
   .rcartAuthorSticker {
     left: 9px;
     bottom: 18px;
@@ -3909,10 +4363,12 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   }
 
   .rcartNamePlate {
-    top: calc(100% + 10px);
-    width: 70%;
+    top: calc(100% + 15px);
+    width: min(104%, 206px);
     min-width: 128px;
-    grid-template-rows: 13px 28px;
+    max-width: 206px;
+    max-height: 100px;
+    grid-template-rows: 13px minmax(28px, auto);
   }
 
   .rcartNamePlate strong {
@@ -3921,8 +4377,18 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rcart:hover:not(:disabled) { transform: none; }
-  .rcart:hover:not(:disabled) .rcartPod { transform: none; }
+  .cart.is-pending-linked:not(:disabled),
+  .cart.is-pending-target:not(:disabled),
+  .rcart:hover:not(:disabled),
+  .rcart.is-pending-linked:not(:disabled),
+  .rcart.is-pending-target:not(:disabled) { transform: none; }
+  .rcart:hover:not(:disabled) .rcartShell { transform: none; }
+  .rcart:hover:not(:disabled) .rcartPod,
+  .rcart.is-pending-linked:not(:disabled) .rcartPod,
+  .rcart.is-pending-target:not(:disabled) .rcartPod { transform: none; }
+  .rcart:hover:not(:disabled) .rcartNamePlate,
+  .rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
+  .rcart.is-pending-target:not(:disabled) .rcartNamePlate { transform: translateX(-50%); }
   .rcartNamePlate,
   .rcartNamePlate strong { transition: none; }
 }
@@ -3942,8 +4408,22 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   transition: none;
 }
 
-:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartPod {
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartPod,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled) .rcartPod,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled) .rcartPod {
   transform: none;
+}
+
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartShell,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled) .rcartShell,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled) .rcartShell {
+  transform: none;
+}
+
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled),
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled) {
+  --rcart-shell-hover-shadow: drop-shadow(0 0 0 transparent);
 }
 
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-wrapped:not(.is-add) .rcartPod,
@@ -3953,6 +4433,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartNamePlate,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled) .rcartNamePlate,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:focus-visible .rcartNamePlate,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate:hover {
   grid-template-rows: 14px minmax(32px, auto);
@@ -3967,6 +4449,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate strong,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) .rcartNamePlate strong,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled) .rcartNamePlate strong,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled) .rcartNamePlate strong,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:focus-visible .rcartNamePlate strong,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate:hover strong {
   padding: 5px 12px 8px;
@@ -4004,12 +4488,18 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 
 :root[data-runtime="tauri"] .cart:hover:not(:disabled),
-:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled) {
+:root[data-runtime="tauri"] .cart.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cart.is-pending-target:not(:disabled),
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled),
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled) {
   filter: none;
   transform: none;
 }
 
-:root[data-runtime="tauri"] .cart:hover:not(:disabled) {
+:root[data-runtime="tauri"] .cart:hover:not(:disabled),
+:root[data-runtime="tauri"] .cart.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cart.is-pending-target:not(:disabled) {
   border-color: var(--stroke);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
@@ -4020,7 +4510,17 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   border-color: rgba(246, 198, 107, 0.45);
 }
 
+:root[data-runtime="tauri"] .cart.is-mounted.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cart.is-mounted.is-pending-target:not(:disabled) {
+  border-color: rgba(246, 198, 107, 0.45);
+}
+
 :root[data-runtime="tauri"] .cart.is-add:hover:not(:disabled) {
+  border-color: rgba(103, 232, 160, 0.5);
+}
+
+:root[data-runtime="tauri"] .cart.is-add.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cart.is-add.is-pending-target:not(:disabled) {
   border-color: rgba(103, 232, 160, 0.5);
 }
 
@@ -4028,12 +4528,26 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   border-color: rgba(255, 122, 138, 0.5);
 }
 
+:root[data-runtime="tauri"] .cart.is-remove.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cart.is-remove.is-pending-target:not(:disabled) {
+  border-color: rgba(255, 122, 138, 0.5);
+}
+
 :root[data-runtime="tauri"] .cart.is-conflict:hover:not(:disabled) {
+  border-color: rgba(199, 155, 255, 0.55);
+}
+
+:root[data-runtime="tauri"] .cart.is-conflict.is-pending-linked:not(:disabled),
+:root[data-runtime="tauri"] .cart.is-conflict.is-pending-target:not(:disabled) {
   border-color: rgba(199, 155, 255, 0.55);
 }
 
 :root[data-runtime="tauri"] .cart:hover:not(:disabled)::after,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:hover:not(:disabled)::after,
+:root[data-runtime="tauri"] .cart.is-pending-linked:not(:disabled)::after,
+:root[data-runtime="tauri"] .cart.is-pending-target:not(:disabled)::after,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled)::after,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled)::after,
 :root[data-runtime="tauri"] .cart:focus-visible::after,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:focus-visible::after {
   opacity: 1;
@@ -4058,6 +4572,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --stroke:rgba(237,224,196,0.16); --stroke-2:rgba(237,224,196,0.28); --shine:rgba(255,244,214,0.5);
   --shadow:rgba(0,0,0,0.6);
   --red:#E2402A; --red-deep:#9E2317; --amber:#E8A22C; --paper:#EDE0C4; --ink:#0E0D0C;
+  --scrollbar-track:transparent; --scrollbar-thumb:#E2402A;
+  --scrollbar-thumb-hover:#E2402A; --scrollbar-thumb-active:#9E2317; --scrollbar-border:transparent; --scrollbar-radius:0;
   --cond:"BD Label Condensed","Oswald","Archivo Narrow",sans-serif;
 }
 :root[data-theme="riso"] {
@@ -4067,6 +4583,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --stroke:rgba(27,23,20,0.2); --stroke-2:rgba(27,23,20,0.32); --shine:rgba(255,255,255,0.65);
   --shadow:rgba(60,40,20,0.3);
   --red:#C8372A; --red-deep:#8E1E15; --amber:#D9772A; --paper:#F0E3C6; --ink:#1B1714; --tray:#14120E;
+  --scrollbar-track:transparent; --scrollbar-thumb:#C8372A;
+  --scrollbar-thumb-hover:#C8372A; --scrollbar-thumb-active:#8E1E15; --scrollbar-border:transparent; --scrollbar-radius:0;
   --cond:"BD Label Condensed","Oswald","Archivo Narrow",sans-serif;
 }
 :root[data-theme="mono"] {
@@ -4076,6 +4594,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --stroke:rgba(22,22,22,0.22); --stroke-2:rgba(22,22,22,0.34); --shine:rgba(255,255,255,0.65);
   --shadow:rgba(60,40,20,0.3);
   --red:#C4382B; --red-deep:#8D1E16; --amber:#E0AE2E; --paper:#F2E7C9; --ink:#161616; --tray:#1a1812;
+  --scrollbar-track:transparent; --scrollbar-thumb:#C4382B;
+  --scrollbar-thumb-hover:#C4382B; --scrollbar-thumb-active:#8D1E16; --scrollbar-border:transparent; --scrollbar-radius:0;
   --cond:"BD Label Condensed","Oswald","Archivo Narrow",sans-serif;
 }
 
@@ -4100,12 +4620,17 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --text:#EDE0C4; --text-dim:#B9AD8E; --text-faint:#8a7f63;
   --glass:rgba(237,224,196,0.06); --glass-2:rgba(237,224,196,0.10); --glass-3:rgba(237,224,196,0.15);
   --stroke:rgba(237,224,196,0.16); --stroke-2:rgba(237,224,196,0.28); --shine:rgba(255,244,214,0.5);
+  --scrollbar-track:transparent; --scrollbar-thumb:var(--red);
+  --scrollbar-thumb-hover:var(--red); --scrollbar-thumb-active:var(--red-deep); --scrollbar-border:transparent;
 }
 
 /* ============ shared print chrome (all poster themes) ============ */
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railName,
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railGroup,
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusKicker,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusMain,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersionLabel,
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewHead h1,
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .panelTitle,
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .statusPill {
@@ -4119,12 +4644,171 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railName { letter-spacing:0.06em; }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railGroup { letter-spacing:0.16em; color:var(--red); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem { border-radius:0; border-left:3px solid transparent; font-weight:700; }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem {
+  position:relative;
+  overflow:hidden;
+  border-radius:0;
+  border-left:3px solid transparent;
+  font-weight:700;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active) {
+  border-color:transparent;
+  border-left-color:color-mix(in srgb, var(--red) 32%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 7%, transparent), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--paper) 5%, transparent), transparent);
+  color:var(--text-dim);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--paper) 9%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active)::after {
+  content:"";
+  position:absolute;
+  right:9px;
+  top:50%;
+  z-index:0;
+  width:12px;
+  height:2px;
+  background:color-mix(in srgb, var(--red) 40%, transparent);
+  transform:translateY(-50%) skewX(-18deg);
+  opacity:0.58;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):hover:not(:disabled),
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):focus-visible {
+  border-color:color-mix(in srgb, var(--red) 30%, transparent);
+  border-left-color:var(--amber);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 18%, transparent), transparent 64%),
+    var(--glass);
+  color:var(--text);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--paper) 10%, transparent),
+    2px 2px 0 color-mix(in srgb, var(--red-deep) 46%, transparent);
+  outline:0;
+  transform:none;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):hover:not(:disabled)::after,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem:not(.active):focus-visible::after {
+  background:var(--red);
+  opacity:0.95;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem .railIco,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem .railLabel,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem .railBadge {
+  position:relative;
+  z-index:1;
+}
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railItem.active {
   background:var(--red); color:var(--paper); border-color:transparent; border-left-color:var(--amber);
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railBadge { border-radius:0; background:var(--amber); color:var(--ink); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion { border-radius:0; }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railFoot {
+  gap:9px;
+  padding:12px 4px 0;
+  border-top:3px solid var(--red);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus {
+  gap:8px;
+  border-radius:8px;
+  border:1px solid rgba(237,224,196,0.18);
+  background:
+    linear-gradient(135deg, rgba(237,224,196,0.13), transparent 34%),
+    linear-gradient(180deg, rgba(237,224,196,0.08), rgba(237,224,196,0.025)),
+    rgba(14,13,12,0.58);
+  -webkit-backdrop-filter:blur(7px) saturate(1.45);
+  backdrop-filter:blur(7px) saturate(1.45);
+  box-shadow:var(--liquid-shadow);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus::before {
+  background:
+    radial-gradient(80px 32px at 90% 0%, color-mix(in srgb, var(--amber) 25%, transparent), transparent 74%),
+    repeating-linear-gradient(0deg, rgba(237,224,196,0.045) 0 1px, transparent 1px 5px);
+  opacity:0.7;
+  mix-blend-mode:screen;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus::after {
+  content:"";
+  position:absolute;
+  top:0;
+  right:0;
+  width:42px;
+  height:5px;
+  background:var(--red);
+  clip-path:polygon(12px 0,100% 0,100% 100%,0 100%);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusKicker {
+  color:var(--amber);
+  letter-spacing:0.2em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusMain {
+  color:var(--paper);
+  font-size:14px;
+  line-height:0.96;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatusSub {
+  color:color-mix(in srgb, var(--paper) 64%, transparent);
+  letter-spacing:0.08em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus .statusDot {
+  width:10px;
+  height:10px;
+  border-radius:0;
+  background:var(--red);
+  color:var(--red);
+  box-shadow:
+    2px 2px 0 var(--red-deep),
+    0 0 10px color-mix(in srgb, var(--red) 46%, transparent);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus .statusDot.ok {
+  background:var(--amber);
+  color:var(--amber);
+  box-shadow:
+    2px 2px 0 var(--red-deep),
+    0 0 10px color-mix(in srgb, var(--amber) 42%, transparent);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion {
+  min-height:35px;
+  border-radius:0;
+  border:1.5px solid var(--ink);
+  background:var(--paper);
+  color:var(--ink);
+  padding:7px 9px 7px 15px;
+  box-shadow:3px 3px 0 rgba(0,0,0,0.36);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion::before {
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:5px;
+  background:var(--red);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersionLabel {
+  color:var(--red-deep);
+  font-size:10px;
+  letter-spacing:0.12em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion strong {
+  color:var(--ink);
+  font-family:var(--cond);
+  font-size:13px;
+  letter-spacing:0.02em;
+  text-transform:none;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked {
+  border-color:var(--red-deep);
+  background:var(--red);
+  box-shadow:3px 3px 0 var(--red-deep);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked::before {
+  background:var(--amber);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked .railVersionLabel,
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railVersion.locked strong {
+  color:var(--paper);
+}
 
 /* title + giant count */
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .viewHead h1 {
@@ -4291,7 +4975,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background:transparent; color:var(--red-deep); border-color:var(--red-deep);
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .categoryBadge.other {
-  background:transparent; color:var(--text-dim); border-color:var(--stroke-2);
+  background:transparent; color:var(--cosmic-orange); border-color:var(--cosmic-orange);
 }
 
 /* ---------- remaining buttons: help & sort ---------- */
@@ -4353,6 +5037,25 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .modsTableFrame.is-list {
   border-radius:5px; border:1.5px solid var(--stroke-2);
 }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockOverlay {
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--ink) 36%, transparent), rgba(0,0,0,0.62) 62%, rgba(0,0,0,0.76)),
+    rgba(0,0,0,0.38);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockCard {
+  border:1.5px solid var(--red);
+  border-radius:5px;
+  background:var(--glass-2);
+  box-shadow:var(--liquid-shadow);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockCard strong {
+  color:var(--red);
+  font-family:var(--cond);
+  letter-spacing:0.06em;
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cartShelfLockCard span {
+  color:var(--text);
+}
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) table th {
   background:rgba(0,0,0,0.28); color:var(--text); border-bottom:2px solid var(--red);
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.06em;
@@ -4411,19 +5114,36 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   box-shadow:0 0 0 2px var(--amber), 0 5px 12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.85);
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-plus.on .rcartPodMark {
-  color:var(--amber);
+  --rcart-pod-symbol:var(--amber);
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-minus {
   background:var(--paper);
   box-shadow:0 0 0 3px var(--red), 0 5px 12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.85);
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcartPod.is-minus .rcartPodMark {
-  color:var(--red);
+  --rcart-pod-symbol:var(--red);
 }
 /* collector frame outlines onto the palette */
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-add .rcartShell { outline-color:var(--amber); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-remove .rcartShell { outline-color:var(--red); }
-:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-warning .rcartShell { outline-color:var(--amber); }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-on {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px var(--amber))
+    drop-shadow(0 0 7px color-mix(in srgb, var(--amber) 54%, transparent));
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-add {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px var(--amber))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--amber) 54%, transparent));
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-remove {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px var(--red))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--red) 54%, transparent));
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .rcart.is-warning {
+  --rcart-shell-state-shadow:
+    drop-shadow(0 0 1px var(--amber))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--amber) 52%, transparent));
+}
 
 /* Arcade cartridge: selection check → square red stamp, frames recolored */
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .cart.is-selected .cartCheck {
@@ -4505,14 +5225,14 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchAdd {
-  --pending-diff-color:var(--amber); background:rgba(232,162,44,0.1);
+  --pending-diff-color:var(--amber); --pending-diff-bg:rgba(232,162,44,0.1); background:var(--pending-diff-bg);
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchRemove {
-  --pending-diff-color:var(--red); background:rgba(226,64,42,0.1);
+  --pending-diff-color:var(--red); --pending-diff-bg:rgba(226,64,42,0.1); background:var(--pending-diff-bg);
 }
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchRepair,
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .pendingDiffItem.pendingPatchConflict {
-  --pending-diff-color:var(--red-deep); background:rgba(158,35,23,0.12);
+  --pending-diff-color:var(--conflict); --pending-diff-bg:var(--conflict-bg); background:var(--pending-diff-bg);
 }
 
 /* ---------- settings → frameless sections, print/glass detail elements ----------
@@ -4538,6 +5258,18 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   content:""; position:absolute; left:0; top:50%; transform:translateY(-50%);
   width:4px; height:13px; background:var(--red);
 }
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionField.is-locked .fieldLabel {
+  color:var(--red);
+}
+:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .injectionLockNotice {
+  border:1.5px solid var(--red);
+  border-radius:5px;
+  background:var(--glass-2);
+  color:var(--red);
+  font-family:var(--cond);
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+}
 
 /* GLASS — status/version blocks and author cards sit on liquid glass */
 :where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus,
@@ -4547,6 +5279,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   box-shadow:var(--liquid-shadow);
 }
 @supports ((backdrop-filter: blur(1px) url(#liquid-lens)) or (-webkit-backdrop-filter: blur(1px) url(#liquid-lens))) {
+  :root[data-glass="liquid"]:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .railStatus {
+    -webkit-backdrop-filter:blur(3px) url(#liquid-lens) saturate(1.55);
+    backdrop-filter:blur(3px) url(#liquid-lens) saturate(1.55);
+  }
+
   :root[data-glass="liquid"]:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .backendStatus,
   :root[data-glass="liquid"]:where([data-theme="night"],[data-theme="riso"],[data-theme="mono"]) .authorRuleRow {
     -webkit-backdrop-filter:blur(2.5px) url(#liquid-lens) saturate(1.55);
