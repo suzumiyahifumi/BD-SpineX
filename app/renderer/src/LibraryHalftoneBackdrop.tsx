@@ -2,6 +2,15 @@ import { useEffect, useRef } from "react";
 
 type HalftoneDot = [number, number, number, number, number, number?];
 type LineArtMeta = { image: string };
+type LibraryBackdropMode = "classic" | "posterGhost" | "duotone" | "pureTone";
+type ParticleDensityPreset = "full" | "sparse";
+type BackdropCharacterPhase = "ready" | "transition" | "settled";
+export type LibraryBackdropCharacterDetail = {
+  duration?: number;
+  fromId?: string;
+  id: string;
+  phase: BackdropCharacterPhase;
+};
 type HalftoneData = {
   id: string;
   aspect: number;
@@ -9,11 +18,15 @@ type HalftoneData = {
   lineArt?: LineArtMeta;
   lineArtVariants?: Record<string, LineArtMeta>;
 };
+
+export const LIBRARY_BACKDROP_CHARACTER_EVENT = "bd-spinex:library-backdrop-character";
 type HalftoneManifest = {
   characters?: Array<{ id?: string }>;
 };
 type HalftoneShape = HalftoneData & {
+  duotoneImage: HTMLImageElement;
   lineArtImage: HTMLImageElement;
+  pureToneImage: HTMLImageElement;
 };
 type ParticleTarget = {
   x: number;
@@ -42,13 +55,58 @@ type Transition = {
   nextShape: HalftoneShape;
   nextIndex: number;
 };
+type LibraryBackdropConsoleApi = {
+  getParticlesEnabled: () => boolean;
+  getParticleCount: () => number;
+  getMode: () => LibraryBackdropMode;
+  getSettings: () => LibraryBackdropSettings;
+  modes: readonly LibraryBackdropMode[];
+  particleModes: readonly ParticleDensityPreset[];
+  resetSettings: () => LibraryBackdropSettings;
+  setInk: (value: number, target?: string) => LibraryBackdropSettings;
+  setMode: (mode: string) => LibraryBackdropMode;
+  setParticleDensity: (value: number) => LibraryBackdropSettings;
+  setParticleMode: (mode: string) => LibraryBackdropSettings;
+  setParticlesEnabled: (enabled: boolean) => LibraryBackdropSettings;
+  setSettings: (settings: Partial<LibraryBackdropSettings>) => LibraryBackdropSettings;
+  toggleParticles: () => LibraryBackdropSettings;
+};
+type LibraryBackdropSettings = {
+  classicInk: number;
+  dotStrength: number;
+  duotoneInk: number;
+  lineWidth: number;
+  particleDensity: number;
+  particlesEnabled: boolean;
+  posterGhostInk: number;
+  pureToneInk: number;
+};
+
+declare global {
+  interface Window {
+    bdLibraryBackdrop?: LibraryBackdropConsoleApi;
+  }
+}
 
 const LIBRARY_HALFTONE_FALLBACK_IDS = ["000201", "067702", "000101"];
 const LIBRARY_HALFTONE_DIR = publicAssetPath("characters/halftone/standing");
 const LIBRARY_HALFTONE_MANIFEST = `${LIBRARY_HALFTONE_DIR}/manifest.json`;
-const DOT_STRENGTH = 0.35;
-const LINE_STRENGTH = 2;
-const LINE_WIDTH = 1;
+const LIBRARY_BACKDROP_MODE_STORAGE_KEY = "bd-spinex.libraryBackdrop.mode";
+const LIBRARY_BACKDROP_SETTINGS_STORAGE_KEY = "bd-spinex.libraryBackdrop.settings";
+const LIBRARY_BACKDROP_MODES = ["classic", "posterGhost", "duotone", "pureTone"] as const satisfies readonly LibraryBackdropMode[];
+const PARTICLE_DENSITY_PRESETS = ["full", "sparse"] as const satisfies readonly ParticleDensityPreset[];
+const SPARSE_PARTICLE_DENSITY = 0.35;
+const DEFAULT_BACKDROP_MODE: LibraryBackdropMode = "pureTone";
+const DEFAULT_BACKDROP_SETTINGS: LibraryBackdropSettings = {
+  classicInk: 2,
+  dotStrength: 0.5,
+  duotoneInk: 0.66,
+  lineWidth: 1,
+  particleDensity: 1,
+  particlesEnabled: true,
+  posterGhostInk: 0.72,
+  pureToneInk: 0.3
+};
 const TRANSITION_DURATION = 4200;
 const SETTLED_HOLD_DURATION = 16000;
 const INITIAL_HOLD_DURATION = 14000;
@@ -79,11 +137,79 @@ export function LibraryHalftoneBackdrop() {
     let nextAt = 0;
     let lineVisibleSince = 0;
     let loadingTransition = false;
+    let renderMode = readStoredBackdropMode();
+    let renderSettings = readStoredBackdropSettings();
     const shapeCache = new Map<string, HalftoneShape>();
     let particles: Particle[] = [];
     let transition: Transition | null = null;
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
+    canvas.dataset.backdropMode = renderMode;
+
+    const setRenderMode = (mode: string) => {
+      renderMode = normalizeBackdropMode(mode, renderMode);
+      canvas.dataset.backdropMode = renderMode;
+      storeBackdropMode(renderMode);
+      draw(performance.now());
+      console.info(`[BD-SpineX] Library backdrop mode: ${renderMode}`);
+      return renderMode;
+    };
+
+    const setRenderSettings = (settings: Partial<LibraryBackdropSettings>) => {
+      const previousParticleDensity = renderSettings.particleDensity;
+      renderSettings = normalizeBackdropSettings(settings, renderSettings);
+      storeBackdropSettings(renderSettings);
+      const now = performance.now();
+      if (
+        currentShape &&
+        !transition &&
+        width > 0 &&
+        height > 0 &&
+        Math.abs(renderSettings.particleDensity - previousParticleDensity) > 0.001
+      ) {
+        particles = createParticlesForShape(currentShape, currentIndex, width, height, renderSettings.particleDensity);
+      }
+      draw(now);
+      console.info("[BD-SpineX] Library backdrop settings:", renderSettings);
+      return { ...renderSettings };
+    };
+
+    const setInk = (value: number, target?: string) => {
+      const targetMode = normalizeBackdropMode(target ?? renderMode, renderMode);
+      return setRenderSettings({ [inkSettingKeyForMode(targetMode)]: value });
+    };
+
+    const setParticleMode = (mode: string) => (
+      setRenderSettings({ particleDensity: particleDensityForMode(mode, renderSettings.particleDensity) })
+    );
+
+    const consoleApi: LibraryBackdropConsoleApi = {
+      getParticleCount: () => particles.length,
+      getParticlesEnabled: () => renderSettings.particlesEnabled,
+      getMode: () => renderMode,
+      getSettings: () => ({ ...renderSettings }),
+      modes: LIBRARY_BACKDROP_MODES,
+      particleModes: PARTICLE_DENSITY_PRESETS,
+      resetSettings: () => setRenderSettings(DEFAULT_BACKDROP_SETTINGS),
+      setInk,
+      setMode: setRenderMode,
+      setParticleDensity: (value: number) => setRenderSettings({ particleDensity: value }),
+      setParticleMode,
+      setParticlesEnabled: (enabled: boolean) => setRenderSettings({ particlesEnabled: enabled }),
+      setSettings: setRenderSettings,
+      toggleParticles: () => setRenderSettings({ particlesEnabled: !renderSettings.particlesEnabled })
+    };
+    window.bdLibraryBackdrop = consoleApi;
+    console.info("[BD-SpineX] Library backdrop controls:", {
+      modes: LIBRARY_BACKDROP_MODES,
+      particleModes: PARTICLE_DENSITY_PRESETS,
+      setParticleDensity: "bdLibraryBackdrop.setParticleDensity(0.08 ... 1)",
+      setParticleMode: "bdLibraryBackdrop.setParticleMode('full' | 'sparse')",
+      setInk: "bdLibraryBackdrop.setInk(value, optionalMode)",
+      setMode: "bdLibraryBackdrop.setMode('classic' | 'posterGhost' | 'duotone' | 'pureTone')",
+      setParticlesEnabled: "bdLibraryBackdrop.setParticlesEnabled(true | false)",
+      setSettings: "bdLibraryBackdrop.setSettings({ particlesEnabled, particleDensity, classicInk, dotStrength, lineWidth, posterGhostInk, duotoneInk, pureToneInk })"
+    });
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -96,10 +222,7 @@ export function LibraryHalftoneBackdrop() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (currentShape) {
-        particles = mapShapeToCanvas(currentShape, width, height).map((target, index) => ({
-          ...target,
-          seed: hash(index, currentIndex + 7)
-        }));
+        particles = createParticlesForShape(currentShape, currentIndex, width, height, renderSettings.particleDensity);
         transition = null;
         lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
         draw(performance.now());
@@ -118,7 +241,7 @@ export function LibraryHalftoneBackdrop() {
       try {
         const nextShape = await loadHalftoneShape(ids[nextIndex], shapeCache);
         if (cancelled || !currentShape) return;
-        const targets = mapShapeToCanvas(nextShape, width, height);
+        const targets = mapShapeToCanvas(nextShape, width, height, renderSettings.particleDensity);
         const count = Math.max(particles.length, targets.length);
         const nextParticles: Particle[] = [];
 
@@ -146,6 +269,7 @@ export function LibraryHalftoneBackdrop() {
         particles = nextParticles;
         const start = performance.now();
         transition = { start, duration: TRANSITION_DURATION, fromShape: currentShape, nextShape, nextIndex };
+        emitBackdropCharacter(nextShape, { duration: TRANSITION_DURATION, fromId: currentShape.id, phase: "transition" });
         nextAt = start + TRANSITION_DURATION + SETTLED_HOLD_DURATION;
       } catch {
         nextAt = performance.now() + SETTLED_HOLD_DURATION;
@@ -205,22 +329,37 @@ export function LibraryHalftoneBackdrop() {
       if (t >= 1) {
         currentIndex = transition.nextIndex;
         currentShape = transition.nextShape;
+        emitBackdropCharacter(currentShape, { phase: "settled" });
         transition = null;
-        lineVisibleSince = now;
-        particles = particles.filter((particle) => particle.targetAlpha === undefined || particle.targetAlpha > 0.01);
+        lineVisibleSince = renderMode === "classic" ? now : now - LINE_FADE_IN_DURATION;
+        particles = width > 0 && height > 0
+          ? createParticlesForShape(currentShape, currentIndex, width, height, renderSettings.particleDensity)
+          : particles.filter((particle) => particle.targetAlpha === undefined || particle.targetAlpha > 0.01);
       }
     };
 
     const draw = (now: number) => {
       ctx.clearRect(0, 0, width, height);
-      drawParticles(ctx, particles, now);
 
-      if (transition) {
-        const fadeOut = 1 - easeInOutCubic(clamp((now - transition.start) / LINE_FADE_OUT_DURATION, 0, 1));
-        drawLineArt(ctx, transition.fromShape, width, height, fadeOut);
-      } else {
-        const fadeIn = easeInOutCubic(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
-        drawLineArt(ctx, currentShape, width, height, fadeIn);
+      if (renderMode === "classic") {
+        if (renderSettings.particlesEnabled) {
+          drawParticles(ctx, particles, now, renderSettings.dotStrength);
+        }
+
+        if (transition) {
+          const fadeOut = 1 - easeInOutCubic(clamp((now - transition.start) / LINE_FADE_OUT_DURATION, 0, 1));
+          drawLineArt(ctx, transition.fromShape, width, height, fadeOut, renderSettings.classicInk, renderSettings.lineWidth);
+        } else {
+          const fadeIn = easeInOutCubic(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
+          drawLineArt(ctx, currentShape, width, height, fadeIn, renderSettings.classicInk, renderSettings.lineWidth);
+        }
+
+        return;
+      }
+
+      drawStillBackdrop(ctx, renderMode, renderSettings, transition, currentShape, width, height, now, lineVisibleSince);
+      if (renderSettings.particlesEnabled) {
+        drawParticles(ctx, particles, now, renderSettings.dotStrength);
       }
     };
 
@@ -230,6 +369,7 @@ export function LibraryHalftoneBackdrop() {
       currentIndex = pickRandomIndex(ids);
       currentShape = await loadHalftoneShape(ids[currentIndex], shapeCache);
       if (cancelled) return;
+      emitBackdropCharacter(currentShape, { phase: "ready" });
       resize();
       lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
       nextAt = performance.now() + INITIAL_HOLD_DURATION;
@@ -244,16 +384,117 @@ export function LibraryHalftoneBackdrop() {
       cancelled = true;
       stopAnimation();
       window.removeEventListener("resize", resize);
+      if (window.bdLibraryBackdrop === consoleApi) {
+        delete window.bdLibraryBackdrop;
+      }
     };
   }, []);
 
   return <canvas className="libraryHalftoneBackdrop" ref={canvasRef} aria-hidden="true" />;
 }
 
+function emitBackdropCharacter(
+  shape: HalftoneShape | null | undefined,
+  detail: Omit<LibraryBackdropCharacterDetail, "id">
+) {
+  if (!shape?.id) return;
+  window.dispatchEvent(new CustomEvent<LibraryBackdropCharacterDetail>(LIBRARY_BACKDROP_CHARACTER_EVENT, {
+    detail: { ...detail, id: shape.id }
+  }));
+}
+
 function publicAssetPath(path: string) {
   const base = import.meta.env.BASE_URL || "./";
   const normalizedBase = base.endsWith("/") ? base : `${base}/`;
   return `${normalizedBase}${path.replace(/^\/+/, "")}`;
+}
+
+function readStoredBackdropMode(): LibraryBackdropMode {
+  try {
+    return normalizeBackdropMode(window.localStorage.getItem(LIBRARY_BACKDROP_MODE_STORAGE_KEY), DEFAULT_BACKDROP_MODE);
+  } catch {
+    return DEFAULT_BACKDROP_MODE;
+  }
+}
+
+function storeBackdropMode(mode: LibraryBackdropMode) {
+  try {
+    window.localStorage.setItem(LIBRARY_BACKDROP_MODE_STORAGE_KEY, mode);
+  } catch {
+    // Optional console control should not affect the background.
+  }
+}
+
+function normalizeBackdropMode(value: unknown, fallback: LibraryBackdropMode): LibraryBackdropMode {
+  if (typeof value !== "string") return fallback;
+  const key = value.trim().toLowerCase();
+  if (key === "classic" || key === "halftone" || key === "particles") return "classic";
+  if (key === "posterghost" || key === "poster-ghost" || key === "poster" || key === "ghost") return "posterGhost";
+  if (key === "duotone" || key === "standard" || key === "normal" || key === "flat") return "duotone";
+  if (key === "puretone" || key === "pure-tone" || key === "pure" || key === "tone" || key === "monotone") return "pureTone";
+  return fallback;
+}
+
+function inkSettingKeyForMode(mode: LibraryBackdropMode): keyof LibraryBackdropSettings {
+  if (mode === "classic") return "classicInk";
+  if (mode === "posterGhost") return "posterGhostInk";
+  if (mode === "pureTone") return "pureToneInk";
+  return "duotoneInk";
+}
+
+function particleDensityForMode(value: unknown, fallback: number) {
+  if (typeof value !== "string") return fallback;
+  const key = value.trim().toLowerCase();
+  if (key === "sparse" || key === "low" || key === "light" || key === "few") return SPARSE_PARTICLE_DENSITY;
+  if (key === "full" || key === "normal" || key === "dense") return 1;
+  return fallback;
+}
+
+function readStoredBackdropSettings(): LibraryBackdropSettings {
+  try {
+    const stored = window.localStorage.getItem(LIBRARY_BACKDROP_SETTINGS_STORAGE_KEY);
+    if (!stored) return { ...DEFAULT_BACKDROP_SETTINGS };
+    return normalizeBackdropSettings(JSON.parse(stored), DEFAULT_BACKDROP_SETTINGS);
+  } catch {
+    return { ...DEFAULT_BACKDROP_SETTINGS };
+  }
+}
+
+function storeBackdropSettings(settings: LibraryBackdropSettings) {
+  try {
+    window.localStorage.setItem(LIBRARY_BACKDROP_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Optional console control should not affect the background.
+  }
+}
+
+function normalizeBackdropSettings(value: unknown, fallback: LibraryBackdropSettings): LibraryBackdropSettings {
+  const input = value && typeof value === "object" ? value as Partial<LibraryBackdropSettings> : {};
+  return {
+    classicInk: finiteNumber(input.classicInk, fallback.classicInk, 0, 3),
+    dotStrength: finiteNumber(input.dotStrength, fallback.dotStrength, 0, 1.2),
+    duotoneInk: finiteNumber(input.duotoneInk, fallback.duotoneInk, 0, 1.5),
+    lineWidth: finiteNumber(input.lineWidth, fallback.lineWidth, 0.25, 3),
+    particleDensity: finiteNumber(input.particleDensity, fallback.particleDensity, 0.08, 1),
+    particlesEnabled: booleanValue(input.particlesEnabled, fallback.particlesEnabled),
+    posterGhostInk: finiteNumber(input.posterGhostInk, fallback.posterGhostInk, 0, 1.5),
+    pureToneInk: finiteNumber(input.pureToneInk, fallback.pureToneInk, 0, 1.5)
+  };
+}
+
+function finiteNumber(value: unknown, fallback: number, min: number, max: number) {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  return Number.isFinite(numeric) ? clamp(numeric, min, max) : fallback;
+}
+
+function booleanValue(value: unknown, fallback: boolean) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const key = value.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(key)) return true;
+    if (["0", "false", "no", "off"].includes(key)) return false;
+  }
+  return fallback;
 }
 
 async function loadHalftoneIds() {
@@ -285,10 +526,22 @@ async function loadHalftoneShape(id: string, cache: Map<string, HalftoneShape>) 
   const response = await fetch(`${LIBRARY_HALFTONE_DIR}/${id}.json`);
   if (!response.ok) throw new Error(`Failed to load halftone data for ${id}`);
   const data = await response.json() as HalftoneData;
-  const lineArt = data.lineArtVariants?.posterGhost ?? data.lineArt;
+  const lineArt = data.lineArtVariants?.posterGhost ?? data.lineArtVariants?.duotone ?? data.lineArt;
+  const duotone = data.lineArtVariants?.duotone ?? lineArt;
+  const pureTone = data.lineArtVariants?.pureTone ?? duotone;
   if (!lineArt?.image) throw new Error(`Missing line art for ${id}`);
+  if (!duotone?.image) throw new Error(`Missing duotone art for ${id}`);
+  if (!pureTone?.image) throw new Error(`Missing pure tone art for ${id}`);
   const lineArtImage = await loadImage(`${LIBRARY_HALFTONE_DIR}/${lineArt.image}`);
-  const shape = { ...data, lineArtImage };
+  const duotoneImage = duotone.image === lineArt.image
+    ? lineArtImage
+    : await loadImage(`${LIBRARY_HALFTONE_DIR}/${duotone.image}`);
+  const pureToneImage = pureTone.image === lineArt.image
+    ? lineArtImage
+    : pureTone.image === duotone.image
+      ? duotoneImage
+      : await loadImage(`${LIBRARY_HALFTONE_DIR}/${pureTone.image}`);
+  const shape = { ...data, duotoneImage, lineArtImage, pureToneImage };
   cache.set(id, shape);
   return shape;
 }
@@ -302,15 +555,47 @@ function loadImage(src: string) {
   });
 }
 
-function mapShapeToCanvas(shape: HalftoneShape, width: number, height: number): ParticleTarget[] {
+function createParticlesForShape(shape: HalftoneShape, index: number, width: number, height: number, particleDensity: number): Particle[] {
+  return mapShapeToCanvas(shape, width, height, particleDensity).map((target, particleIndex) => ({
+    ...target,
+    seed: hash(particleIndex, index + 7)
+  }));
+}
+
+function mapShapeToCanvas(shape: HalftoneShape, width: number, height: number, particleDensity: number): ParticleTarget[] {
   const layout = shapeLayout(shape, width, height);
-  return shape.dots.map((dot) => ({
+  return selectParticleDots(shape, particleDensity).map((dot) => ({
     x: layout.left + dot[0] * layout.shapeWidth,
     y: layout.top + dot[1] * layout.shapeHeight,
     size: layout.baseSize * dot[2],
     alpha: dot[3],
     tone: dot[4]
   }));
+}
+
+function selectParticleDots(shape: HalftoneShape, particleDensity: number) {
+  const density = clamp(particleDensity, 0.08, 1);
+  if (density >= 0.995 || shape.dots.length <= 1) return shape.dots;
+
+  const keepCount = Math.max(1, Math.round(shape.dots.length * density));
+  return shape.dots
+    .map((dot, index) => ({
+      dot,
+      index,
+      score: particleDotImportance(dot, index, shape.id)
+    }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, keepCount)
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.dot);
+}
+
+function particleDotImportance(dot: HalftoneDot, index: number, shapeId: string) {
+  const idSeed = Number.parseInt(shapeId, 10) || 0;
+  const alpha = clamp(dot[3] ?? 0, 0, 1);
+  const size = clamp((dot[2] ?? 1) / 2.4, 0, 1);
+  const toneBoost = dot[4] === 2 ? 0.06 : dot[4] === 1 ? 0.03 : 0;
+  return alpha * 0.68 + size * 0.2 + toneBoost + seeded(index, idSeed + 31) * 0.18;
 }
 
 function shapeLayout(shape: HalftoneShape, width: number, height: number) {
@@ -329,11 +614,11 @@ function shapeLayout(shape: HalftoneShape, width: number, height: number) {
   return { left, top, shapeWidth, shapeHeight, baseSize };
 }
 
-function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], now: number) {
+function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], now: number, dotStrength: number) {
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
   for (const particle of particles) {
-    const particleAlpha = particle.alpha * DOT_STRENGTH;
+    const particleAlpha = particle.alpha * dotStrength;
     if (particleAlpha <= 0.01 || particle.size <= 0.1) continue;
 
     const pulse = 1 + Math.sin(now * 0.0024 + particle.seed) * 0.025;
@@ -355,11 +640,19 @@ function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], now
   ctx.restore();
 }
 
-function drawLineArt(ctx: CanvasRenderingContext2D, shape: HalftoneShape | null | undefined, width: number, height: number, visibility: number) {
+function drawLineArt(
+  ctx: CanvasRenderingContext2D,
+  shape: HalftoneShape | null | undefined,
+  width: number,
+  height: number,
+  visibility: number,
+  ink: number,
+  lineWidth: number
+) {
   if (!shape?.lineArtImage || visibility <= 0) return;
   const layout = shapeLayout(shape, width, height);
-  const opacity = clamp(LINE_STRENGTH * 0.82 * visibility, 0, 1);
-  const spread = Math.max(0, LINE_WIDTH - 0.76) * Math.max(1, layout.baseSize * 0.18);
+  const opacity = clamp(ink * 0.82 * visibility, 0, 1);
+  const spread = Math.max(0, lineWidth - 0.76) * Math.max(1, layout.baseSize * 0.18);
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
   ctx.imageSmoothingEnabled = true;
@@ -379,6 +672,115 @@ function drawLineArt(ctx: CanvasRenderingContext2D, shape: HalftoneShape | null 
 
   ctx.globalAlpha = opacity;
   ctx.drawImage(shape.lineArtImage, layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
+  ctx.restore();
+}
+
+function drawStillBackdrop(
+  ctx: CanvasRenderingContext2D,
+  mode: LibraryBackdropMode,
+  settings: LibraryBackdropSettings,
+  transition: Transition | null,
+  currentShape: HalftoneShape | null,
+  width: number,
+  height: number,
+  now: number,
+  lineVisibleSince: number
+) {
+  if (transition) {
+    const t = clamp((now - transition.start) / transition.duration, 0, 1);
+    const fadeOut = 1 - easeInOutCubic(clamp(t / 0.42, 0, 1));
+    const fadeIn = easeInOutCubic(clamp((t - 0.18) / 0.82, 0, 1));
+    drawStillBackdropImage(ctx, mode, settings, transition.fromShape, width, height, fadeOut);
+    drawStillBackdropImage(ctx, mode, settings, transition.nextShape, width, height, fadeIn);
+    return;
+  }
+
+  const fadeIn = easeInOutCubic(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
+  drawStillBackdropImage(ctx, mode, settings, currentShape, width, height, fadeIn);
+}
+
+function drawStillBackdropImage(
+  ctx: CanvasRenderingContext2D,
+  mode: LibraryBackdropMode,
+  settings: LibraryBackdropSettings,
+  shape: HalftoneShape | null | undefined,
+  width: number,
+  height: number,
+  visibility: number
+) {
+  if (mode === "duotone") {
+    drawStandardDuotoneImage(ctx, shape, width, height, visibility, settings.duotoneInk);
+    return;
+  }
+  if (mode === "pureTone") {
+    drawPureToneImage(ctx, shape, width, height, visibility, settings.pureToneInk);
+    return;
+  }
+
+  drawPosterGhostImage(ctx, shape, width, height, visibility, settings.posterGhostInk);
+}
+
+function drawPosterGhostImage(
+  ctx: CanvasRenderingContext2D,
+  shape: HalftoneShape | null | undefined,
+  width: number,
+  height: number,
+  visibility: number,
+  ink: number
+) {
+  if (!shape?.lineArtImage || visibility <= 0) return;
+  const layout = shapeLayout(shape, width, height);
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = ink * clamp(visibility, 0, 1);
+  ctx.imageSmoothingEnabled = true;
+  ctx.filter = "saturate(1.06) contrast(1.04)";
+  ctx.drawImage(shape.lineArtImage, layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
+  ctx.restore();
+}
+
+function drawStandardDuotoneImage(
+  ctx: CanvasRenderingContext2D,
+  shape: HalftoneShape | null | undefined,
+  width: number,
+  height: number,
+  visibility: number,
+  ink: number
+) {
+  if (!shape?.duotoneImage || visibility <= 0) {
+    drawPosterGhostImage(ctx, shape, width, height, visibility, ink);
+    return;
+  }
+
+  const layout = shapeLayout(shape, width, height);
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = ink * clamp(visibility, 0, 1);
+  ctx.imageSmoothingEnabled = true;
+  ctx.filter = "saturate(1.03) contrast(1.06)";
+  ctx.drawImage(shape.duotoneImage, layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
+  ctx.restore();
+}
+
+function drawPureToneImage(
+  ctx: CanvasRenderingContext2D,
+  shape: HalftoneShape | null | undefined,
+  width: number,
+  height: number,
+  visibility: number,
+  ink: number
+) {
+  if (!shape?.pureToneImage || visibility <= 0) {
+    drawStandardDuotoneImage(ctx, shape, width, height, visibility, ink);
+    return;
+  }
+
+  const layout = shapeLayout(shape, width, height);
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = ink * clamp(visibility, 0, 1);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(shape.pureToneImage, layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
   ctx.restore();
 }
 

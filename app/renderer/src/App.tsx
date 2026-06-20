@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
 import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
 import characterAssetsJson from "./data/bd2-characters.json";
-import { LibraryHalftoneBackdrop } from "./LibraryHalftoneBackdrop";
+import { LIBRARY_BACKDROP_CHARACTER_EVENT, LibraryHalftoneBackdrop, type LibraryBackdropCharacterDetail } from "./LibraryHalftoneBackdrop";
 
 // Runtime-based BD-SpineX. The interaction model follows the original offline patch UI.
 // Stage 3 of the liquid-glass redesign: the top toolbar is replaced by a left glass
@@ -154,6 +154,10 @@ for (const character of CHARACTER_ASSETS.characters) {
     });
   }
 }
+const BACKDROP_SLOT_ROLL_TICK_MS = 72;
+const BACKDROP_SLOT_ROLL_MIN_MS = 1200;
+const BACKDROP_SLOT_ROLL_MAX_MS = 3600;
+const BACKDROP_SLOT_CANDIDATES = Array.from(CHARACTER_BY_ID.values());
 
 function typeToCategory(type: RuntimeMod["type"]): ModCategory {
   return type === "skillcut" ? "cutscene" : type === "dating" ? "dating" : type === "standing" ? "char" : "other";
@@ -174,6 +178,8 @@ export function App() {
   const [modFilter, setModFilter] = useState("");
   const [modSort, setModSort] = useState<ModSort>({ key: "folder", direction: "asc" });
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
+  const [backgroundCharacter, setBackgroundCharacter] = useState<DetectedCharacter | null>(null);
+  const [backdropSlotRolling, setBackdropSlotRolling] = useState(false);
   const [tauriCanvasCartridges] = useState(readTauriCanvasCartridgeMode);
   const theme = ACTIVE_THEME;
 
@@ -191,8 +197,39 @@ export function App() {
   const [spotlitPendingFolder, setSpotlitPendingFolder] = useState<string | null>(null);
   const cartNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const pendingSpotlightTimerRef = useRef<number | null>(null);
+  const backdropSlotTimerRef = useRef<number | null>(null);
 
   const log = useCallback((message: string, tone?: LogEntry["tone"]) => pushLog(setLogs, message, tone), []);
+
+  const stopBackdropSlotRoll = useCallback((finalCharacter?: DetectedCharacter | null) => {
+    if (backdropSlotTimerRef.current) {
+      window.clearTimeout(backdropSlotTimerRef.current);
+      backdropSlotTimerRef.current = null;
+    }
+    if (finalCharacter) setBackgroundCharacter(finalCharacter);
+    setBackdropSlotRolling(false);
+  }, []);
+
+  const startBackdropSlotRoll = useCallback((targetCharacter: DetectedCharacter, duration?: number) => {
+    stopBackdropSlotRoll(null);
+    const rollDuration = backdropSlotRollDuration(duration);
+    const startedAt = performance.now();
+    let tick = 0;
+    const roll = () => {
+      const progress = Math.min(1, (performance.now() - startedAt) / rollDuration);
+      if (progress >= 1) {
+        stopBackdropSlotRoll(targetCharacter);
+        return;
+      }
+
+      tick += 1;
+      setBackgroundCharacter(pickBackdropSlotCharacter(targetCharacter.id, tick));
+      backdropSlotTimerRef.current = window.setTimeout(roll, backdropSlotRollDelay(progress));
+    };
+
+    setBackdropSlotRolling(true);
+    roll();
+  }, [stopBackdropSlotRoll]);
 
   const refreshStatus = useCallback(async () => {
     const s = await window.bd2.runtimeStatus();
@@ -229,8 +266,25 @@ export function App() {
   useEffect(() => {
     return () => {
       if (pendingSpotlightTimerRef.current) window.clearTimeout(pendingSpotlightTimerRef.current);
+      if (backdropSlotTimerRef.current) window.clearTimeout(backdropSlotTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    const handleBackdropCharacter = (event: Event) => {
+      const detail = (event as CustomEvent<LibraryBackdropCharacterDetail>).detail;
+      if (!detail?.id) return;
+      const nextCharacter = resolveBackdropCharacter(detail.id);
+      if (detail.phase === "transition") {
+        startBackdropSlotRoll(nextCharacter, detail.duration);
+        return;
+      }
+      stopBackdropSlotRoll(nextCharacter);
+    };
+
+    window.addEventListener(LIBRARY_BACKDROP_CHARACTER_EVENT, handleBackdropCharacter);
+    return () => window.removeEventListener(LIBRARY_BACKDROP_CHARACTER_EVENT, handleBackdropCharacter);
+  }, [startBackdropSlotRoll, stopBackdropSlotRoll]);
 
   const mountedMods = useMemo(() => status?.mountedMods ?? [], [status]);
   const mountedFolders = useMemo(() => new Set(mountedMods.map((m) => m.folder)), [mountedMods]);
@@ -256,6 +310,13 @@ export function App() {
   const appReady = Boolean(status?.appFound && status?.loaderAvailable);
   const injectionMissing = Boolean(status && appReady && !status.injected);
   const gameRunning = Boolean(status?.gameRunning);
+  const backgroundCharacterCode = backgroundCharacter?.id ?? "------";
+  const backgroundCharacterName = backgroundCharacter
+    ? `${backgroundCharacter.character} · ${backgroundCharacter.costume}`
+    : "Backdrop character loading";
+  const backgroundCharacterTitle = backgroundCharacter
+    ? `${backgroundCharacter.character}\n${backgroundCharacter.costume}\nCharacter ID ${backgroundCharacter.id}`
+    : "Waiting for backdrop character";
   const injectionActionLocked = busy || gameRunning;
   const injectionLocked = injectionActionLocked || injectionVersionLocked;
   const injectionLockTitle = injectionVersionLocked
@@ -642,7 +703,6 @@ export function App() {
 
   const libraryView = (
     <>
-      <LibraryHalftoneBackdrop />
       <section className="scanGrid libraryFlow">
         <div className="panel tablePanel modsPanel cartridgePanel">
           <div className="modsHeader cartridgeToolbar">
@@ -1074,18 +1134,21 @@ export function App() {
       </nav>
 
       <main className={`appMain view-${view}`}>
+        <LibraryHalftoneBackdrop />
         <div className="viewHead">
           <div>
             <h1>{activeNav.label}</h1>
             <div className="viewSub">BrownDust II Runtime Mod Loader · Mac PlayCover</div>
           </div>
           <div className="spacer" />
-          <div className="viewCount" aria-hidden="true">
-            <b>{mountedMods.length}</b><span>Mounted</span>
+          <div className={`backdropMeta ${backdropSlotRolling ? "is-rolling" : ""}`} title={backgroundCharacterTitle}>
+            <div className="viewCount">
+              <b>{backgroundCharacterCode}</b><span>Backdrop<br />ID</span>
+            </div>
+            <div className="backdropMetaName">
+              {backgroundCharacterName}
+            </div>
           </div>
-          <span className="statusPill" title={status?.injected ? "Loader installed" : "Loader not installed"}>
-            {status?.injected ? "Runtime installed" : "Not installed"} · {mountedMods.length} mounted{gameRunning ? " · game running" : ""}
-          </span>
         </div>
 
         {globalBanners}
@@ -1593,6 +1656,39 @@ function detectModCharacter(mod: RuntimeMod): DetectedCharacter | null {
 
 function lookupCharacterById(id: string | null | undefined) {
   return id ? CHARACTER_BY_ID.get(id) ?? null : null;
+}
+
+function resolveBackdropCharacter(id: string): DetectedCharacter {
+  return lookupCharacterById(id) ?? {
+    id,
+    imageId: id,
+    character: `Character ${id}`,
+    costume: "Backdrop source"
+  };
+}
+
+function backdropSlotRollDuration(duration?: number) {
+  const requested = Number.isFinite(duration) ? Number(duration) * 0.82 : BACKDROP_SLOT_ROLL_MAX_MS;
+  return Math.max(BACKDROP_SLOT_ROLL_MIN_MS, Math.min(BACKDROP_SLOT_ROLL_MAX_MS, requested));
+}
+
+function backdropSlotRollDelay(progress: number) {
+  const eased = easeInCubic(Math.max(0, Math.min(1, progress)));
+  return Math.round(BACKDROP_SLOT_ROLL_TICK_MS + eased * 188);
+}
+
+function easeInCubic(t: number) {
+  return t * t * t;
+}
+
+function pickBackdropSlotCharacter(targetId: string, tick: number): DetectedCharacter {
+  if (!BACKDROP_SLOT_CANDIDATES.length) return resolveBackdropCharacter(targetId);
+  const index = Math.floor((Math.random() * BACKDROP_SLOT_CANDIDATES.length + tick * 7) % BACKDROP_SLOT_CANDIDATES.length);
+  const candidate = BACKDROP_SLOT_CANDIDATES[index];
+  if (candidate.id === targetId && BACKDROP_SLOT_CANDIDATES.length > 1) {
+    return BACKDROP_SLOT_CANDIDATES[(index + tick + 1) % BACKDROP_SLOT_CANDIDATES.length];
+  }
+  return candidate;
 }
 
 function lookupDatingCharacterById(datingId: string | null | undefined) {

@@ -16,6 +16,16 @@ const MODE_PRESETS = {
   layered: { density: 0.94, maxDots: 6400 }
 };
 const DEFAULT_DUOTONE_PROFILE = "posterGhost";
+const STANDARD_DUOTONE_PROFILE = {
+  label: "Standard Duotone",
+  style: "source-duotone-standard-v1",
+  defaultInk: 0.66
+};
+const PURE_TONE_PROFILE = {
+  label: "Pure Tone",
+  style: "source-pure-tone-v1",
+  defaultInk: 0.58
+};
 const DUOTONE_PROFILES = {
   posterGhost: {
     label: "Poster Ghost",
@@ -40,7 +50,7 @@ const DUOTONE_PROFILES = {
   }
 };
 const DUOTONE_PROFILE_KEYS = Object.keys(DUOTONE_PROFILES);
-const LINE_ART_PRESETS = new Set(["contour", "duotone", ...DUOTONE_PROFILE_KEYS]);
+const LINE_ART_PRESETS = new Set(["contour", "duotone", "pureTone", ...DUOTONE_PROFILE_KEYS]);
 
 const INK = {
   bg: [14, 13, 12, 255],
@@ -88,14 +98,16 @@ for (const id of options.ids) {
     ? {
       contour: `${id}.contour.lineart.png`,
       duotone: `${id}.duotone.lineart.png`,
+      pureTone: `${id}.pure-tone.lineart.png`,
       ...Object.fromEntries(DUOTONE_PROFILE_KEYS.map((key) => [
         key,
         `${id}.${DUOTONE_PROFILES[key].file}.lineart.png`
       ]))
     }
     : {
-      duotone: lineArtName,
-      [options.lineArt]: lineArtName
+      duotone: options.lineArt === "duotone" ? lineArtName : `${id}.duotone.lineart.png`,
+      pureTone: options.lineArt === "pureTone" ? lineArtName : `${id}.pure-tone.lineart.png`,
+      ...(options.lineArt !== "duotone" && options.lineArt !== "pureTone" ? { [options.lineArt]: lineArtName } : {})
     };
   const dataPath = path.join(options.outputDir, dataName);
   const previewPath = path.join(options.outputDir, previewName);
@@ -153,20 +165,27 @@ for (const id of options.ids) {
         preset: key
       }
     ])),
-    lineArtProfiles: Object.fromEntries(DUOTONE_PROFILE_KEYS.map((key) => [
-      key,
-      {
-        label: DUOTONE_PROFILES[key].label,
-        defaultInk: DUOTONE_PROFILES[key].defaultInk,
-        style: DUOTONE_PROFILES[key].style
-      }
-    ])),
+    lineArtProfiles: {
+      duotone: STANDARD_DUOTONE_PROFILE,
+      pureTone: PURE_TONE_PROFILE,
+      ...Object.fromEntries(DUOTONE_PROFILE_KEYS.map((key) => [
+        key,
+        {
+          label: DUOTONE_PROFILES[key].label,
+          defaultInk: DUOTONE_PROFILES[key].defaultInk,
+          style: DUOTONE_PROFILES[key].style
+        }
+      ]))
+    },
     dots
   })}\n`);
 
   await fs.writeFile(lineArtPath, PNG.sync.write(lineArt.png));
-  if (fullArtifacts) {
-    await Promise.all(Object.entries(lineArtVariants).map(([key, variant]) => (
+  const variantEntriesToWrite = Object.entries(lineArtVariants).filter(([key]) => (
+    fullArtifacts || lineArtVariantNames[key] !== lineArtName
+  ));
+  if (variantEntriesToWrite.length) {
+    await Promise.all(variantEntriesToWrite.map(([key, variant]) => (
       fs.writeFile(path.join(options.outputDir, lineArtVariantNames[key]), PNG.sync.write(variant.png))
     )));
   }
@@ -585,7 +604,8 @@ function createLineArtVariants(image, crop) {
   const backdropTrace = createSourceDuotoneArt(image, crop, DUOTONE_PROFILES.backdropTrace, "backdropTrace");
   return {
     contour: createMangaLineArt(image, crop),
-    duotone: posterGhost,
+    duotone: createStandardDuotoneArt(image, crop),
+    pureTone: createPureToneArt(image, crop),
     posterGhost,
     detailInk: createSourceDuotoneArt(image, crop, DUOTONE_PROFILES.detailInk, "detailInk"),
     backdropTrace
@@ -593,16 +613,90 @@ function createLineArtVariants(image, crop) {
 }
 
 function createOfficialLineArtVariants(image, crop, lineArtKey) {
+  const standardDuotone = createStandardDuotoneArt(image, crop);
+  const pureTone = createPureToneArt(image, crop);
+
   if (lineArtKey === "contour") {
-    return { contour: createMangaLineArt(image, crop) };
+    return {
+      duotone: standardDuotone,
+      pureTone,
+      contour: createMangaLineArt(image, crop)
+    };
+  }
+
+  if (lineArtKey === "duotone") {
+    return {
+      duotone: standardDuotone,
+      pureTone
+    };
+  }
+
+  if (lineArtKey === "pureTone") {
+    return {
+      duotone: standardDuotone,
+      pureTone
+    };
   }
 
   const profileKey = DUOTONE_PROFILES[lineArtKey] ? lineArtKey : DEFAULT_DUOTONE_PROFILE;
   const lineArt = createSourceDuotoneArt(image, crop, DUOTONE_PROFILES[profileKey], profileKey);
   return {
-    duotone: lineArt,
+    duotone: standardDuotone,
+    pureTone,
     [profileKey]: lineArt
   };
+}
+
+function createStandardDuotoneArt(image, crop) {
+  const scale = 6;
+  const png = new PNG({ width: crop.width * scale, height: crop.height * scale });
+  const background = estimateBackgroundColor(image, crop);
+  let inkPixels = 0;
+
+  for (let y = 0; y < png.height; y += 1) {
+    for (let x = 0; x < png.width; x += 1) {
+      const sx = crop.x + (x + 0.5) / scale;
+      const sy = crop.y + (y + 0.5) / scale;
+      const pixel = sampleBilinear(image, sx, sy);
+      const alpha = pixel[3] / 255;
+      const foreground = foregroundValueFromPixel(pixel, background);
+      if (alpha < 0.04 || foreground < 0.045) continue;
+
+      const luminance = luma(pixel) / 255;
+      const chroma = saturation(pixel);
+      const color = standardDuotoneColor(luminance, chroma);
+      const inkAlpha = clamp(foreground * (0.26 + (1 - luminance) * 0.5 + chroma * 0.08), 0.08, 0.86);
+      inkPixels += blendLineArtPixel(png, x, y, color, inkAlpha);
+    }
+  }
+
+  return { png, inkPixels, style: STANDARD_DUOTONE_PROFILE.style };
+}
+
+function createPureToneArt(image, crop) {
+  const scale = 6;
+  const png = new PNG({ width: crop.width * scale, height: crop.height * scale });
+  let inkPixels = 0;
+
+  for (let y = 0; y < png.height; y += 1) {
+    for (let x = 0; x < png.width; x += 1) {
+      const sx = crop.x + (x + 0.5) / scale;
+      const sy = crop.y + (y + 0.5) / scale;
+      const pixel = sampleBilinear(image, sx, sy);
+      const alpha = pixel[3] / 255;
+      if (alpha <= 0.004) continue;
+
+      const color = pureToneColor(luma(pixel) / 255);
+      const offset = (y * png.width + x) * 4;
+      png.data[offset] = color[0];
+      png.data[offset + 1] = color[1];
+      png.data[offset + 2] = color[2];
+      png.data[offset + 3] = Math.round(clamp(alpha, 0, 1) * 255);
+      if (png.data[offset + 3] >= 8) inkPixels += 1;
+    }
+  }
+
+  return { png, inkPixels, style: PURE_TONE_PROFILE.style };
 }
 
 function createSourceDuotoneArt(image, crop, profile, profileKey) {
@@ -851,6 +945,31 @@ function duotoneAlphaCurve(luminance, contrast, profileKey) {
   }
 
   return clamp(0.13 + contrast * 0.18 + (1 - luminance) * 0.32, 0.1, 0.66);
+}
+
+function standardDuotoneColor(luminance, chroma) {
+  const value = clamp(luminance + chroma * 0.035, 0, 1);
+  if (value > 0.88) {
+    return mixColor(INK.amber, INK.paper, clamp((value - 0.88) / 0.12, 0, 1) * 0.62);
+  }
+  if (value > 0.62) {
+    return mixColor(INK.red, INK.amber, clamp((value - 0.62) / 0.26, 0, 1) * 0.74);
+  }
+  if (value > 0.28) {
+    return mixColor(INK.redDeep, INK.red, 0.2 + clamp((value - 0.28) / 0.34, 0, 1) * 0.8);
+  }
+  return mixColor(INK.redDeep, INK.red, clamp(value / 0.28, 0, 1) * 0.18);
+}
+
+function pureToneColor(luminance) {
+  const value = clamp(luminance, 0, 1);
+  if (value > 0.72) {
+    return mixColor(INK.amber, INK.paper, clamp((value - 0.72) / 0.28, 0, 1));
+  }
+  if (value > 0.38) {
+    return mixColor(INK.red, INK.amber, clamp((value - 0.38) / 0.34, 0, 1));
+  }
+  return mixColor(INK.redDeep, INK.red, clamp(value / 0.38, 0, 1));
 }
 
 function duotoneColor(luminance, chroma, profileKey) {
