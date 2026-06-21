@@ -3396,6 +3396,20 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   padding: 16px 10px 206px;
 }
 
+.rcartWrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.48 / 1;
+  align-self: start;
+  margin-bottom: 68px;
+}
+
+.rcartWrap > .rcart {
+  height: 100%;
+  margin-bottom: 0;
+}
+
 .rcart {
   --shell-light: #7193c8;
   --shell-mid: #4d73aa;
@@ -4310,6 +4324,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
 .rcart.is-pending-target:not(:disabled) .rcartNamePlate,
 .rcart:focus-visible .rcartNamePlate,
+.rcartWrap:focus-within .rcartNamePlate,
 .rcartNamePlate:hover {
   z-index: 8;
   transform: translateX(-50%);
@@ -4317,8 +4332,57 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .rcart:hover:not(:disabled) .rcartNamePlate,
 .rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
-.rcart.is-pending-target:not(:disabled) .rcartNamePlate {
+.rcart.is-pending-target:not(:disabled) .rcartNamePlate,
+.rcartWrap:hover .rcartNamePlate {
   transform: translateX(calc(-50% - 2.5px)) translateY(5px) rotate(1.2deg);
+}
+
+.rcartPreviewButton {
+  position: absolute;
+  top: calc(100% + 17px);
+  right: 28px;
+  z-index: 9;
+  width: 52px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(246, 198, 107, 0.92);
+  border-radius: 0;
+  background: rgba(14, 13, 12, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(237, 224, 196, 0.14),
+    2px 2px 0 rgba(0, 0, 0, 0.36);
+  color: var(--amber);
+  font-family: var(--cond);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  transform: none;
+  transition:
+    color var(--motion-duration-control) var(--motion-ease-snappy),
+    border-color var(--motion-duration-control) var(--motion-ease-snappy),
+    background var(--motion-duration-control) var(--motion-ease-snappy),
+    transform var(--motion-duration-card) var(--motion-ease-smooth);
+}
+
+.rcartWrap:hover .rcartPreviewButton,
+.rcartWrap:focus-within .rcartPreviewButton {
+  transform: translateX(-2.5px) translateY(5px) rotate(1.2deg);
+}
+
+.rcartPreviewButton:hover,
+.rcartPreviewButton:focus-visible {
+  outline: 0;
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(237, 224, 196, 0.18),
+    2px 2px 0 rgba(0, 0, 0, 0.44);
 }
 
 .rcart.cat-dating {
@@ -4676,7 +4740,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     padding-bottom: 198px;
   }
 
-  .rcart {
+  .rcartWrap {
     margin-bottom: 62px;
   }
 
@@ -4712,6 +4776,12 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
   .rcartNamePlate strong {
     font-size: 13px;
+  }
+
+  .rcartPreviewButton {
+    top: calc(100% + 15px);
+    right: 24px;
+    width: 48px;
   }
 }
 
@@ -4775,6 +4845,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart.is-pending-target:not(:disabled) .rcartNamePlate,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcart:focus-visible .rcartNamePlate,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartWrap:hover .rcartNamePlate,
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate:hover {
   grid-template-rows: 14px minmax(32px, auto);
   width: min(104%, 224px);
@@ -4784,6 +4855,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   filter: none;
   transform: translateX(-50%);
   transition: none;
+}
+
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartWrap:hover .rcartPreviewButton,
+:root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartWrap:focus-within .rcartPreviewButton {
+  transform: none;
 }
 
 :root[data-runtime="tauri"] .cartShelf:not(.cartShelf--canvas) .rcartNamePlate strong,
@@ -5647,7 +5723,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 26px 0 9px;
+  padding: 0 86px 0 9px;
   background: #171511;
   color: var(--amber);
   font-family: var(--cond);
@@ -6636,6 +6712,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .pvCrumb b { color: var(--amber); }
 .pvSp { flex: 1; }
 .pvModeSeg { flex: none; }
+.pvModeSeg.segmentedControl { flex-wrap: nowrap; }
 
 .pvTop { flex: 1; display: grid; grid-template-columns: 258px minmax(0, 1fr); gap: 14px; align-items: stretch; min-height: 0; overflow: hidden; }
 @media (max-width: 900px) { .pvTop { grid-template-columns: 1fr; } }
@@ -6834,8 +6911,9 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .pvSelect:disabled { opacity: 0.5; }
 .pvScrub { flex: 1; min-width: 24px; height: 6px; position: relative; border: 1px solid var(--stroke); background: rgba(0, 0, 0, 0.45); }
 .pvScrub i { position: absolute; left: 1px; top: 1px; bottom: 1px; background: repeating-linear-gradient(90deg, var(--red) 0 6px, var(--red-deep) 6px 9px); }
+.pvStageWrap.dual .pvScrub { display: none; }
 .pvSpeed { display: flex; align-items: center; gap: 5px; }
-.pvSpeed input { width: 48px; accent-color: var(--red); }
+.pvSpeed .pvSelect { max-width: 54px; }
 .pvView input[type="range"] {
   height: 14px;
   margin: 0;

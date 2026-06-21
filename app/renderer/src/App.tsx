@@ -76,6 +76,8 @@ type PreviewStageControls = {
   resetView: () => void;
 };
 
+const PREVIEW_SPEED_OPTIONS = [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+
 type ViewKey = "library" | "roster" | "profiles" | "preview" | "stats" | "logs" | "settings";
 type NavItem = { key: ViewKey; label: string; icon: string; group: "collection" | "tools" | "system" };
 
@@ -625,7 +627,7 @@ function PreviewSpineRenderer({
           setSpeed: (nextSpeed: number) => {
             if (!spine) return;
             const runtime = runtimeRef.current;
-            runtime.speed = Math.max(0.1, Math.min(2.5, nextSpeed));
+            runtime.speed = Math.max(0, Math.min(2, nextSpeed));
             spine.state.timeScale = runtime.playing ? runtime.speed : 0;
             emit();
           },
@@ -1396,6 +1398,7 @@ export function App() {
                       buttonRef={(node) => registerCartNode(mod.folder, node)}
                       isPendingLinked={pendingLinked}
                       isPendingTarget={spotlitPendingFolder === mod.folder}
+                      onPreview={() => openInPreview(detectModCharacter(mod)?.character ?? formatFolderName(mod.folder), mod)}
                     />
                   );
                 })}
@@ -1784,17 +1787,18 @@ export function App() {
           </label>
           <span className="pvScrub"><i style={{ width: `${Math.max(0, Math.min(100, info.progress))}%` }} /></span>
           <label className="pvSel pvSpeed">
-            <span>{info.speed.toFixed(1)}×</span>
-            <input
-              type="range"
-              min="0.1"
-              max="2.5"
-              step="0.1"
+            <span>Speed</span>
+            <select
+              className="pvSelect"
               disabled={!ready}
               value={info.speed}
               onChange={(event) => pvControlsRef.current[slot]?.setSpeed(Number(event.target.value))}
               aria-label={`Preview ${slot.toUpperCase()} speed`}
-            />
+            >
+              {PREVIEW_SPEED_OPTIONS.map((speed) => (
+                <option key={speed} value={speed}>{speed}×</option>
+              ))}
+            </select>
           </label>
           <button type="button" className="pvTb" disabled={!ready} title="Reset view" onClick={() => pvControlsRef.current[slot]?.resetView()}>⌖</button>
         </div>
@@ -1808,7 +1812,7 @@ export function App() {
         <span className="pvTitle">Preview</span>
         <span className="pvCrumb">{pvFocusedMod ? <>▶ Previewing <b>{detectModCharacter(pvFocusedMod)?.character ?? formatFolderName(pvFocusedMod.folder)}</b></> : "Pick a character, then a mod"}</span>
         <span className="pvSp" />
-        <div className="segmentedControl pvModeSeg" role="tablist" aria-label="Preview mode">
+        <div className="segmentedControl rstSort pvModeSeg" role="tablist" aria-label="Preview mode">
           <button type="button" className={pvMode === "single" ? "active" : ""} onClick={() => switchPreviewMode("single")} aria-pressed={pvMode === "single"}><span>Single</span></button>
           <button type="button" className={pvMode === "dual" ? "active" : ""} onClick={() => switchPreviewMode("dual")} aria-pressed={pvMode === "dual"}><span>Dual · 比較</span></button>
         </div>
@@ -2114,6 +2118,7 @@ export function App() {
                               lockedReason={modsLocked ? modsLockReason : undefined}
                               onToggle={() => updateDesired(mod.folder, !isDesired(mod.folder))}
                               authorRules={authorRules}
+                              onPreview={() => openInPreview(expanded.name, mod)}
                             />
                           );
                         })}
@@ -3139,8 +3144,9 @@ function CartridgeRealistic(props: {
   buttonRef?: (node: HTMLButtonElement | null) => void;
   isPendingLinked?: boolean;
   isPendingTarget?: boolean;
+  onPreview?: () => void;
 }) {
-  const { mod, have, selected, tone, locked, lockedReason, onToggle, authorRules = DEFAULT_AUTHOR_RULES, buttonRef, isPendingLinked = false, isPendingTarget = false } = props;
+  const { mod, have, selected, tone, locked, lockedReason, onToggle, authorRules = DEFAULT_AUTHOR_RULES, buttonRef, isPendingLinked = false, isPendingTarget = false, onPreview } = props;
   const meta = mod as RuntimeMod & { author?: string; cover?: string };
   const category = typeToCategory(mod.type);
   const folderName = formatFolderName(mod.folder);
@@ -3171,64 +3177,80 @@ function CartridgeRealistic(props: {
   const podTone = tone === "removed" ? "minus" : have ? "check" : "plus";
   const podMark = podTone === "minus" ? "-" : podTone === "check" ? "✓" : "+";
   return (
-    <button
-      type="button"
-      ref={buttonRef}
-      className={`rcart cat-${category} ${stateClass} ${skinClass} ${have ? "is-have" : ""} ${selected ? "is-on" : ""} ${isPendingLinked ? "is-pending-linked" : ""} ${isPendingTarget ? "is-pending-target" : ""}`}
-      disabled={locked || mountBlocked}
-      onClick={onToggle}
-      aria-pressed={selected}
-      title={title}
-    >
-      <span className="rcartShell">
-        <span className="rcartRidges rcartRidges--left" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
-        <span className="rcartRidges rcartRidges--right" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
-        <span className={`rcartNo rcartTypeBadge is-${category}`} aria-hidden="true" title={typeLabel}>
-          <img src={typeIcon} alt="" draggable={false} />
-        </span>
-        <span className="rcartLabel">
-          <span className="rcartArt" style={coverStyle} aria-hidden="true" />
-          <span className="rcartAged" aria-hidden="true" />
-          <span className="rcartGloss" aria-hidden="true" />
-          {detectedCharacter ? (
-            <span className="rcartPortrait" aria-hidden="true" title={`${detectedCharacter.character} - ${detectedCharacter.costume}`}>
-              <img src={publicAssetPath(`characters/standing/${detectedCharacter.imageId}.png`)} alt="" draggable={false} loading="lazy" />
+    <span className="rcartWrap">
+      <button
+        type="button"
+        ref={buttonRef}
+        className={`rcart cat-${category} ${stateClass} ${skinClass} ${have ? "is-have" : ""} ${selected ? "is-on" : ""} ${isPendingLinked ? "is-pending-linked" : ""} ${isPendingTarget ? "is-pending-target" : ""}`}
+        disabled={locked || mountBlocked}
+        onClick={onToggle}
+        aria-pressed={selected}
+        title={title}
+      >
+        <span className="rcartShell">
+          <span className="rcartRidges rcartRidges--left" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+          <span className="rcartRidges rcartRidges--right" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+          <span className={`rcartNo rcartTypeBadge is-${category}`} aria-hidden="true" title={typeLabel}>
+            <img src={typeIcon} alt="" draggable={false} />
+          </span>
+          <span className="rcartLabel">
+            <span className="rcartArt" style={coverStyle} aria-hidden="true" />
+            <span className="rcartAged" aria-hidden="true" />
+            <span className="rcartGloss" aria-hidden="true" />
+            {detectedCharacter ? (
+              <span className="rcartPortrait" aria-hidden="true" title={`${detectedCharacter.character} - ${detectedCharacter.costume}`}>
+                <img src={publicAssetPath(`characters/standing/${detectedCharacter.imageId}.png`)} alt="" draggable={false} loading="lazy" />
+              </span>
+            ) : null}
+            <span className="rcartHead">
+              <span className="rcartPack">{pack}</span>
+              <span className="rcartCode">{mod.key}</span>
+            </span>
+            <span className="rcartTitle2">{displayTitle}</span>
+            <span className="rcartCredits" aria-hidden="true">
+              <span>ASSET {mod.key}</span>
+              <span>{`MOD BY ${detectedAuthor.name.toUpperCase()}`}</span>
+              <span>RUNTIME {runtimeLabel}</span>
+            </span>
+          </span>
+          {showAuthorSticker ? (
+            <span className="rcartAuthorSticker" style={authorStyle} aria-hidden="true">
+              <span className="rcartAuthorLabel">Author</span>
+              <strong><span className="rcartAuthorName">{detectedAuthor.name}</span></strong>
             </span>
           ) : null}
-          <span className="rcartHead">
-            <span className="rcartPack">{pack}</span>
-            <span className="rcartCode">{mod.key}</span>
+          <span className="rcartPlastic" aria-hidden="true"><i /><i /><i /><i /></span>
+          <span className="rcartWarningSticker" aria-hidden="true">
+            <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
+              <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
+              <path className="rcartWarningInnerLine" d="M32 16 C33.1 16 33.8 17.1 34.5 18.4 L49.1 44.2 C49.9 45.6 49 47.2 47.4 47.2 H16.6 C15 47.2 14.1 45.6 14.9 44.2 L29.5 18.4 C30.2 17.1 30.9 16 32 16 Z" />
+              <path className="rcartWarningBang" d="M32 25.4 L32 34.6" />
+              <circle className="rcartWarningDot" cx="32" cy="40.9" r="1.8" />
+            </svg>
           </span>
-          <span className="rcartTitle2">{displayTitle}</span>
-          <span className="rcartCredits" aria-hidden="true">
-            <span>ASSET {mod.key}</span>
-            <span>{`MOD BY ${detectedAuthor.name.toUpperCase()}`}</span>
-            <span>RUNTIME {runtimeLabel}</span>
-          </span>
+          <span className="rcartBottomGroove" aria-hidden="true" />
         </span>
-        {showAuthorSticker ? (
-          <span className="rcartAuthorSticker" style={authorStyle} aria-hidden="true">
-            <span className="rcartAuthorLabel">Author</span>
-            <strong><span className="rcartAuthorName">{detectedAuthor.name}</span></strong>
-          </span>
-        ) : null}
-        <span className="rcartPlastic" aria-hidden="true"><i /><i /><i /><i /></span>
-        <span className="rcartWarningSticker" aria-hidden="true">
-          <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
-            <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
-            <path className="rcartWarningInnerLine" d="M32 16 C33.1 16 33.8 17.1 34.5 18.4 L49.1 44.2 C49.9 45.6 49 47.2 47.4 47.2 H16.6 C15 47.2 14.1 45.6 14.9 44.2 L29.5 18.4 C30.2 17.1 30.9 16 32 16 Z" />
-            <path className="rcartWarningBang" d="M32 25.4 L32 34.6" />
-            <circle className="rcartWarningDot" cx="32" cy="40.9" r="1.8" />
-          </svg>
+        <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
+        <span className="rcartNamePlate" aria-hidden="true">
+          <span className="rcartNameKind">{pack}</span>
+          <strong>{displayTitle}</strong>
         </span>
-        <span className="rcartBottomGroove" aria-hidden="true" />
-      </span>
-      <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
-      <span className="rcartNamePlate" aria-hidden="true">
-        <span className="rcartNameKind">{pack}</span>
-        <strong>{displayTitle}</strong>
-      </span>
-    </button>
+      </button>
+      {onPreview ? (
+        <button
+          type="button"
+          className="rcartPreviewButton"
+          onClick={(event) => {
+            event.stopPropagation();
+            onPreview();
+          }}
+          title={`Preview ${folderName}`}
+          aria-label={`Preview ${folderName}`}
+        >
+          <span aria-hidden="true">PREV</span>
+        </button>
+      ) : null}
+    </span>
   );
 }
 
@@ -3263,8 +3285,9 @@ function CanvasCartridge(props: {
   buttonRef?: (node: HTMLButtonElement | null) => void;
   isPendingLinked?: boolean;
   isPendingTarget?: boolean;
+  onPreview?: () => void;
 }) {
-  const { mod, have, selected, tone, locked, lockedReason, onToggle, authorRules = DEFAULT_AUTHOR_RULES, buttonRef, isPendingLinked = false, isPendingTarget = false } = props;
+  const { mod, have, selected, tone, locked, lockedReason, onToggle, authorRules = DEFAULT_AUTHOR_RULES, buttonRef, isPendingLinked = false, isPendingTarget = false, onPreview } = props;
   const meta = mod as RuntimeMod & { author?: string; cover?: string };
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const plasticCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -3350,55 +3373,71 @@ function CanvasCartridge(props: {
   const podMark = podTone === "minus" ? "-" : podTone === "check" ? "✓" : "+";
 
   return (
-    <button
-      type="button"
-      ref={buttonRef}
-      className={`rcart rcart--canvas cat-${category} ${stateClass} ${skinClass} ${have ? "is-have" : ""} ${selected ? "is-on" : ""} ${isPendingLinked ? "is-pending-linked" : ""} ${isPendingTarget ? "is-pending-target" : ""}`}
-      disabled={locked || mountBlocked}
-      onClick={onToggle}
-      aria-pressed={selected}
-      title={title}
-    >
-      <span className="rcartShell">
-        <canvas className="rcartCanvasBase" ref={baseCanvasRef} aria-hidden="true" />
-        <span className={`rcartNo rcartTypeBadge is-${category}`} aria-hidden="true" title={typeLabel}>
-          <img src={typeIcon} alt="" draggable={false} />
-        </span>
-        <span className="rcartLabel">
-          <span className="rcartHead">
-            <span className="rcartPack">{pack}</span>
-            <span className="rcartCode">{mod.key}</span>
+    <span className="rcartWrap">
+      <button
+        type="button"
+        ref={buttonRef}
+        className={`rcart rcart--canvas cat-${category} ${stateClass} ${skinClass} ${have ? "is-have" : ""} ${selected ? "is-on" : ""} ${isPendingLinked ? "is-pending-linked" : ""} ${isPendingTarget ? "is-pending-target" : ""}`}
+        disabled={locked || mountBlocked}
+        onClick={onToggle}
+        aria-pressed={selected}
+        title={title}
+      >
+        <span className="rcartShell">
+          <canvas className="rcartCanvasBase" ref={baseCanvasRef} aria-hidden="true" />
+          <span className={`rcartNo rcartTypeBadge is-${category}`} aria-hidden="true" title={typeLabel}>
+            <img src={typeIcon} alt="" draggable={false} />
           </span>
-          <span className="rcartTitle2">{displayTitle}</span>
-          <span className="rcartCredits" aria-hidden="true">
-            <span>ASSET {mod.key}</span>
-            <span>{`MOD BY ${detectedAuthor.name.toUpperCase()}`}</span>
-            <span>RUNTIME {runtimeLabel}</span>
+          <span className="rcartLabel">
+            <span className="rcartHead">
+              <span className="rcartPack">{pack}</span>
+              <span className="rcartCode">{mod.key}</span>
+            </span>
+            <span className="rcartTitle2">{displayTitle}</span>
+            <span className="rcartCredits" aria-hidden="true">
+              <span>ASSET {mod.key}</span>
+              <span>{`MOD BY ${detectedAuthor.name.toUpperCase()}`}</span>
+              <span>RUNTIME {runtimeLabel}</span>
+            </span>
           </span>
-        </span>
-        {showAuthorSticker ? (
-          <span className="rcartAuthorSticker" style={authorStyle} aria-hidden="true">
-            <span className="rcartAuthorLabel">Author</span>
-            <strong><span className="rcartAuthorName">{detectedAuthor.name}</span></strong>
+          {showAuthorSticker ? (
+            <span className="rcartAuthorSticker" style={authorStyle} aria-hidden="true">
+              <span className="rcartAuthorLabel">Author</span>
+              <strong><span className="rcartAuthorName">{detectedAuthor.name}</span></strong>
+            </span>
+          ) : null}
+          <canvas className="rcartCanvasPlastic" ref={plasticCanvasRef} aria-hidden="true" />
+          <span className="rcartWarningSticker" aria-hidden="true">
+            <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
+              <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
+              <path className="rcartWarningInnerLine" d="M32 16 C33.1 16 33.8 17.1 34.5 18.4 L49.1 44.2 C49.9 45.6 49 47.2 47.4 47.2 H16.6 C15 47.2 14.1 45.6 14.9 44.2 L29.5 18.4 C30.2 17.1 30.9 16 32 16 Z" />
+              <path className="rcartWarningBang" d="M32 25.4 L32 34.6" />
+              <circle className="rcartWarningDot" cx="32" cy="40.9" r="1.8" />
+            </svg>
           </span>
-        ) : null}
-        <canvas className="rcartCanvasPlastic" ref={plasticCanvasRef} aria-hidden="true" />
-        <span className="rcartWarningSticker" aria-hidden="true">
-          <svg className="rcartWarningIcon" viewBox="0 0 64 58" focusable="false">
-            <path className="rcartWarningTriangle" d="M32 6 C34.8 6 36.2 8 37.8 10.8 L58.3 47 C60.1 50.2 58.1 54 54.3 54 H9.7 C5.9 54 3.9 50.2 5.7 47 L26.2 10.8 C27.8 8 29.2 6 32 6 Z" />
-            <path className="rcartWarningInnerLine" d="M32 16 C33.1 16 33.8 17.1 34.5 18.4 L49.1 44.2 C49.9 45.6 49 47.2 47.4 47.2 H16.6 C15 47.2 14.1 45.6 14.9 44.2 L29.5 18.4 C30.2 17.1 30.9 16 32 16 Z" />
-            <path className="rcartWarningBang" d="M32 25.4 L32 34.6" />
-            <circle className="rcartWarningDot" cx="32" cy="40.9" r="1.8" />
-          </svg>
+          <span className="rcartBottomGroove" aria-hidden="true" />
         </span>
-        <span className="rcartBottomGroove" aria-hidden="true" />
-      </span>
-      <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
-      <span className="rcartNamePlate" aria-hidden="true">
-        <span className="rcartNameKind">{pack}</span>
-        <strong>{displayTitle}</strong>
-      </span>
-    </button>
+        <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
+        <span className="rcartNamePlate" aria-hidden="true">
+          <span className="rcartNameKind">{pack}</span>
+          <strong>{displayTitle}</strong>
+        </span>
+      </button>
+      {onPreview ? (
+        <button
+          type="button"
+          className="rcartPreviewButton"
+          onClick={(event) => {
+            event.stopPropagation();
+            onPreview();
+          }}
+          title={`Preview ${folderName}`}
+          aria-label={`Preview ${folderName}`}
+        >
+          <span aria-hidden="true">PREV</span>
+        </button>
+      ) : null}
+    </span>
   );
 }
 
