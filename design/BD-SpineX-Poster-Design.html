@@ -374,6 +374,79 @@ code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;color:va
 .promini{width:36px;height:21px;border-radius:3px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
 .proact{display:flex;align-items:center;gap:8px;flex:none}
 
+/* §14 logs — press log */
+.lgtools{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;position:relative;z-index:1}
+.lgchips{display:flex;gap:8px}
+.lgchip{display:flex;align-items:center;gap:6px;font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim);border:1px solid var(--stroke);padding:4px 9px}
+.lgchip i{width:8px;height:8px;flex:none}
+.lgchip.ok i{background:#67c98a}.lgchip.warn i{background:var(--amber)}.lgchip.err i{background:var(--red)}
+.lgchip b{color:var(--paper);font-weight:800}
+.lgspace{flex:1}
+.lgconsole{position:relative;overflow:hidden;border:2px solid var(--paper);background:rgba(14,13,12,.55);-webkit-backdrop-filter:blur(8px) saturate(1.4);backdrop-filter:blur(8px) saturate(1.4);padding:10px 12px 12px 36px;min-height:230px}
+.lgconsole::before{content:"";position:absolute;left:0;top:0;bottom:0;width:26px;z-index:1;background:rgba(0,0,0,.32);border-right:1px solid var(--stroke);background-image:radial-gradient(circle at 13px 9px, rgba(0,0,0,.6) 0 2.6px, transparent 3.1px);background-size:26px 19px;background-repeat:repeat-y}
+.lgconsole::after{content:"";position:absolute;inset:0 0 0 26px;z-index:0;pointer-events:none;opacity:.5;background:repeating-linear-gradient(0deg, rgba(237,224,196,.045) 0 1px, transparent 1px 5px)}
+.lgrow{position:relative;z-index:2;display:grid;grid-template-columns:auto 62px 1fr;align-items:center;gap:10px;padding:4px 6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.55;color:var(--paper-dim);border-left:2px solid transparent}
+.lgmark{width:9px;height:9px;flex:none;background:color-mix(in srgb,var(--paper) 40%,transparent)}
+.lgtime{color:color-mix(in srgb,var(--paper) 42%,transparent);white-space:nowrap}
+.lgmsg{overflow-wrap:anywhere}
+.lgrow.ok .lgmark{background:#67c98a}
+.lgrow.warn{border-left-color:var(--amber)}.lgrow.warn .lgmark{background:var(--amber)}.lgrow.warn .lgmsg{color:var(--amber)}
+.lgrow.err{border-left-color:var(--red)}.lgrow.err .lgmark{background:var(--red)}.lgrow.err .lgmsg{color:#ff8b7a;font-weight:700}
+
+/* §15 preview — the press bench */
+.pvbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.pvbar .crumb{font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim)}
+.pvbar .crumb b{color:var(--amber)}
+.pvbar .sp{flex:1}
+.pvwrap{display:grid;grid-template-columns:250px minmax(0,1fr) 248px;gap:14px;align-items:stretch;min-height:438px}
+@media(max-width:900px){.pvwrap{grid-template-columns:1fr}}
+.pvfinder{display:grid;grid-template-columns:104px 1fr;border:1px solid var(--stroke);background:var(--glass);-webkit-backdrop-filter:blur(8px) saturate(1.3);backdrop-filter:blur(8px) saturate(1.3)}
+.pvcol{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--stroke)}
+.pvcol:last-child{border-right:0}
+.pvcolhd{font-family:var(--cond);font-weight:700;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);padding:8px 9px 6px;border-bottom:1px solid var(--stroke)}
+.pvcolhd .tc{font-family:var(--tc);color:var(--paper-dim);letter-spacing:.02em}
+.pvlist{padding:4px;overflow:auto}
+.pvitem{display:flex;align-items:center;gap:6px;padding:5px 7px;font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--paper-dim);border-left:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pvitem.mod{font-size:11px}
+.pvitem .ct{margin-left:auto;font-size:10px;color:var(--amber)}
+.pvitem .dot{width:7px;height:7px;flex:none;background:var(--amber)}
+.pvitem.on{background:linear-gradient(100deg,var(--red) 0 82%,transparent 82%);color:var(--paper);border-left-color:var(--amber)}
+.pvstageWrap{display:grid;gap:12px}
+.pvstageWrap.dual{grid-template-columns:1fr 1fr}
+.pvstage{position:relative;overflow:hidden;display:flex;flex-direction:column;border:2px solid var(--paper);background:radial-gradient(300px 220px at 50% -4%, #1b1812, #0b0a08)}
+.pvstage .field{position:relative;flex:1;min-height:236px;display:grid;place-items:center;overflow:hidden}
+.pvstage .field::before{content:"";position:absolute;inset:0;opacity:.05;background-image:radial-gradient(var(--red) 1px,transparent 1.5px);background-size:15px 15px}
+.pvtag{position:absolute;z-index:2;top:8px;left:8px;width:24px;height:24px;display:grid;place-items:center;background:var(--red);color:var(--paper);font-family:var(--cond);font-weight:800;font-size:14px;clip-path:polygon(0 0,100% 0,100% 100%,22% 100%)}
+.pvreg{position:absolute;z-index:1;width:16px;height:16px;border:1.5px solid rgba(237,224,196,.3);border-radius:50%}
+.pvreg::before,.pvreg::after{content:"";position:absolute;background:rgba(237,224,196,.3)}
+.pvreg::before{left:50%;top:-4px;bottom:-4px;width:1.5px;transform:translateX(-50%)}
+.pvreg::after{top:50%;left:-4px;right:-4px;height:1.5px;transform:translateY(-50%)}
+.pvspine{position:relative;width:120px;height:188px;z-index:1}
+.pvspine::before{content:"";position:absolute;left:50%;top:0;width:52px;height:52px;border-radius:50%;transform:translateX(-50%);background:radial-gradient(circle at 50% 38%, rgba(168,188,222,.72), rgba(49,89,141,.22))}
+.pvspine::after{content:"";position:absolute;left:50%;top:46px;width:96px;height:142px;transform:translateX(-50%);border-radius:46px 46px 16px 16px;background:linear-gradient(180deg, rgba(113,147,200,.58), rgba(34,70,116,.18))}
+.pvname{position:absolute;z-index:2;left:9px;bottom:9px;font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--paper-dim)}
+.pvplay{display:flex;align-items:center;gap:8px;padding:7px 9px;border-top:1px solid var(--stroke);background:rgba(11,10,8,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.pvplay .tb{width:26px;height:26px;flex:none;border:1px solid var(--stroke);background:var(--glass);color:var(--paper);display:grid;place-items:center;font-size:11px}
+.pvplay .tb.play{background:var(--red);border-color:var(--red-deep)}
+.pvplay .sel{font-family:var(--cond);font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--paper);border:1px solid var(--stroke);padding:4px 7px;white-space:nowrap}
+.pvplay .sel .cv{color:var(--amber)}
+.pvscrub{flex:1;height:4px;min-width:20px;background:rgba(0,0,0,.45);position:relative}
+.pvscrub i{position:absolute;left:0;top:0;bottom:0;background:repeating-linear-gradient(90deg,var(--red) 0 6px,var(--red-deep) 6px 9px)}
+.pvinspect{display:flex;flex-direction:column;gap:13px;border:1px solid var(--stroke);background:var(--glass);-webkit-backdrop-filter:blur(8px) saturate(1.3);backdrop-filter:blur(8px) saturate(1.3);padding:12px}
+.pvsec .h{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:var(--cond);font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper)}
+.pvsec .h .num{color:var(--red)}
+.pvsec .h i{flex:1;height:1px;background:var(--stroke)}
+.pvsearch{display:flex;align-items:center;gap:6px;border:1px solid var(--stroke);background:rgba(0,0,0,.26);padding:5px 8px;margin-bottom:7px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--paper-dim)}
+.pvlayer{display:flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid var(--stroke);background:var(--glass);margin-bottom:5px;font-family:var(--cond);font-weight:700;font-size:11px;text-transform:uppercase;color:var(--paper)}
+.pvlayer .gr{color:var(--paper-dim);cursor:grab}
+.pvlayer .eye{margin-left:auto;color:var(--amber)}
+.pvpart{display:grid;grid-template-columns:1fr 64px auto;align-items:center;gap:8px;padding:4px 4px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--paper-dim)}
+.pvslider{position:relative;height:4px;background:rgba(0,0,0,.45)}
+.pvslider i{position:absolute;left:0;top:0;bottom:0;background:var(--amber)}
+.pvslider b{position:absolute;top:50%;width:9px;height:9px;background:var(--paper);transform:translate(-50%,-50%);box-shadow:0 0 0 1px var(--ink)}
+.pvpart .eye{color:var(--amber)}
+.pvpart.off{opacity:.5}.pvpart.off .eye{color:var(--paper-dim)}
+
 footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
 .reveal{opacity:0;transform:translateY(16px);transition:.6s cubic-bezier(.2,.7,.2,1)}
 .reveal.in{opacity:1;transform:none}
@@ -397,7 +470,7 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
     <div class="brand"><span class="mark">B</span> BD-SpineX · 印刷局</div>
     <nav>
       <a href="#thesis">主張</a><a href="#schemes">配色</a><a href="#buttons">按鈕</a>
-      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a><a href="#sidebar">側欄</a><a href="#library">Library頁</a><a href="#settings">設定</a><a href="#stats">統計</a><a href="#roster">名冊</a><a href="#profiles">編組</a>
+      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a><a href="#sidebar">側欄</a><a href="#library">Library頁</a><a href="#settings">設定</a><a href="#stats">統計</a><a href="#roster">名冊</a><a href="#profiles">編組</a><a href="#logs">紀錄</a><a href="#preview">預覽</a>
     </nav>
   </div>
 </div>
@@ -998,6 +1071,172 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
     </div>
   </div>
   <p class="tc" style="margin-top:16px"><strong style="color:var(--paper)">編組票</strong>＝巨數編號＋名稱＋迷你卡帶縮圖＋LOAD 蓋章鈕（印刷主鈕，套用＝把掛載狀態調成該組）。當前組亮紅左邊＋ACTIVE。「Clean / Vanilla」是內建空組＝一鍵全卸。和 Library 的 PENDING／APPLY 是同一套套用流程。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- LOGS -->
+<section id="logs" class="wrap reveal">
+  <div class="secnum">14 — LOGS 紀錄 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印字紀錄 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Log · 連續報表紙</span></h2>
+  <p class="tc" style="max-width:66ch">把純文字 log 變成<strong style="color:var(--paper)">玻璃下的連續報表紙</strong>：左緣是點陣印表機的<strong style="color:var(--amber)">送紙孔</strong>，每一行像印出來的紀錄——等寬字、油墨色 tone（紅＝錯誤、琥珀＝警告、綠＝正常）＋方塊蓋章。整捲紙裝在毛玻璃機殼裡，頂部是印刷標頭＋計數章＋篩選。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div class="lgtools">
+      <div class="lgchips">
+        <span class="lgchip ok"><i></i><b>18</b> OK</span>
+        <span class="lgchip warn"><i></i><b>1</b> Warn</span>
+        <span class="lgchip err"><i></i><b>2</b> Err</span>
+      </div>
+      <span class="lgspace"></span>
+      <div class="cfgseg"><b class="on">All</b><b>OK</b><b>Warn</b><b>Err</b></div>
+      <button class="pbtn paper sm">Copy</button>
+      <button class="pbtn ghost sm">Clear</button>
+    </div>
+    <div class="lgconsole">
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:14:07</span><span class="lgmsg">Runtime ready · 31 cartridges mounted</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:14:05</span><span class="lgmsg">Applied: 4 mounted, 1 unmounted. Restart the game to apply changes.</span></div>
+      <div class="lgrow warn"><span class="lgmark"></span><span class="lgtime">22:13:58</span><span class="lgmsg">BrownDust II is running — close the game before changing injection.</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:13:40</span><span class="lgmsg">Staged JUSTIA WHITE REAPER for mount.</span></div>
+      <div class="lgrow err"><span class="lgmark"></span><span class="lgtime">22:13:22</span><span class="lgmsg">Loader not found · install Runtime Injection in Settings.</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:13:01</span><span class="lgmsg">Scanned Mods Folder · 75 cartridges.</span></div>
+      <div class="lgrow err"><span class="lgmark"></span><span class="lgtime">22:12:54</span><span class="lgmsg">Same-key conflict: char000202 staged twice.</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:12:40</span><span class="lgmsg">Ready.</span></div>
+    </div>
+  </div>
+
+  <div class="lib" style="margin-top:18px">
+    <div class="sbanno" style="margin:0"><h4 class="tc">設計動作</h4>
+      <ol>
+        <li><b>連續報表紙</b>：左緣<span class="tc">送紙孔</span>（點陣印表機）＋掃描線網底，整體裝在毛玻璃機殼，是「印刷紙 × 玻璃」的並置。</li>
+        <li><b>油墨 tone</b>：每行一個方塊蓋章＋左緣油墨條——<span style="color:#67c98a">綠＝OK</span>、<span style="color:var(--amber)">琥珀＝警告</span>、<span style="color:#ff8b7a">紅＝錯誤</span>；等寬字維持「印出來」的質感。</li>
+        <li><b>印刷標頭</b>：tone 計數章（OK／Warn／Err）一眼掌握狀態；篩選用你喜歡的玻璃＋紅分段（All／OK／Warn／Err）。</li>
+        <li><b>動作</b>：Copy（複製全部）紙鈕、Clear（清空）ghost 鈕。最新在上、上限 200 行（沿用現況）。</li>
+      </ol>
+    </div>
+    <div class="sbanno" style="margin:0"><h4 class="tc">玻璃 × 印刷</h4>
+      <p class="tc" style="margin:0;font-size:13.5px">機殼＝<strong style="color:var(--paper)">毛玻璃</strong>（Tauri 一律毛玻璃），讓背後角色 backdrop 柔和透出；紙紋、送紙孔、油墨 tone、計數章＝<strong style="color:var(--amber)">印刷</strong>。玻璃負責「機器的當下」，印刷負責「印出的紀錄」。資料沿用現有 <code>logs</code>（time／message／tone），不動邏輯，只重塑外觀＋加篩選/複製/清除。</p>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">落地對應：</strong>改 <code>App.tsx</code> 的 <code>logView</code>（標頭＋送紙孔列＋tone 行＋篩選/Copy/Clear）與 <code>styles.css</code> 的 <code>:where([data-theme="night"]) .log*</code>。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- PREVIEW -->
+<section id="preview" class="wrap reveal">
+  <div class="secnum">15 — PREVIEW 預覽 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷預覽台 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Bench · Spine 試映</span></h2>
+  <p class="tc" style="max-width:68ch">套用前先<strong style="color:var(--paper)">試映</strong>：用 Pixi + pixi-spine 把 mod 的 spine 渲染在台面上（參考本機 Spine-Viewer）。三區工作台——左<strong style="color:var(--amber)">資料夾雙欄</strong>（角色→該角色的 mod，橫向 miller column）、中<strong style="color:var(--amber)">試映台</strong>（spine＋播放）、右<strong style="color:var(--amber)">檢視器</strong>（圖層／部件透明度／搜尋／皮膚動畫）。最多<strong style="color:var(--paper)">雙開比較</strong>。其他頁面點卡帶／mod 可直接跳來開啟。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div class="pvbar">
+      <span class="crumb">▶ 從 <b>Library</b> 載入 · Justia White Reaper</span>
+      <span class="sp"></span>
+      <div class="cfgseg"><b class="on">單開</b><b>雙開比較</b></div>
+    </div>
+    <div class="pvwrap">
+      <!-- finder: characters -> mods -->
+      <div class="pvfinder">
+        <div class="pvcol">
+          <div class="pvcolhd"><span class="tc">角色</span> Chars</div>
+          <div class="pvlist">
+            <div class="pvitem on">Justia<span class="ct">3</span></div>
+            <div class="pvitem">Helena<span class="ct">5</span></div>
+            <div class="pvitem">Diana<span class="ct">2</span></div>
+            <div class="pvitem">Sylvia<span class="ct">4</span></div>
+            <div class="pvitem">Eclipse<span class="ct">1</span></div>
+            <div class="pvitem">Liatris<span class="ct">2</span></div>
+          </div>
+        </div>
+        <div class="pvcol">
+          <div class="pvcolhd"><span class="tc">模組</span> Mods · Justia</div>
+          <div class="pvlist">
+            <div class="pvitem mod on"><span class="dot"></span>White Reaper</div>
+            <div class="pvitem mod"><span class="dot"></span>Blood Glutton</div>
+            <div class="pvitem mod"><span class="dot"></span>Skillcut Edit</div>
+          </div>
+        </div>
+      </div>
+      <!-- stage -->
+      <div class="pvstageWrap">
+        <div class="pvstage">
+          <span class="pvtag">A</span>
+          <div class="field">
+            <span class="pvreg" style="left:10px;top:10px"></span>
+            <span class="pvreg" style="right:10px;bottom:34px"></span>
+            <span class="pvspine"></span>
+            <span class="pvname">Justia · White Reaper · idle</span>
+          </div>
+          <div class="pvplay">
+            <button class="tb play">▶</button>
+            <span class="sel">Anim <span class="cv">idle</span> ▾</span>
+            <span class="sel">Skin <span class="cv">default</span> ▾</span>
+            <span class="pvscrub"><i style="width:62%"></i></span>
+            <span class="sel">1.0×</span>
+          </div>
+        </div>
+      </div>
+      <!-- inspector -->
+      <div class="pvinspect">
+        <div class="pvsec">
+          <div class="h"><span class="num">▤</span>Layers <span class="tc" style="color:var(--paper-dim);font-weight:700">圖層</span><i></i></div>
+          <div class="pvlayer"><span class="gr">⠿</span>White Reaper<span class="eye">●</span></div>
+          <div class="pvlayer"><span class="gr">⠿</span>FX Overlay<span class="eye">●</span></div>
+          <button class="pbtn ghost sm" style="width:100%;margin-top:2px">＋ 疊圖層</button>
+        </div>
+        <div class="pvsec">
+          <div class="h"><span class="num">◳</span>Parts <span class="tc" style="color:var(--paper-dim);font-weight:700">部件</span><i></i></div>
+          <div class="pvsearch">⌕ search slot…</div>
+          <div class="pvpart"><span>body</span><span class="pvslider"><i style="width:100%"></i><b style="left:100%"></b></span><span class="eye">●</span></div>
+          <div class="pvpart"><span>hair_front</span><span class="pvslider"><i style="width:70%"></i><b style="left:70%"></b></span><span class="eye">●</span></div>
+          <div class="pvpart off"><span>cape</span><span class="pvslider"><i style="width:0%"></i><b style="left:0%"></b></span><span class="eye">○</span></div>
+          <div class="pvpart"><span>weapon_l</span><span class="pvslider"><i style="width:85%"></i><b style="left:85%"></b></span><span class="eye">●</span></div>
+          <div class="pvpart"><span>fx_glow</span><span class="pvslider"><i style="width:45%"></i><b style="left:45%"></b></span><span class="eye">●</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- dual compare -->
+  <h3 class="tc" style="font-size:18px;color:var(--paper);margin:28px 0 4px">雙開比較 <span style="color:var(--paper-dim);font-size:14px">Dual · 並排同動畫</span></h3>
+  <p class="tc" style="max-width:60ch;margin-bottom:16px">最多兩個 mod 並排（A 紅／B 琥珀），可同步動畫與鏡頭，逐格對比。檢視器跟著目前聚焦的台（A/B）。</p>
+  <div class="pgbed">
+    <div class="pvstageWrap dual">
+      <div class="pvstage">
+        <span class="pvtag">A</span>
+        <div class="field"><span class="pvspine"></span><span class="pvname">White Reaper</span></div>
+        <div class="pvplay"><button class="tb play">▶</button><span class="sel">idle</span><span class="pvscrub"><i style="width:54%"></i></span></div>
+      </div>
+      <div class="pvstage">
+        <span class="pvtag" style="background:var(--amber);color:var(--ink)">B</span>
+        <div class="field"><span class="pvspine"></span><span class="pvname">Blood Glutton</span></div>
+        <div class="pvplay"><button class="tb play">▶</button><span class="sel">idle</span><span class="pvscrub"><i style="width:54%"></i></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- annotations -->
+  <div class="lib" style="margin-top:22px">
+    <div class="sbanno" style="margin:0"><h4 class="tc">三區工作台</h4>
+      <ol>
+        <li><b>資料夾雙欄（Finder）</b>：橫向 miller column——<span class="tc">角色欄</span>（搜尋＋每名 mod 數）→ <span class="tc">模組欄</span>（該角色的 mod）。點 mod 載入試映台，找模組超快。</li>
+        <li><b>試映台</b>：spine 渲染在印刷台面（⊕ 套准記號＋網點）＋A/B 斜切標；底部玻璃播放條＝播放/暫停、<span class="tc">動畫</span>（多軌）、<span class="tc">皮膚</span>、進度、<span class="tc">速度</span>（沿用 Spine-Viewer 的 zoom/speed/mix）。</li>
+        <li><b>檢視器</b>：<span class="tc">圖層</span>（疊多個 spine、可拖曳排序/顯隱）＋<span class="tc">部件</span>（slots：搜尋＋逐一透明度滑桿＋眼睛顯隱）＋皮膚/動畫選單。</li>
+      </ol>
+    </div>
+    <div class="sbanno" style="margin:0"><h4 class="tc">互動 & 落地</h4>
+      <ol>
+        <li><b>跨頁跳轉</b>：Library 卡帶、Roster 角色卡、Profiles 都加「▶ Preview」——直接帶 mod 跳來開台。</li>
+        <li><b>雙開比較</b>：上限 2，A/B 並排；可同步動畫/鏡頭。</li>
+        <li><b>玻璃 × 印刷</b>：台面＝印刷（網點/⊕/斜切），Finder・檢視器・播放條＝<strong style="color:var(--amber)">毛玻璃</strong>（Tauri 毛玻璃）。</li>
+        <li><b>技術</b>：Pixi.js + pixi-spine 讀 <code>.json/.skel</code>＋atlas（參考 Spine-Viewer）；概念對齊 BD2ModManager 的 Mod Preview。</li>
+      </ol>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">落地對應：</strong>新 <code>previewView</code>（Finder／stage／inspector）＋ Pixi 渲染容器；<code>styles.css</code> 的 <code>.pv*</code>。其他頁加「▶ Preview」動作把 mod 丟進 preview 並 <code>setView("preview")</code>。<strong style="color:var(--amber)">本輪只做設計</strong>。</p>
 </section>
 
 <footer class="wrap">

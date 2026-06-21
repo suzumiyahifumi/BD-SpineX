@@ -62,10 +62,10 @@ function supportsLiquidGlassFilter() {
 }
 
 function configureGlassMode() {
-  document.documentElement.setAttribute(
-    "data-glass",
-    isChromiumFamilyBrowser() && supportsLiquidGlassFilter() ? "liquid" : "frosted"
-  );
+  // Tauri always uses frosted glass — no liquid-lens refraction in the app build.
+  const liquid =
+    detectRuntime() !== "tauri" && isChromiumFamilyBrowser() && supportsLiquidGlassFilter();
+  document.documentElement.setAttribute("data-glass", liquid ? "liquid" : "frosted");
 }
 
 function configureRuntimeMode() {

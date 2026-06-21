@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type MouseEvent, type ReactNode, type SetStateAction } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type MouseEvent, type ReactNode, type SetStateAction } from "react";
+import { createPortal } from "react-dom";
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
 import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
 import characterAssetsJson from "./data/bd2-characters.json";
-import { LIBRARY_BACKDROP_CHARACTER_EVENT, LibraryHalftoneBackdrop, type LibraryBackdropCharacterDetail } from "./LibraryHalftoneBackdrop";
+import {
+  LIBRARY_BACKDROP_CHARACTER_EVENT,
+  LIBRARY_BACKDROP_SETTINGS_EVENT,
+  LibraryHalftoneBackdrop,
+  type LibraryBackdropCharacterDetail,
+  type LibraryBackdropSettingsDetail
+} from "./LibraryHalftoneBackdrop";
 
 // Runtime-based BD-SpineX. The interaction model follows the original offline patch UI.
 // Stage 3 of the liquid-glass redesign: the top toolbar is replaced by a left glass
@@ -23,6 +30,7 @@ type CharacterAsset = {
   costume: string;
   dating_id?: string | null;
   npc_id?: string | null;
+  standing?: boolean;
 };
 type CharacterAssetsJson = {
   characters: CharacterAsset[];
@@ -163,12 +171,27 @@ function typeToCategory(type: RuntimeMod["type"]): ModCategory {
   return type === "skillcut" ? "cutscene" : type === "dating" ? "dating" : type === "standing" ? "char" : "other";
 }
 
+function chunkRows<T>(items: T[], columns: number) {
+  const size = Math.max(1, columns);
+  const rows: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    rows.push(items.slice(index, index + size));
+  }
+  return rows;
+}
+
 export function App() {
   useTauriCustomScrollbars();
+  const htmlAltTooltip = useHtmlAltTooltip();
 
   const [appInfo, setAppInfo] = useState<AppInfo>(defaultAppInfo);
   const [gameVersionInfo, setGameVersionInfo] = useState<GameVersionInfo | null>(null);
   const [view, setView] = useState<ViewKey>("library");
+  const [rosterSearch, setRosterSearch] = useState("");
+  const [rosterMode, setRosterMode] = useState<"mods" | "az" | "modded">("mods");
+  const [openRosterChar, setOpenRosterChar] = useState<string | null>(null);
+  const [rosterColumns, setRosterColumns] = useState(1);
+  const [logFilter, setLogFilter] = useState<"all" | "ok" | "warn" | "err">("all");
   const [modsDir, setModsDir] = useState<string>("");
   const [library, setLibrary] = useState<RuntimeMod[]>([]);
   const [status, setStatus] = useState<RuntimeStatus | null>(null);
@@ -180,6 +203,7 @@ export function App() {
   const [modView, setModView] = useState<ModView>(() => (localStorage.getItem(MODVIEW_KEY) === "list" ? "list" : "grid"));
   const [backgroundCharacter, setBackgroundCharacter] = useState<DetectedCharacter | null>(null);
   const [backdropSlotRolling, setBackdropSlotRolling] = useState(false);
+  const [backdropParticlesEnabled, setBackdropParticlesEnabled] = useState(true);
   const [tauriCanvasCartridges] = useState(readTauriCanvasCartridgeMode);
   const theme = ACTIVE_THEME;
 
@@ -196,6 +220,7 @@ export function App() {
   const [pendingScrollTarget, setPendingScrollTarget] = useState<string | null>(null);
   const [spotlitPendingFolder, setSpotlitPendingFolder] = useState<string | null>(null);
   const cartNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const rosterGridRef = useRef<HTMLDivElement | null>(null);
   const pendingSpotlightTimerRef = useRef<number | null>(null);
   const backdropSlotTimerRef = useRef<number | null>(null);
 
@@ -285,6 +310,29 @@ export function App() {
     window.addEventListener(LIBRARY_BACKDROP_CHARACTER_EVENT, handleBackdropCharacter);
     return () => window.removeEventListener(LIBRARY_BACKDROP_CHARACTER_EVENT, handleBackdropCharacter);
   }, [startBackdropSlotRoll, stopBackdropSlotRoll]);
+
+  useEffect(() => {
+    const syncBackdropParticles = () => {
+      setBackdropParticlesEnabled(window.bdLibraryBackdrop?.getParticlesEnabled() ?? true);
+    };
+    const handleBackdropSettings = (event: Event) => {
+      const detail = (event as CustomEvent<LibraryBackdropSettingsDetail>).detail;
+      setBackdropParticlesEnabled(detail?.particlesEnabled ?? true);
+    };
+
+    syncBackdropParticles();
+    const frame = window.requestAnimationFrame(syncBackdropParticles);
+    window.addEventListener(LIBRARY_BACKDROP_SETTINGS_EVENT, handleBackdropSettings);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener(LIBRARY_BACKDROP_SETTINGS_EVENT, handleBackdropSettings);
+    };
+  }, []);
+
+  const updateBackdropParticlesEnabled = useCallback((enabled: boolean) => {
+    setBackdropParticlesEnabled(enabled);
+    window.bdLibraryBackdrop?.setParticlesEnabled(enabled);
+  }, []);
 
   const mountedMods = useMemo(() => status?.mountedMods ?? [], [status]);
   const mountedFolders = useMemo(() => new Set(mountedMods.map((m) => m.folder)), [mountedMods]);
@@ -687,16 +735,60 @@ export function App() {
     </aside>
   ) : null;
 
+  const logCounts = useMemo(() => {
+    let ok = 0, warn = 0, err = 0;
+    for (const e of logs) {
+      if (e.tone === "warn") warn++;
+      else if (e.tone === "err") err++;
+      else ok++;
+    }
+    return { ok, warn, err };
+  }, [logs]);
+  const filteredLogs = useMemo(() => {
+    if (logFilter === "all") return logs;
+    if (logFilter === "ok") return logs.filter((e) => !e.tone || e.tone === "ok");
+    return logs.filter((e) => e.tone === logFilter);
+  }, [logs, logFilter]);
+  const copyLogs = useCallback(() => {
+    const text = logs.map((e) => `${e.time}  ${e.message}`).join("\n");
+    navigator.clipboard?.writeText(text).then(() => log("Log copied to clipboard.", "ok")).catch(() => {});
+  }, [logs, log]);
+  const clearLogs = useCallback(() => setLogs([createLogEntry("Log cleared.")]), []);
+
   const logView = (
     <section className="panel logPanel logPage">
-      <h2>Log</h2>
-      <div className="logStream" role="log" aria-live="polite">
-        {logs.map((entry) => (
-          <div key={entry.id} className="logLine">
-            <span className="logTime">{entry.time}</span>
-            <span className={`logMessage ${entry.tone ? `logAccent ${entry.tone}` : ""}`}>{entry.message}</span>
-          </div>
-        ))}
+      <div className="lgTools">
+        <div className="lgChips">
+          <span className="lgChip ok"><i aria-hidden="true" /><b>{logCounts.ok}</b> OK</span>
+          <span className="lgChip warn"><i aria-hidden="true" /><b>{logCounts.warn}</b> Warn</span>
+          <span className="lgChip err"><i aria-hidden="true" /><b>{logCounts.err}</b> Err</span>
+        </div>
+        <span className="lgSpace" />
+        <div className="segmentedControl lgFilter" role="tablist" aria-label="Log filter">
+          {(["all", "ok", "warn", "err"] as const).map((f) => (
+            <button key={f} type="button" className={logFilter === f ? "active" : ""} onClick={() => setLogFilter(f)} aria-pressed={logFilter === f}>
+              <span>{f === "all" ? "All" : f === "ok" ? "OK" : f === "warn" ? "Warn" : "Err"}</span>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="lgBtn" onClick={copyLogs} disabled={logs.length === 0}>Copy</button>
+        <button type="button" className="lgBtn" onClick={clearLogs}>Clear</button>
+      </div>
+      <div className="lgConsole">
+        <div className="lgStream logStream" role="log" aria-live="polite">
+          {filteredLogs.length === 0 ? (
+            <div className="lgEmpty">No entries.</div>
+          ) : filteredLogs.map((entry) => {
+            const tone = entry.tone === "warn" ? "warn" : entry.tone === "err" ? "err" : "ok";
+            return (
+              <div key={entry.id} className={`lgRow ${tone}`}>
+                <span className="lgMark" aria-hidden="true" />
+                <span className="lgTime">{entry.time}</span>
+                <span className="lgMsg">{entry.message}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -847,126 +939,367 @@ export function App() {
     </>
   );
 
-  const settingsView = (
-    <>
-      <section className="panel settingsGrid">
-        <div className={`field injectionField ${injectionVersionLocked ? "is-locked" : ""}`}>
-          <span className="fieldLabel">
-            <span>Runtime Injection (BepInEx)</span>
-            <HelpButton title="Runtime Injection">
-              Installs the loader into the game executable after backing up and re-signing it. Close BrownDust II before installing or removing injection. Mounted mods take effect the next time the game starts. Removing injection restores the original executable but keeps mounted mod files in place. Reinstall injection after a game update.
-            </HelpButton>
-          </span>
-          <div className="pathRow injectionRow" aria-disabled={injectionLocked || !appReady}>
-            <span className={`badge injectionBadge ${status?.injected ? "injected" : "notInjected"}`} style={{ alignSelf: "center" }}>
-              {status?.injected ? "Injected" : "Not injected"}
-            </span>
-            <button
-              type="button"
-              disabled={injectionLocked || !appReady || Boolean(status?.injected)}
-              onClick={installLoader}
-              title={injectionLockTitle}
-            >
-              Install Injection
-            </button>
-            <button
-              type="button"
-              disabled={injectionLocked || !status?.injected}
-              onClick={uninstallLoader}
-              title={injectionLockTitle}
-            >
-              Remove Injection
-            </button>
-          </div>
-          {injectionVersionLocked && (
-            <div className="injectionLockNotice" role="status">
-              {injectionVersionLockMessage}
-            </div>
+  const stats = useMemo(() => {
+    const authorMap = new Map<string, { id: string; name: string; color: string; count: number }>();
+    const charMap = new Map<string, { id: string; name: string; count: number }>();
+    const catCount: Record<ModCategory, number> = { char: 0, dating: 0, cutscene: 0, other: 0 };
+    for (const mod of library) {
+      const a = detectModAuthor(mod, authorRules);
+      const ae = authorMap.get(a.id);
+      if (ae) ae.count++; else authorMap.set(a.id, { id: a.id, name: a.name, color: a.color, count: 1 });
+      catCount[typeToCategory(mod.type)]++;
+      const ch = detectModCharacter(mod);
+      if (ch) {
+        const ce = charMap.get(ch.id);
+        if (ce) ce.count++; else charMap.set(ch.id, { id: ch.id, name: ch.character, count: 1 });
+      }
+    }
+    const authors = [...authorMap.values()].sort((x, y) => y.count - x.count);
+    const characters = [...charMap.values()].sort((x, y) => y.count - x.count);
+    const catLabels: Record<ModCategory, string> = { char: "Character", cutscene: "Cutscene", dating: "Dating", other: "NPC" };
+    const categories = (["char", "cutscene", "dating", "other"] as ModCategory[]).map((key) => ({ key, label: catLabels[key], count: catCount[key] }));
+    const topAuthors = authors.slice(0, 5).map((a) => ({ id: a.id, name: a.name, count: a.count }));
+    const restCount = authors.slice(5).reduce((sum, a) => sum + a.count, 0);
+    if (restCount > 0) topAuthors.push({ id: "__others", name: "Others", count: restCount });
+    return {
+      authors,
+      characters,
+      categories,
+      topAuthors,
+      maxChar: characters.length ? characters[0].count : 1,
+      maxAuthor: topAuthors.length ? Math.max(...topAuthors.map((a) => a.count)) : 1,
+      maxCat: Math.max(1, ...categories.map((c) => c.count))
+    };
+  }, [library, authorRules]);
+
+  const roster = useMemo(() => {
+    const modGroups = new Map<string, { mods: RuntimeMod[]; imageId: string }>();
+    for (const mod of library) {
+      const ch = detectModCharacter(mod);
+      if (!ch?.character) continue;
+      const g = modGroups.get(ch.character);
+      if (g) g.mods.push(mod);
+      else modGroups.set(ch.character, { mods: [mod], imageId: ch.imageId });
+    }
+    const meta = new Map<string, string | null>();
+    for (const c of CHARACTER_ASSETS.characters) {
+      const id = (Array.isArray(c.id) ? c.id : [c.id])[0];
+      if (!meta.has(c.character)) meta.set(c.character, c.standing ? id : null);
+      else if (c.standing && !meta.get(c.character)) meta.set(c.character, id);
+    }
+    const names = new Set<string>([...meta.keys(), ...modGroups.keys()]);
+    return [...names].map((name) => {
+      const g = modGroups.get(name);
+      return { name, count: g?.mods.length ?? 0, mods: g?.mods ?? [], imageId: g?.imageId ?? meta.get(name) ?? null };
+    });
+  }, [library]);
+
+  const rosterList = useMemo(() => {
+    const q = rosterSearch.trim().toLowerCase();
+    let list = q ? roster.filter((c) => c.name.toLowerCase().includes(q)) : roster;
+    if (rosterMode === "modded") list = list.filter((c) => c.count > 0);
+    return [...list].sort(rosterMode === "az"
+      ? (a, b) => a.name.localeCompare(b.name)
+      : (a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [roster, rosterSearch, rosterMode]);
+
+  useLayoutEffect(() => {
+    if (view !== "roster") return;
+    const grid = rosterGridRef.current;
+    if (!grid) return;
+
+    const updateColumns = () => {
+      const columns = getComputedStyle(grid).gridTemplateColumns
+        .split(" ")
+        .filter((track) => track && track !== "none").length;
+      setRosterColumns(Math.max(1, columns));
+    };
+
+    updateColumns();
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(grid);
+    window.addEventListener("resize", updateColumns);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateColumns);
+    };
+  }, [rosterList.length, view]);
+
+  const rosterRows = useMemo(() => chunkRows(rosterList, rosterColumns), [rosterList, rosterColumns]);
+
+  const statsView = (
+    <div className="stxView">
+      <div className="stxNums">
+        <div className="stxNum"><b>{library.length}</b><span>Mods Scanned</span></div>
+        <div className="stxNum"><b>{mountedMods.length}</b><span>Mounted</span></div>
+        <div className="stxNum"><b>{stats.authors.length}</b><span>Authors</span></div>
+        <div className="stxNum"><b>{stats.characters.length}</b><span>Characters</span></div>
+      </div>
+      <div className="stxGrid">
+        <div className="stxHeatCol">
+          <div className="stxHead"><span className="ico" aria-hidden="true">▦</span><span>Character Coverage</span><span className="cjk">角色覆蓋熱力圖</span><i aria-hidden="true" /></div>
+          {stats.characters.length > 0 ? (
+            <>
+              <div className="stxHeat" role="img" aria-label={`Character coverage heatmap, ${stats.characters.length} characters`}>
+                {stats.characters.map((c) => (
+                  <span
+                    key={c.id}
+                    className="stxCell"
+                    style={{ opacity: 0.14 + 0.86 * (c.count / stats.maxChar) }}
+                    title={`${c.name} · ${c.count} mod${c.count > 1 ? "s" : ""}`}
+                  />
+                ))}
+              </div>
+              <div className="stxLegend">
+                Less
+                <i style={{ opacity: 0.12 }} /><i style={{ opacity: 0.32 }} /><i style={{ opacity: 0.55 }} /><i style={{ opacity: 0.8 }} /><i />
+                More · {stats.characters.length} characters
+              </div>
+            </>
+          ) : (
+            <div className="stxEmpty">No character data yet — choose a Mods Folder in Settings.</div>
           )}
         </div>
-        <PathField
-          label="Mods Folder"
-          helpTitle="Mods Folder"
-          helpText="Choose the folder containing your mods. The Library view reads cartridges from here."
-          value={modsDir}
-          onChange={(v) => setModsDir(v)}
-          onBrowse={selectDir}
-          invalid={missingModsDir}
-        />
-      </section>
-
-      <section className="panel authorSettingsPanel">
-        <div className="authorSettingsHead">
-          <div className="panelTitle titleWithHelp">
-            <span>Author Labels</span>
-            <HelpButton title="Author Labels">
-              Cartridge author stickers are detected from the mod path, folder, or key. Default names come from BD2ModManager's author index; add aliases here when your local folder names use a different author keyword.
-            </HelpButton>
-          </div>
-          <button type="button" onClick={resetAuthorRules}>Reset Authors</button>
-        </div>
-        <form className="authorAddRow" onSubmit={(e) => { e.preventDefault(); addAuthorRule(); }}>
-          <input value={newAuthorName} onChange={(e) => setNewAuthorName(e.target.value)} placeholder="Add author name" />
-          <button type="submit" disabled={!newAuthorName.trim()}>Add Author</button>
-        </form>
-        <div className="authorRuleGrid">
-          {authorRules.map((rule) => (
-            <div className="authorRuleRow" key={rule.id}>
-              <span className="authorRuleSwatch" style={{ "--author-color": rule.color } as CSSProperties} aria-hidden="true" />
-              <span className="authorRuleName" title={rule.keywords.join(", ")}>{rule.name}</span>
-              <input type="color" value={rule.color} onChange={(e) => updateAuthorColor(rule.id, e.target.value)} aria-label={`Color for ${rule.name}`} />
-              {rule.custom ? (
-                <button type="button" className="authorRuleRemove" onClick={() => removeAuthorRule(rule.id)} title={`Remove ${rule.name}`}>×</button>
-              ) : (
-                <span className="authorRuleLock" title="Default author">Default</span>
-              )}
+        <div className="stxSideCol">
+          <div className="stxHead"><span className="ico" aria-hidden="true">▮</span><span>Top Authors</span><i aria-hidden="true" /></div>
+          {stats.topAuthors.length > 0 ? (
+            <div className="stxBars">
+              {stats.topAuthors.map((a) => (
+                <div className="stxBar" key={a.id}>
+                  <span className="nm" title={a.name}>{a.name}</span>
+                  <span className="track"><i style={{ width: `${Math.max(6, Math.round((a.count / stats.maxAuthor) * 100))}%` }} /></span>
+                  <span className="v">{a.count}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel settingsGrid appearancePanel">
-        <div className="field" style={{ gridColumn: "1 / -1" }}>
-          <span className="fieldLabel">
-            <span>Appearance · Theme</span>
-            <HelpButton title="Theme">
-              Night Press is the fixed interface skin: Soviet-print chrome layered over the original dark glass base. Cartridge artwork stays unchanged.
-            </HelpButton>
-          </span>
-          <div className="themeSwitch segmentedControl" role="tablist" aria-label="Theme">
-            {THEMES.map((t) => (
-              <button key={t.key} type="button" className={theme === t.key ? "active" : ""} onClick={() => updateTheme(t.key)} aria-pressed={theme === t.key}>
-                <span>{t.label}</span>
-              </button>
+          ) : (
+            <div className="stxEmpty">—</div>
+          )}
+          <div className="stxHead" style={{ marginTop: 18 }}><span className="ico" aria-hidden="true">◷</span><span>By Category</span><i aria-hidden="true" /></div>
+          <div className="stxBars">
+            {stats.categories.map((c) => (
+              <div className="stxBar" key={c.key}>
+                <span className="nm">{c.label}</span>
+                <span className="track"><i style={{ width: `${c.count ? Math.max(6, Math.round((c.count / stats.maxCat) * 100)) : 0}%` }} /></span>
+                <span className="v">{c.count}</span>
+              </div>
             ))}
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  );
 
-      <section className="panel settingsGrid">
-        <div className="field">
-          <span className="fieldLabel"><span>App</span></span>
-          <div className="backendStatus">
-            <span>{appInfo.name} · {appInfo.subtitle}</span>
-            <strong>v{appInfo.version}</strong>
-          </div>
+  const rosterView = (
+    <div className="rstView">
+      <div className="rstToolbar">
+        <span className="rstSearch">
+          <input value={rosterSearch} onChange={(e) => setRosterSearch(e.target.value)} placeholder="Search character…" spellCheck={false} aria-label="Search character" />
+        </span>
+        <div className="segmentedControl rstSort" role="tablist" aria-label="Roster order">
+          <button type="button" className={rosterMode === "mods" ? "active" : ""} onClick={() => setRosterMode("mods")} aria-pressed={rosterMode === "mods"}><span>Most Mods</span></button>
+          <button type="button" className={rosterMode === "az" ? "active" : ""} onClick={() => setRosterMode("az")} aria-pressed={rosterMode === "az"}><span>A–Z</span></button>
+          <button type="button" className={rosterMode === "modded" ? "active" : ""} onClick={() => setRosterMode("modded")} aria-pressed={rosterMode === "modded"}><span>Modded</span></button>
         </div>
-        <div className="field">
-          <span className="fieldLabel"><span>Game</span></span>
-          <div className="backendStatus">
-            <span>Detected BrownDust II</span>
-            <strong>{gameVersionInfo?.version ?? "unknown"}</strong>
-          </div>
+      </div>
+      {rosterList.length === 0 ? (
+        <div className="stxEmpty">{library.length === 0 ? "Choose a Mods Folder in Settings to populate the roster." : "No characters match."}</div>
+      ) : (
+        <div className="rstGrid" ref={rosterGridRef}>
+          {rosterRows.map((row, rowIndex) => {
+            const expanded = row.find((ch) => openRosterChar === ch.name && ch.count > 0);
+            return (
+              <Fragment key={`row-${rowIndex}-${row[0]?.name ?? "empty"}`}>
+                {row.map((ch) => (
+                  <button
+                    key={ch.name}
+                    type="button"
+                    className={`rstCard ${ch.count === 0 ? "dim" : ""} ${openRosterChar === ch.name ? "open" : ""}`}
+                    onClick={() => setOpenRosterChar((cur) => (cur === ch.name ? null : ch.name))}
+                    aria-expanded={openRosterChar === ch.name}
+                    disabled={ch.count === 0}
+                    title={ch.count === 0 ? `${ch.name} — no mods` : `${ch.name} — ${ch.count} mod${ch.count > 1 ? "s" : ""}`}
+                  >
+                    <span className={`rstStamp ${ch.count === 0 ? "zero" : ""}`}>{ch.count === 0 ? "0" : `${ch.count} Mod${ch.count > 1 ? "s" : ""}`}</span>
+                    <span className="rstPort">
+                      {ch.imageId ? (
+                        <img src={publicAssetPath(`characters/standing/${ch.imageId}.png`)} alt="" draggable={false} loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      ) : null}
+                      <span className="rstSil" aria-hidden="true" />
+                    </span>
+                    <span className="rstPlate">
+                      <span className="k"><span>Roster</span><span>{ch.count > 0 ? "★" : "—"}</span></span>
+                      <span className="nm">{ch.name}</span>
+                    </span>
+                  </button>
+                ))}
+                {expanded && (
+                  <div className="rstExpand">
+                    <div className="rstExpandInner">
+                      <div className="rstExpandHead">
+                        <span className="t">{expanded.name}</span>
+                        <span className="c">{expanded.count} cartridge{expanded.count > 1 ? "s" : ""}</span>
+                        <button type="button" className="rstClose" onClick={() => setOpenRosterChar(null)} aria-label="Close">×</button>
+                      </div>
+                      <div className={`cartShelf cartShelf--collector ${useCanvasCartridges ? "cartShelf--canvas" : ""}`}>
+                        {expanded.mods.map((mod) => {
+                          const CartComp = useCanvasCartridges ? CanvasCartridge : CartridgeRealistic;
+                          return (
+                            <CartComp
+                              key={mod.path}
+                              mod={mod}
+                              have={mountedFolders.has(mod.folder)}
+                              selected={isDesired(mod.folder)}
+                              tone={tones[mod.folder]}
+                              locked={modsLocked}
+                              lockedReason={modsLocked ? modsLockReason : undefined}
+                              onToggle={() => updateDesired(mod.folder, !isDesired(mod.folder))}
+                              authorRules={authorRules}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Fragment>
+            );
+          })}
         </div>
-        <div className="field">
-          <span className="fieldLabel"><span>Runtime</span></span>
-          <div className="backendStatus">
-            <span>{status?.injected ? "Injected" : "Not injected"} · {mountedMods.length} mounted</span>
-            <strong>{status?.loaderAvailable ? "loader ready" : "loader missing"}</strong>
+      )}
+    </div>
+  );
+
+  const settingsView = (
+    <div className="cfgConsole">
+      <div className="cfgBody">
+        <section className="cfgGroup" id="cfg-runtime">
+          <div className="cfgGroupHead"><span className="num">01</span><span>Runtime</span><span className="cjk">執行時</span><i aria-hidden="true" /></div>
+
+          <div className={`cfgCard cfgInjection ${injectionVersionLocked ? "is-locked" : ""}`}>
+            <div className="cfgConsoleRow">
+              <span className={`cfgSeal ${status?.injected ? "" : "bad"}`} aria-hidden="true">{status?.injected ? "✓" : "✗"}</span>
+              <div className="cfgConsoleLbl">
+                <b>Runtime Injection · BepInEx</b>
+                <span>{status?.injected ? "Installed · re-signed" : "Not installed"}</span>
+              </div>
+              <HelpButton title="Runtime Injection">
+                Installs the loader into the game executable after backing up and re-signing it. Close BrownDust II before installing or removing injection. Mounted mods take effect the next time the game starts. Removing injection restores the original executable but keeps mounted mod files in place. Reinstall injection after a game update.
+              </HelpButton>
+              <div className="cfgConsoleBtns" aria-disabled={injectionLocked || !appReady}>
+                <button
+                  type="button"
+                  className="cfgBtn primary"
+                  disabled={injectionLocked || !appReady || Boolean(status?.injected)}
+                  onClick={installLoader}
+                  title={injectionLockTitle}
+                >
+                  Install
+                </button>
+                <button
+                  type="button"
+                  className="cfgBtn"
+                  disabled={injectionLocked || !status?.injected}
+                  onClick={uninstallLoader}
+                  title={injectionLockTitle}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+            {injectionVersionLocked && (
+              <div className="cfgLockNotice" role="status">{injectionVersionLockMessage}</div>
+            )}
           </div>
-        </div>
-      </section>
-    </>
+
+          <div className="cfgCard">
+            <div className="cfgFieldHead">
+              <span>Mods Folder</span>
+              <HelpButton title="Mods Folder">Choose the folder containing your mods. The Library view reads cartridges from here.</HelpButton>
+            </div>
+            <div className={`cfgSlot ${missingModsDir ? "is-invalid" : ""}`}>
+              <input className="cfgPath" value={modsDir} onChange={(e) => setModsDir(e.target.value)} placeholder="No folder selected — choose one to load cartridges" spellCheck={false} />
+              <button type="button" className="cfgBtn" onClick={selectDir}>Browse</button>
+            </div>
+          </div>
+        </section>
+
+        <section className="cfgGroup" id="cfg-library">
+          <div className="cfgGroupHead"><span className="num">02</span><span>Library</span><span className="cjk">編目</span><i aria-hidden="true" /></div>
+          <div className="cfgCard">
+            <div className="cfgFieldHead">
+              <span>Author Labels</span>
+              <HelpButton title="Author Labels">Cartridge author stickers are detected from the mod path, folder, or key. Default names come from BD2ModManager's author index; add aliases here when your local folder names use a different author keyword.</HelpButton>
+              <button type="button" className="cfgBtn cfgHeadBtn" onClick={resetAuthorRules}>Reset</button>
+            </div>
+            <form className="cfgAuthorAdd" onSubmit={(e) => { e.preventDefault(); addAuthorRule(); }}>
+              <input value={newAuthorName} onChange={(e) => setNewAuthorName(e.target.value)} placeholder="Add author name" />
+              <button type="submit" className="cfgBtn" disabled={!newAuthorName.trim()}>Add</button>
+            </form>
+            <div className="cfgChips">
+              {authorRules.map((rule) => (
+                <span className="cfgChip" key={rule.id} title={rule.keywords.join(", ")}>
+                  <input type="color" className="cfgChipSwatch" value={rule.color} onChange={(e) => updateAuthorColor(rule.id, e.target.value)} aria-label={`Color for ${rule.name}`} />
+                  <span className="cfgChipName">{rule.name}</span>
+                  {rule.custom ? (
+                    <button type="button" className="cfgChipRemove" onClick={() => removeAuthorRule(rule.id)} title={`Remove ${rule.name}`}>×</button>
+                  ) : (
+                    <span className="cfgChipLock" title="Default author" aria-label="Default author">·</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="cfgGroup" id="cfg-appearance">
+          <div className="cfgGroupHead"><span className="num">03</span><span>Appearance</span><span className="cjk">外觀</span><i aria-hidden="true" /></div>
+          <div className="cfgCard cfgAppearance">
+            <div className="cfgFieldHead">
+              <span>Theme</span>
+              <HelpButton title="Theme">Night Press is the fixed interface skin: Soviet-print chrome layered over the original dark glass base. Cartridge artwork stays unchanged.</HelpButton>
+            </div>
+            <div className="themeSwitch segmentedControl" role="tablist" aria-label="Theme">
+              {THEMES.map((t) => (
+                <button key={t.key} type="button" className={theme === t.key ? "active" : ""} onClick={() => updateTheme(t.key)} aria-pressed={theme === t.key}>
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="cfgCard cfgBackdropEffects">
+            <div className="cfgFieldHead">
+              <span>Backdrop Effects</span>
+              <HelpButton title="Backdrop Effects">Toggle the animated square particle layer used by the character backdrop.</HelpButton>
+            </div>
+            <label className="cfgToggleRow">
+              <span className="cfgToggleCopy">
+                <b>Square Particles</b>
+                <span>{backdropParticlesEnabled ? "Enabled" : "Disabled"}</span>
+              </span>
+              <input
+                type="checkbox"
+                className="cfgSwitchInput"
+                checked={backdropParticlesEnabled}
+                onChange={(event) => updateBackdropParticlesEnabled(event.currentTarget.checked)}
+              />
+              <span className="cfgSwitchTrack" aria-hidden="true">
+                <span className="cfgSwitchThumb" />
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section className="cfgGroup" id="cfg-about">
+          <div className="cfgGroupHead"><span className="num">04</span><span>About</span><span className="cjk">版本</span><i aria-hidden="true" /></div>
+          <div className="cfgColophon">
+            <div className="cfgColoRow"><span className="cfgColoReg" aria-hidden="true" /><span className="k">App</span><span className="v">{appInfo.name} · {appInfo.subtitle} · v{appInfo.version}</span></div>
+            <div className="cfgColoRow"><span className="cfgColoReg" aria-hidden="true" /><span className="k">Game</span><span className="v">BrownDust II · {gameVersionInfo?.version ?? "unknown"}</span></div>
+            <div className="cfgColoRow"><span className="cfgColoReg" aria-hidden="true" /><span className="k">Runtime</span><span className="v">{status?.injected ? "Injected" : "Not injected"} · {mountedMods.length} mounted · {status?.loaderAvailable ? "loader ready" : "loader missing"}</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
   );
 
   const placeholderView = (key: ViewKey) => {
@@ -1156,11 +1489,14 @@ export function App() {
         {view === "library" && libraryView}
         {view === "logs" && logView}
         {view === "settings" && settingsView}
-        {view !== "library" && view !== "logs" && view !== "settings" && placeholderView(view)}
+        {view === "stats" && statsView}
+        {view === "roster" && rosterView}
+        {view !== "library" && view !== "logs" && view !== "settings" && view !== "stats" && view !== "roster" && placeholderView(view)}
 
         {playerDock}
         {pendingDiffDock}
       </main>
+      {htmlAltTooltip}
     </div>
   );
 }
@@ -2203,14 +2539,15 @@ function drawCanvasCartridgeBase(ctx: CanvasRenderingContext2D, width: number, h
   ctx.save();
   roundedRectPath(ctx, 8 * scale, 0, width - 16 * scale, 14 * scale, 5 * scale);
   const top = ctx.createLinearGradient(0, 0, 0, 14 * scale);
-  top.addColorStop(0, paint.category === "char" ? "rgba(245, 248, 250, 0.42)" : "rgba(174, 202, 238, 0.4)");
-  top.addColorStop(1, paint.category === "char" ? "rgba(125, 134, 145, 0.24)" : "rgba(78, 119, 178, 0.3)");
+  top.addColorStop(0, paint.category === "char" ? "rgba(245, 248, 250, 0.42)" : paint.category === "other" ? "rgba(255, 190, 112, 0.38)" : "rgba(174, 202, 238, 0.4)");
+  top.addColorStop(1, paint.category === "char" ? "rgba(125, 134, 145, 0.24)" : paint.category === "other" ? "rgba(184, 73, 28, 0.24)" : "rgba(78, 119, 178, 0.3)");
   ctx.fillStyle = top;
   ctx.fill();
   ctx.restore();
 
-  const sideDark = paint.category === "char" ? "rgba(77, 84, 93, 0.82)" : paint.category === "cutscene" ? "rgba(16, 18, 25, 0.9)" : "rgba(24, 51, 86, 0.76)";
-  const sideLight = paint.category === "char" ? "rgba(143, 153, 164, 0.38)" : paint.category === "cutscene" ? "rgba(78, 84, 98, 0.36)" : "rgba(70, 110, 165, 0.4)";
+  const sideDark = paint.category === "char" ? "rgba(77, 84, 93, 0.82)" : paint.category === "cutscene" ? "rgba(16, 18, 25, 0.9)" : paint.category === "other" ? "rgba(126, 38, 20, 0.84)" : "rgba(24, 51, 86, 0.76)";
+  const sideLight = paint.category === "char" ? "rgba(143, 153, 164, 0.38)" : paint.category === "cutscene" ? "rgba(78, 84, 98, 0.36)" : paint.category === "other" ? "rgba(255, 154, 74, 0.42)" : "rgba(70, 110, 165, 0.4)";
+  const sideHighlight = paint.category === "other" ? "rgba(255, 199, 126, 0.14)" : "rgba(255, 255, 255, 0.11)";
   const leftSide = ctx.createLinearGradient(0, 0, 13 * scale, 0);
   leftSide.addColorStop(0, sideDark);
   leftSide.addColorStop(1, sideLight);
@@ -2222,13 +2559,13 @@ function drawCanvasCartridgeBase(ctx: CanvasRenderingContext2D, width: number, h
     roundedRectPath(ctx, 0, ridgeY, 11 * scale, 5.5 * scale, 3 * scale);
     ctx.fillStyle = leftSide;
     ctx.fill();
-    ctx.fillStyle = "rgba(255, 255, 255, 0.11)";
+    ctx.fillStyle = sideHighlight;
     ctx.fillRect(8.5 * scale, ridgeY + 1 * scale, 1 * scale, 3.5 * scale);
 
     roundedRectPath(ctx, width - 11 * scale, ridgeY, 11 * scale, 5.5 * scale, 3 * scale);
     ctx.fillStyle = rightSide;
     ctx.fill();
-    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.fillStyle = sideHighlight;
     ctx.fillRect(width - 9.5 * scale, ridgeY + 1 * scale, 1 * scale, 3.5 * scale);
   }
 
@@ -3059,7 +3396,7 @@ function PathField(props: { label: string; value: string; onChange: (v: string) 
 
 function HelpButton(props: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [popupPosition, setPopupPosition] = useState({ left: 0, placement: "below" as "below" | "above" });
+  const [popupPosition, setPopupPosition] = useState({ left: 0, top: 0, placement: "below" as "below" | "above" });
   const rootRef = useRef<HTMLSpanElement | null>(null);
   const popupRef = useRef<HTMLSpanElement | null>(null);
 
@@ -3069,7 +3406,8 @@ function HelpButton(props: { title: string; children: ReactNode }) {
     }
 
     function handlePointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !popupRef.current?.contains(target)) {
         setOpen(false);
       }
     }
@@ -3102,17 +3440,25 @@ function HelpButton(props: { title: string; children: ReactNode }) {
       }
 
       const margin = 16;
+      const gap = 8;
       const rootRect = root.getBoundingClientRect();
       const popupRect = popup.getBoundingClientRect();
       const desiredViewportLeft = rootRect.left + rootRect.width / 2 - popupRect.width / 2;
       const maxViewportLeft = Math.max(margin, window.innerWidth - popupRect.width - margin);
       const clampedViewportLeft = Math.min(Math.max(desiredViewportLeft, margin), maxViewportLeft);
-      const hasBelowSpace = rootRect.bottom + 8 + popupRect.height <= window.innerHeight - margin;
-      const hasAboveSpace = rootRect.top - 8 - popupRect.height >= margin;
+      const hasBelowSpace = rootRect.bottom + gap + popupRect.height <= window.innerHeight - margin;
+      const hasAboveSpace = rootRect.top - gap - popupRect.height >= margin;
+      const placement = !hasBelowSpace && hasAboveSpace ? "above" : "below";
+      const desiredViewportTop = placement === "above"
+        ? rootRect.top - gap - popupRect.height
+        : rootRect.bottom + gap;
+      const maxViewportTop = Math.max(margin, window.innerHeight - popupRect.height - margin);
+      const clampedViewportTop = Math.min(Math.max(desiredViewportTop, margin), maxViewportTop);
 
       setPopupPosition({
-        left: clampedViewportLeft - rootRect.left,
-        placement: !hasBelowSpace && hasAboveSpace ? "above" : "below"
+        left: clampedViewportLeft,
+        top: clampedViewportTop,
+        placement
       });
     }
 
@@ -3125,6 +3471,34 @@ function HelpButton(props: { title: string; children: ReactNode }) {
       window.removeEventListener("scroll", updatePopupPosition, true);
     };
   }, [open]);
+
+  const popup = open
+    ? createPortal(
+      <span
+        className={`helpPopup ${popupPosition.placement === "above" ? "above" : "below"}`}
+        ref={popupRef}
+        role="dialog"
+        aria-label={props.title}
+        style={{ left: `${popupPosition.left}px`, top: `${popupPosition.top}px` }}
+      >
+        <span className="helpPopupTitle">{props.title}</span>
+        <div className="helpPopupText">{props.children}</div>
+        <button
+          aria-label="Close help"
+          className="helpCloseButton"
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+          }}
+        >
+          Close
+        </button>
+      </span>,
+      document.body
+    )
+    : null;
 
   return (
     <span className="helpRoot" ref={rootRef}>
@@ -3141,30 +3515,228 @@ function HelpButton(props: { title: string; children: ReactNode }) {
       >
         ?
       </button>
-      {open && (
-        <span
-          className={`helpPopup ${popupPosition.placement === "above" ? "above" : "below"}`}
-          ref={popupRef}
-          role="dialog"
-          aria-label={props.title}
-          style={{ left: `${popupPosition.left}px` }}
-        >
-          <span className="helpPopupTitle">{props.title}</span>
-          <div className="helpPopupText">{props.children}</div>
-          <button
-            aria-label="Close help"
-            className="helpCloseButton"
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setOpen(false);
-            }}
-          >
-            Close
-          </button>
-        </span>
-      )}
+      {popup}
     </span>
   );
+}
+
+type HtmlAltTooltipState = {
+  left: number;
+  placement: "above" | "below";
+  ready: boolean;
+  text: string;
+  top: number;
+};
+
+const HTML_ALT_TOOLTIP_SELECTOR = "[data-tooltip], [title], img[alt]";
+const SLOW_HTML_ALT_TOOLTIP_DELAY_MS = 1500;
+
+function useHtmlAltTooltip() {
+  const [tooltip, setTooltip] = useState<HtmlAltTooltipState | null>(null);
+  const activeTargetRef = useRef<HTMLElement | null>(null);
+  const mutedTitleRef = useRef<WeakMap<HTMLElement, string>>(new WeakMap());
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const delayTimerRef = useRef<number | null>(null);
+
+  const restoreNativeTitle = useCallback(() => {
+    const target = activeTargetRef.current;
+    if (!target) return;
+
+    const title = mutedTitleRef.current.get(target);
+    if (title !== undefined) {
+      if (!target.hasAttribute("title")) target.setAttribute("title", title);
+      mutedTitleRef.current.delete(target);
+    }
+    activeTargetRef.current = null;
+  }, []);
+
+  const closeTooltip = useCallback(() => {
+    if (delayTimerRef.current !== null) {
+      window.clearTimeout(delayTimerRef.current);
+      delayTimerRef.current = null;
+    }
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    restoreNativeTitle();
+    setTooltip(null);
+  }, [restoreNativeTitle]);
+
+  const updateTooltipPosition = useCallback(() => {
+    frameRef.current = null;
+    const target = activeTargetRef.current;
+    const popup = tooltipRef.current;
+    if (!target || !popup) return;
+
+    const margin = 14;
+    const gap = 8;
+    const targetRect = target.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    const maxLeft = Math.max(margin, window.innerWidth - popupRect.width - margin);
+    const desiredLeft = targetRect.left + targetRect.width / 2 - popupRect.width / 2;
+    const left = Math.round(Math.min(Math.max(desiredLeft, margin), maxLeft));
+    const hasBelowSpace = targetRect.bottom + gap + popupRect.height <= window.innerHeight - margin;
+    const hasAboveSpace = targetRect.top - gap - popupRect.height >= margin;
+    const placement = !hasBelowSpace && hasAboveSpace ? "above" : "below";
+    const desiredTop = placement === "above"
+      ? targetRect.top - gap - popupRect.height
+      : targetRect.bottom + gap;
+    const maxTop = Math.max(margin, window.innerHeight - popupRect.height - margin);
+    const top = Math.round(Math.min(Math.max(desiredTop, margin), maxTop));
+
+    setTooltip((current) => {
+      if (!current) return current;
+      if (current.left === left && current.top === top && current.placement === placement && current.ready) return current;
+      return { ...current, left, top, placement, ready: true };
+    });
+  }, []);
+
+  const scheduleTooltipPosition = useCallback(() => {
+    if (frameRef.current !== null) return;
+    frameRef.current = window.requestAnimationFrame(updateTooltipPosition);
+  }, [updateTooltipPosition]);
+
+  const openTooltip = useCallback((target: HTMLElement, delayMs = getHtmlAltTooltipDelayMs(target)) => {
+    const text = getHtmlAltTooltipText(target);
+    if (!text) {
+      closeTooltip();
+      return;
+    }
+
+    if (delayTimerRef.current !== null) {
+      window.clearTimeout(delayTimerRef.current);
+      delayTimerRef.current = null;
+    }
+    if (activeTargetRef.current && activeTargetRef.current !== target) {
+      restoreNativeTitle();
+    }
+    activeTargetRef.current = target;
+    muteNativeTitle(target, mutedTitleRef.current);
+
+    if (delayMs > 0) {
+      setTooltip(null);
+      delayTimerRef.current = window.setTimeout(() => {
+        delayTimerRef.current = null;
+        if (activeTargetRef.current === target) {
+          setTooltip({ left: 0, top: 0, placement: "below", ready: false, text });
+        }
+      }, delayMs);
+      return;
+    }
+
+    setTooltip({ left: 0, top: 0, placement: "below", ready: false, text });
+  }, [closeTooltip, restoreNativeTitle]);
+
+  useEffect(() => {
+    function handlePointerOver(event: PointerEvent) {
+      const target = findHtmlAltTooltipTarget(event.target);
+      if (!target || target === activeTargetRef.current) return;
+      openTooltip(target);
+    }
+
+    function handlePointerOut(event: PointerEvent) {
+      const target = activeTargetRef.current;
+      if (!target) return;
+      const related = event.relatedTarget;
+      if (related instanceof Node && target.contains(related)) return;
+      closeTooltip();
+    }
+
+    function handleFocusIn(event: FocusEvent) {
+      const target = findHtmlAltTooltipTarget(event.target);
+      if (target) openTooltip(target, 0);
+    }
+
+    function handleFocusOut(event: FocusEvent) {
+      const target = activeTargetRef.current;
+      const related = event.relatedTarget;
+      if (!target) return;
+      if (related instanceof Node && target.contains(related)) return;
+      closeTooltip();
+    }
+
+    document.addEventListener("pointerover", handlePointerOver, true);
+    document.addEventListener("pointerout", handlePointerOut, true);
+    document.addEventListener("focusin", handleFocusIn, true);
+    document.addEventListener("focusout", handleFocusOut, true);
+
+    return () => {
+      document.removeEventListener("pointerover", handlePointerOver, true);
+      document.removeEventListener("pointerout", handlePointerOut, true);
+      document.removeEventListener("focusin", handleFocusIn, true);
+      document.removeEventListener("focusout", handleFocusOut, true);
+      closeTooltip();
+    };
+  }, [closeTooltip, openTooltip]);
+
+  useLayoutEffect(() => {
+    if (!tooltip) return;
+    scheduleTooltipPosition();
+  }, [scheduleTooltipPosition, tooltip?.text]);
+
+  useEffect(() => {
+    if (!tooltip) return;
+    window.addEventListener("resize", scheduleTooltipPosition);
+    window.addEventListener("scroll", scheduleTooltipPosition, true);
+    return () => {
+      window.removeEventListener("resize", scheduleTooltipPosition);
+      window.removeEventListener("scroll", scheduleTooltipPosition, true);
+    };
+  }, [scheduleTooltipPosition, tooltip]);
+
+  if (!tooltip) return null;
+
+  return createPortal(
+    <div
+      className={`htmlAltTooltip ${tooltip.ready ? "is-ready" : ""} is-${tooltip.placement}`}
+      ref={tooltipRef}
+      role="tooltip"
+      style={{ left: `${tooltip.left}px`, top: `${tooltip.top}px` }}
+    >
+      {tooltip.text.split(/\r?\n/).map((line, index) => (
+        <span className="htmlAltTooltipLine" key={`${index}-${line}`}>{line}</span>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
+function findHtmlAltTooltipTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return null;
+  let tooltipTarget = target.closest(HTML_ALT_TOOLTIP_SELECTOR);
+  while (tooltipTarget instanceof HTMLElement) {
+    if (getHtmlAltTooltipText(tooltipTarget)) return tooltipTarget;
+    tooltipTarget = tooltipTarget.parentElement?.closest(HTML_ALT_TOOLTIP_SELECTOR) ?? null;
+  }
+  return null;
+}
+
+function getHtmlAltTooltipText(target: HTMLElement) {
+  const customTooltip = target.getAttribute("data-tooltip")?.trim();
+  if (customTooltip) return customTooltip;
+
+  const nativeTitle = target.getAttribute("title")?.trim();
+  if (nativeTitle) return nativeTitle;
+
+  if (target instanceof HTMLImageElement) {
+    const alt = target.getAttribute("alt")?.trim();
+    if (alt) return alt;
+  }
+
+  return "";
+}
+
+function getHtmlAltTooltipDelayMs(target: HTMLElement) {
+  const configuredDelay = target.getAttribute("data-tooltip-delay");
+  if (configuredDelay && /^\d+$/.test(configuredDelay)) return Number(configuredDelay);
+  return target.closest(".view-library, .view-roster") ? SLOW_HTML_ALT_TOOLTIP_DELAY_MS : 0;
+}
+
+function muteNativeTitle(target: HTMLElement, mutedTitles: WeakMap<HTMLElement, string>) {
+  const title = target.getAttribute("title");
+  if (!title?.trim()) return;
+  if (!mutedTitles.has(target)) mutedTitles.set(target, title);
+  target.removeAttribute("title");
 }

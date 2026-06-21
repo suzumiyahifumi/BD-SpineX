@@ -4,12 +4,16 @@ type HalftoneDot = [number, number, number, number, number, number?];
 type LineArtMeta = { image: string };
 type LibraryBackdropMode = "classic" | "posterGhost" | "duotone" | "pureTone";
 type ParticleDensityPreset = "full" | "sparse";
+type ParticleLayerMode = "standard" | "outer";
 type BackdropCharacterPhase = "ready" | "transition" | "settled";
 export type LibraryBackdropCharacterDetail = {
   duration?: number;
   fromId?: string;
   id: string;
   phase: BackdropCharacterPhase;
+};
+export type LibraryBackdropSettingsDetail = {
+  particlesEnabled: boolean;
 };
 type HalftoneData = {
   id: string;
@@ -20,6 +24,7 @@ type HalftoneData = {
 };
 
 export const LIBRARY_BACKDROP_CHARACTER_EVENT = "bd-spinex:library-backdrop-character";
+export const LIBRARY_BACKDROP_SETTINGS_EVENT = "bd-spinex:library-backdrop-settings";
 type HalftoneManifest = {
   characters?: Array<{ id?: string }>;
 };
@@ -59,13 +64,16 @@ type LibraryBackdropConsoleApi = {
   getParticlesEnabled: () => boolean;
   getParticleCount: () => number;
   getMode: () => LibraryBackdropMode;
+  getParticleLayerMode: () => ParticleLayerMode;
   getSettings: () => LibraryBackdropSettings;
   modes: readonly LibraryBackdropMode[];
+  particleLayerModes: readonly ParticleLayerMode[];
   particleModes: readonly ParticleDensityPreset[];
   resetSettings: () => LibraryBackdropSettings;
   setInk: (value: number, target?: string) => LibraryBackdropSettings;
   setMode: (mode: string) => LibraryBackdropMode;
   setParticleDensity: (value: number) => LibraryBackdropSettings;
+  setParticleLayerMode: (mode: string) => LibraryBackdropSettings;
   setParticleMode: (mode: string) => LibraryBackdropSettings;
   setParticlesEnabled: (enabled: boolean) => LibraryBackdropSettings;
   setSettings: (settings: Partial<LibraryBackdropSettings>) => LibraryBackdropSettings;
@@ -77,6 +85,7 @@ type LibraryBackdropSettings = {
   duotoneInk: number;
   lineWidth: number;
   particleDensity: number;
+  particleLayerMode: ParticleLayerMode;
   particlesEnabled: boolean;
   posterGhostInk: number;
   pureToneInk: number;
@@ -95,7 +104,9 @@ const LIBRARY_BACKDROP_MODE_STORAGE_KEY = "bd-spinex.libraryBackdrop.mode";
 const LIBRARY_BACKDROP_SETTINGS_STORAGE_KEY = "bd-spinex.libraryBackdrop.settings";
 const LIBRARY_BACKDROP_MODES = ["classic", "posterGhost", "duotone", "pureTone"] as const satisfies readonly LibraryBackdropMode[];
 const PARTICLE_DENSITY_PRESETS = ["full", "sparse"] as const satisfies readonly ParticleDensityPreset[];
+const PARTICLE_LAYER_MODES = ["standard", "outer"] as const satisfies readonly ParticleLayerMode[];
 const SPARSE_PARTICLE_DENSITY = 0.35;
+const OUTER_PARTICLE_KEEP_RATIO = 0.36;
 const DEFAULT_BACKDROP_MODE: LibraryBackdropMode = "pureTone";
 const DEFAULT_BACKDROP_SETTINGS: LibraryBackdropSettings = {
   classicInk: 2,
@@ -103,6 +114,7 @@ const DEFAULT_BACKDROP_SETTINGS: LibraryBackdropSettings = {
   duotoneInk: 0.66,
   lineWidth: 1,
   particleDensity: 1,
+  particleLayerMode: "outer",
   particlesEnabled: true,
   posterGhostInk: 0.72,
   pureToneInk: 0.3
@@ -112,6 +124,7 @@ const SETTLED_HOLD_DURATION = 16000;
 const INITIAL_HOLD_DURATION = 14000;
 const LINE_FADE_IN_DURATION = 3200;
 const LINE_FADE_OUT_DURATION = 520;
+const BACKDROP_SCATTER_END = 0.46;
 const DOT_COLORS = {
   red: [226, 64, 42],
   redDeep: [158, 35, 23],
@@ -157,6 +170,7 @@ export function LibraryHalftoneBackdrop() {
 
     const setRenderSettings = (settings: Partial<LibraryBackdropSettings>) => {
       const previousParticleDensity = renderSettings.particleDensity;
+      const previousParticleLayerMode = renderSettings.particleLayerMode;
       renderSettings = normalizeBackdropSettings(settings, renderSettings);
       storeBackdropSettings(renderSettings);
       const now = performance.now();
@@ -165,11 +179,22 @@ export function LibraryHalftoneBackdrop() {
         !transition &&
         width > 0 &&
         height > 0 &&
-        Math.abs(renderSettings.particleDensity - previousParticleDensity) > 0.001
+        (
+          Math.abs(renderSettings.particleDensity - previousParticleDensity) > 0.001 ||
+          renderSettings.particleLayerMode !== previousParticleLayerMode
+        )
       ) {
-        particles = createParticlesForShape(currentShape, currentIndex, width, height, renderSettings.particleDensity);
+        particles = createParticlesForShape(
+          currentShape,
+          currentIndex,
+          width,
+          height,
+          renderSettings.particleDensity,
+          renderSettings.particleLayerMode
+        );
       }
       draw(now);
+      emitBackdropSettings(renderSettings);
       console.info("[BD-SpineX] Library backdrop settings:", renderSettings);
       return { ...renderSettings };
     };
@@ -183,32 +208,42 @@ export function LibraryHalftoneBackdrop() {
       setRenderSettings({ particleDensity: particleDensityForMode(mode, renderSettings.particleDensity) })
     );
 
+    const setParticleLayerMode = (mode: string) => (
+      setRenderSettings({ particleLayerMode: normalizeParticleLayerMode(mode, renderSettings.particleLayerMode) })
+    );
+
     const consoleApi: LibraryBackdropConsoleApi = {
       getParticleCount: () => particles.length,
       getParticlesEnabled: () => renderSettings.particlesEnabled,
       getMode: () => renderMode,
+      getParticleLayerMode: () => renderSettings.particleLayerMode,
       getSettings: () => ({ ...renderSettings }),
       modes: LIBRARY_BACKDROP_MODES,
+      particleLayerModes: PARTICLE_LAYER_MODES,
       particleModes: PARTICLE_DENSITY_PRESETS,
       resetSettings: () => setRenderSettings(DEFAULT_BACKDROP_SETTINGS),
       setInk,
       setMode: setRenderMode,
       setParticleDensity: (value: number) => setRenderSettings({ particleDensity: value }),
+      setParticleLayerMode,
       setParticleMode,
       setParticlesEnabled: (enabled: boolean) => setRenderSettings({ particlesEnabled: enabled }),
       setSettings: setRenderSettings,
       toggleParticles: () => setRenderSettings({ particlesEnabled: !renderSettings.particlesEnabled })
     };
     window.bdLibraryBackdrop = consoleApi;
+    emitBackdropSettings(renderSettings);
     console.info("[BD-SpineX] Library backdrop controls:", {
       modes: LIBRARY_BACKDROP_MODES,
       particleModes: PARTICLE_DENSITY_PRESETS,
+      particleLayerModes: PARTICLE_LAYER_MODES,
       setParticleDensity: "bdLibraryBackdrop.setParticleDensity(0.08 ... 1)",
+      setParticleLayerMode: "bdLibraryBackdrop.setParticleLayerMode('standard' | 'outer')",
       setParticleMode: "bdLibraryBackdrop.setParticleMode('full' | 'sparse')",
       setInk: "bdLibraryBackdrop.setInk(value, optionalMode)",
       setMode: "bdLibraryBackdrop.setMode('classic' | 'posterGhost' | 'duotone' | 'pureTone')",
       setParticlesEnabled: "bdLibraryBackdrop.setParticlesEnabled(true | false)",
-      setSettings: "bdLibraryBackdrop.setSettings({ particlesEnabled, particleDensity, classicInk, dotStrength, lineWidth, posterGhostInk, duotoneInk, pureToneInk })"
+      setSettings: "bdLibraryBackdrop.setSettings({ particlesEnabled, particleDensity, particleLayerMode, classicInk, dotStrength, lineWidth, posterGhostInk, duotoneInk, pureToneInk })"
     });
 
     const resize = () => {
@@ -222,7 +257,14 @@ export function LibraryHalftoneBackdrop() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (currentShape) {
-        particles = createParticlesForShape(currentShape, currentIndex, width, height, renderSettings.particleDensity);
+        particles = createParticlesForShape(
+          currentShape,
+          currentIndex,
+          width,
+          height,
+          renderSettings.particleDensity,
+          renderSettings.particleLayerMode
+        );
         transition = null;
         lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
         draw(performance.now());
@@ -241,7 +283,7 @@ export function LibraryHalftoneBackdrop() {
       try {
         const nextShape = await loadHalftoneShape(ids[nextIndex], shapeCache);
         if (cancelled || !currentShape) return;
-        const targets = mapShapeToCanvas(nextShape, width, height, renderSettings.particleDensity);
+        const targets = mapShapeToCanvas(nextShape, width, height, renderSettings.particleDensity, renderSettings.particleLayerMode);
         const count = Math.max(particles.length, targets.length);
         const nextParticles: Particle[] = [];
 
@@ -294,7 +336,9 @@ export function LibraryHalftoneBackdrop() {
     const updateParticles = (now: number) => {
       if (!transition) return;
       const t = clamp((now - transition.start) / transition.duration, 0, 1);
-      const scatterEnd = 0.46;
+      const isScatterPhase = t < BACKDROP_SCATTER_END;
+      const scatterProgress = motionSnappy(clamp(t / BACKDROP_SCATTER_END, 0, 1));
+      const settleProgress = motionSettle(clamp((t - BACKDROP_SCATTER_END) / (1 - BACKDROP_SCATTER_END), 0, 1));
 
       for (const particle of particles) {
         const fromX = particle.fromX ?? particle.x;
@@ -309,15 +353,15 @@ export function LibraryHalftoneBackdrop() {
         const targetSize = particle.targetSize ?? particle.size;
         const phase = (particle.seed % 6283) / 1000;
 
-        if (t < scatterEnd) {
-          const q = easeOutCubic(t / scatterEnd);
+        if (isScatterPhase) {
+          const q = scatterProgress;
           const drift = Math.sin(now * 0.01 + phase) * 12 * q;
           particle.x = lerp(fromX, scatterX, q) + drift;
           particle.y = lerp(fromY, scatterY, q) + Math.cos(now * 0.008 + phase) * 9 * q;
           particle.size = lerp(fromSize, Math.max(fromSize, targetSize) * 0.82, q);
           particle.alpha = lerp(fromAlpha, Math.max(0.14, (fromAlpha || targetAlpha) * 0.54), q);
         } else {
-          const q = easeOutExpo((t - scatterEnd) / (1 - scatterEnd));
+          const q = settleProgress;
           const settle = Math.sin((1 - q) * Math.PI) * (1 - q);
           particle.x = lerp(scatterX, tx, q) + Math.sin(phase + q * Math.PI) * 22 * settle;
           particle.y = lerp(scatterY, ty, q) + Math.cos(phase + q * Math.PI) * 16 * settle;
@@ -333,7 +377,14 @@ export function LibraryHalftoneBackdrop() {
         transition = null;
         lineVisibleSince = renderMode === "classic" ? now : now - LINE_FADE_IN_DURATION;
         particles = width > 0 && height > 0
-          ? createParticlesForShape(currentShape, currentIndex, width, height, renderSettings.particleDensity)
+          ? createParticlesForShape(
+            currentShape,
+            currentIndex,
+            width,
+            height,
+            renderSettings.particleDensity,
+            renderSettings.particleLayerMode
+          )
           : particles.filter((particle) => particle.targetAlpha === undefined || particle.targetAlpha > 0.01);
       }
     };
@@ -347,18 +398,22 @@ export function LibraryHalftoneBackdrop() {
         }
 
         if (transition) {
-          const fadeOut = 1 - easeInOutCubic(clamp((now - transition.start) / LINE_FADE_OUT_DURATION, 0, 1));
+          const fadeOut = 1 - motionSmooth(clamp((now - transition.start) / LINE_FADE_OUT_DURATION, 0, 1));
           drawLineArt(ctx, transition.fromShape, width, height, fadeOut, renderSettings.classicInk, renderSettings.lineWidth);
         } else {
-          const fadeIn = easeInOutCubic(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
+          const fadeIn = motionSmooth(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
           drawLineArt(ctx, currentShape, width, height, fadeIn, renderSettings.classicInk, renderSettings.lineWidth);
         }
 
         return;
       }
 
+      if (renderSettings.particlesEnabled && renderSettings.particleLayerMode === "outer") {
+        drawParticles(ctx, particles, now, renderSettings.dotStrength);
+      }
+
       drawStillBackdrop(ctx, renderMode, renderSettings, transition, currentShape, width, height, now, lineVisibleSince);
-      if (renderSettings.particlesEnabled) {
+      if (renderSettings.particlesEnabled && renderSettings.particleLayerMode !== "outer") {
         drawParticles(ctx, particles, now, renderSettings.dotStrength);
       }
     };
@@ -400,6 +455,12 @@ function emitBackdropCharacter(
   if (!shape?.id) return;
   window.dispatchEvent(new CustomEvent<LibraryBackdropCharacterDetail>(LIBRARY_BACKDROP_CHARACTER_EVENT, {
     detail: { ...detail, id: shape.id }
+  }));
+}
+
+function emitBackdropSettings(settings: LibraryBackdropSettings) {
+  window.dispatchEvent(new CustomEvent<LibraryBackdropSettingsDetail>(LIBRARY_BACKDROP_SETTINGS_EVENT, {
+    detail: { particlesEnabled: settings.particlesEnabled }
   }));
 }
 
@@ -476,10 +537,19 @@ function normalizeBackdropSettings(value: unknown, fallback: LibraryBackdropSett
     duotoneInk: finiteNumber(input.duotoneInk, fallback.duotoneInk, 0, 1.5),
     lineWidth: finiteNumber(input.lineWidth, fallback.lineWidth, 0.25, 3),
     particleDensity: finiteNumber(input.particleDensity, fallback.particleDensity, 0.08, 1),
+    particleLayerMode: normalizeParticleLayerMode(input.particleLayerMode, fallback.particleLayerMode),
     particlesEnabled: booleanValue(input.particlesEnabled, fallback.particlesEnabled),
     posterGhostInk: finiteNumber(input.posterGhostInk, fallback.posterGhostInk, 0, 1.5),
     pureToneInk: finiteNumber(input.pureToneInk, fallback.pureToneInk, 0, 1.5)
   };
+}
+
+function normalizeParticleLayerMode(value: unknown, fallback: ParticleLayerMode): ParticleLayerMode {
+  if (typeof value !== "string") return fallback;
+  const key = value.trim().toLowerCase();
+  if (key === "outer" || key === "outside" || key === "outline" || key === "perimeter" || key === "halo" || key === "behind") return "outer";
+  if (key === "standard" || key === "normal" || key === "front" || key === "default" || key === "full") return "standard";
+  return fallback;
 }
 
 function finiteNumber(value: unknown, fallback: number, min: number, max: number) {
@@ -555,16 +625,29 @@ function loadImage(src: string) {
   });
 }
 
-function createParticlesForShape(shape: HalftoneShape, index: number, width: number, height: number, particleDensity: number): Particle[] {
-  return mapShapeToCanvas(shape, width, height, particleDensity).map((target, particleIndex) => ({
+function createParticlesForShape(
+  shape: HalftoneShape,
+  index: number,
+  width: number,
+  height: number,
+  particleDensity: number,
+  particleLayerMode: ParticleLayerMode
+): Particle[] {
+  return mapShapeToCanvas(shape, width, height, particleDensity, particleLayerMode).map((target, particleIndex) => ({
     ...target,
     seed: hash(particleIndex, index + 7)
   }));
 }
 
-function mapShapeToCanvas(shape: HalftoneShape, width: number, height: number, particleDensity: number): ParticleTarget[] {
+function mapShapeToCanvas(
+  shape: HalftoneShape,
+  width: number,
+  height: number,
+  particleDensity: number,
+  particleLayerMode: ParticleLayerMode
+): ParticleTarget[] {
   const layout = shapeLayout(shape, width, height);
-  return selectParticleDots(shape, particleDensity).map((dot) => ({
+  return selectParticleDots(shape, particleDensity, particleLayerMode).map((dot) => ({
     x: layout.left + dot[0] * layout.shapeWidth,
     y: layout.top + dot[1] * layout.shapeHeight,
     size: layout.baseSize * dot[2],
@@ -573,17 +656,63 @@ function mapShapeToCanvas(shape: HalftoneShape, width: number, height: number, p
   }));
 }
 
-function selectParticleDots(shape: HalftoneShape, particleDensity: number) {
+function selectParticleDots(shape: HalftoneShape, particleDensity: number, particleLayerMode: ParticleLayerMode) {
+  const candidateDots = particleLayerMode === "outer" ? selectOuterParticleDots(shape) : shape.dots;
   const density = clamp(particleDensity, 0.08, 1);
-  if (density >= 0.995 || shape.dots.length <= 1) return shape.dots;
+  if (density >= 0.995 || candidateDots.length <= 1) return candidateDots;
 
-  const keepCount = Math.max(1, Math.round(shape.dots.length * density));
-  return shape.dots
+  const keepCount = Math.max(1, Math.round(candidateDots.length * density));
+  return candidateDots
     .map((dot, index) => ({
       dot,
       index,
       score: particleDotImportance(dot, index, shape.id)
     }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, keepCount)
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.dot);
+}
+
+function selectOuterParticleDots(shape: HalftoneShape) {
+  if (shape.dots.length <= 16) return shape.dots;
+
+  const bounds = shape.dots.reduce((box, dot) => ({
+    minX: Math.min(box.minX, dot[0]),
+    maxX: Math.max(box.maxX, dot[0]),
+    minY: Math.min(box.minY, dot[1]),
+    maxY: Math.max(box.maxY, dot[1])
+  }), { minX: 1, maxX: 0, minY: 1, maxY: 0 });
+  const centerX = (bounds.minX + bounds.maxX) * 0.5;
+  const centerY = (bounds.minY + bounds.maxY) * 0.5;
+  const aspect = shape.aspect || 1;
+  const sectorCount = 192;
+  const maxRadiusBySector = new Array<number>(sectorCount).fill(0);
+  const dotMetrics = shape.dots.map((dot) => {
+    const dx = (dot[0] - centerX) * aspect;
+    const dy = dot[1] - centerY;
+    const angle = Math.atan2(dy, dx);
+    const sector = Math.floor((((angle + Math.PI) / (Math.PI * 2)) * sectorCount)) % sectorCount;
+    const radius = Math.hypot(dx, dy);
+    maxRadiusBySector[sector] = Math.max(maxRadiusBySector[sector], radius);
+    return { dot, radius, sector };
+  });
+
+  const keepCount = Math.max(24, Math.min(shape.dots.length, Math.round(shape.dots.length * OUTER_PARTICLE_KEEP_RATIO)));
+  return dotMetrics
+    .map((entry, index) => {
+      const sectorRadius = Math.max(
+        maxRadiusBySector[(entry.sector - 1 + sectorCount) % sectorCount],
+        maxRadiusBySector[entry.sector],
+        maxRadiusBySector[(entry.sector + 1) % sectorCount]
+      );
+      const edgeDepth = Math.max(0, sectorRadius - entry.radius);
+      const outerBand = 1 - clamp(edgeDepth / 0.064, 0, 1);
+      const radial = clamp(entry.radius / Math.max(0.01, sectorRadius), 0, 1);
+      const alpha = clamp(entry.dot[3] ?? 0, 0, 1);
+      const score = outerBand * 0.72 + radial * 0.18 + alpha * 0.08 + seeded(index, Number.parseInt(shape.id, 10) || 0) * 0.08;
+      return { ...entry, index, score };
+    })
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, keepCount)
     .sort((a, b) => a.index - b.index)
@@ -688,14 +817,14 @@ function drawStillBackdrop(
 ) {
   if (transition) {
     const t = clamp((now - transition.start) / transition.duration, 0, 1);
-    const fadeOut = 1 - easeInOutCubic(clamp(t / 0.42, 0, 1));
-    const fadeIn = easeInOutCubic(clamp((t - 0.18) / 0.82, 0, 1));
+    const fadeOut = 1 - motionSmooth(clamp(t / 0.42, 0, 1));
+    const fadeIn = motionSmooth(clamp((t - 0.18) / 0.82, 0, 1));
     drawStillBackdropImage(ctx, mode, settings, transition.fromShape, width, height, fadeOut);
     drawStillBackdropImage(ctx, mode, settings, transition.nextShape, width, height, fadeIn);
     return;
   }
 
-  const fadeIn = easeInOutCubic(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
+  const fadeIn = motionSmooth(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
   drawStillBackdropImage(ctx, mode, settings, currentShape, width, height, fadeIn);
 }
 
@@ -844,16 +973,19 @@ function hash(a: number, b: number) {
   return value >>> 0;
 }
 
-function easeInOutCubic(t: number) {
-  return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
+function motionSmooth(t: number) {
+  const x = clamp(t, 0, 1);
+  return x * x * x * (x * (x * 6 - 15) + 10);
 }
 
-function easeOutCubic(t: number) {
-  return 1 - ((1 - t) ** 3);
+function motionSnappy(t: number) {
+  const x = clamp(t, 0, 1);
+  return 1 - ((1 - x) ** 3);
 }
 
-function easeOutExpo(t: number) {
-  return t === 1 ? 1 : 1 - (2 ** (-10 * t));
+function motionSettle(t: number) {
+  const x = clamp(t, 0, 1);
+  return x === 1 ? 1 : 1 - (2 ** (-10 * x));
 }
 
 function lerp(a: number, b: number, t: number) {
