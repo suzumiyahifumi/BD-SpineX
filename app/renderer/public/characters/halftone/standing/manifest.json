@@ -1,0 +1,2709 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-20T06:11:31.429Z",
+  "inputDir": "app/renderer/public/characters/standing",
+  "outputDir": "app/renderer/public/characters/halftone/standing",
+  "settings": {
+    "mode": "classic",
+    "grid": 3,
+    "density": 0.82,
+    "edgeWeight": 1.25,
+    "maxDots": 5200,
+    "contourAlphaThreshold": 0.18,
+    "lineArt": "posterGhost",
+    "artifacts": "app",
+    "fullVariantIds": [
+      "000201",
+      "067702",
+      "000101"
+    ]
+  },
+  "characters": [
+    {
+      "id": "000101",
+      "dots": 2305,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000101.lineart.png",
+      "inkPixels": 804916,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "contour": "app/renderer/public/characters/halftone/standing/000101.contour.lineart.png",
+        "duotone": "app/renderer/public/characters/halftone/standing/000101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000101.poster-ghost.lineart.png",
+        "detailInk": "app/renderer/public/characters/halftone/standing/000101.detail-ink.lineart.png",
+        "backdropTrace": "app/renderer/public/characters/halftone/standing/000101.backdrop-trace.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000101.json",
+      "preview": "app/renderer/public/characters/halftone/standing/000101.preview.png"
+    },
+    {
+      "id": "000102",
+      "dots": 2820,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000102.lineart.png",
+      "inkPixels": 869260,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000102.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000102.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000102.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000102.json"
+    },
+    {
+      "id": "000103",
+      "dots": 2609,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000103.lineart.png",
+      "inkPixels": 778094,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000103.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000103.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000103.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000103.json"
+    },
+    {
+      "id": "000104",
+      "dots": 2839,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000104.lineart.png",
+      "inkPixels": 806064,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000104.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000104.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000104.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000104.json"
+    },
+    {
+      "id": "000105",
+      "dots": 2835,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000105.lineart.png",
+      "inkPixels": 920605,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000105.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000105.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000105.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000105.json"
+    },
+    {
+      "id": "000106",
+      "dots": 3455,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000106.lineart.png",
+      "inkPixels": 1212457,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000106.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000106.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000106.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/000106.json"
+    },
+    {
+      "id": "000201",
+      "dots": 2553,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000201.lineart.png",
+      "inkPixels": 943294,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "contour": "app/renderer/public/characters/halftone/standing/000201.contour.lineart.png",
+        "duotone": "app/renderer/public/characters/halftone/standing/000201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000201.poster-ghost.lineart.png",
+        "detailInk": "app/renderer/public/characters/halftone/standing/000201.detail-ink.lineart.png",
+        "backdropTrace": "app/renderer/public/characters/halftone/standing/000201.backdrop-trace.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000201.json",
+      "preview": "app/renderer/public/characters/halftone/standing/000201.preview.png"
+    },
+    {
+      "id": "000202",
+      "dots": 2378,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000202.lineart.png",
+      "inkPixels": 925952,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000202.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000202.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000202.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000202.json"
+    },
+    {
+      "id": "000203",
+      "dots": 2836,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000203.lineart.png",
+      "inkPixels": 930027,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000203.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000203.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000203.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000203.json"
+    },
+    {
+      "id": "000204",
+      "dots": 2411,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000204.lineart.png",
+      "inkPixels": 990862,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000204.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000204.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000204.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000204.json"
+    },
+    {
+      "id": "000206",
+      "dots": 2184,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000206.lineart.png",
+      "inkPixels": 847297,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000206.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000206.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000206.lineart.png"
+      },
+      "aspect": 0.94531,
+      "data": "app/renderer/public/characters/halftone/standing/000206.json"
+    },
+    {
+      "id": "000296",
+      "dots": 2534,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000296.lineart.png",
+      "inkPixels": 1110236,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000296.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000296.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000296.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/000296.json"
+    },
+    {
+      "id": "000301",
+      "dots": 2782,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000301.lineart.png",
+      "inkPixels": 731774,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000301.lineart.png"
+      },
+      "aspect": 0.94922,
+      "data": "app/renderer/public/characters/halftone/standing/000301.json"
+    },
+    {
+      "id": "000303",
+      "dots": 2996,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000303.lineart.png",
+      "inkPixels": 688896,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000303.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000303.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000303.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/000303.json"
+    },
+    {
+      "id": "000304",
+      "dots": 2513,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000304.lineart.png",
+      "inkPixels": 638105,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000304.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000304.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000304.lineart.png"
+      },
+      "aspect": 0.95313,
+      "data": "app/renderer/public/characters/halftone/standing/000304.json"
+    },
+    {
+      "id": "000306",
+      "dots": 3132,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000306.lineart.png",
+      "inkPixels": 1671142,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000306.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000306.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000306.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000306.json"
+    },
+    {
+      "id": "000396",
+      "dots": 2373,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000396.lineart.png",
+      "inkPixels": 1009836,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000396.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000396.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000396.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/000396.json"
+    },
+    {
+      "id": "000401",
+      "dots": 3024,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000401.lineart.png",
+      "inkPixels": 891221,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000401.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000401.json"
+    },
+    {
+      "id": "000402",
+      "dots": 2711,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000402.lineart.png",
+      "inkPixels": 924984,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000402.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000402.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000402.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000402.json"
+    },
+    {
+      "id": "000403",
+      "dots": 3434,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000403.lineart.png",
+      "inkPixels": 1086060,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000403.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000403.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000403.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/000403.json"
+    },
+    {
+      "id": "000406",
+      "dots": 2863,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000406.lineart.png",
+      "inkPixels": 1275876,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000406.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000406.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000406.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000406.json"
+    },
+    {
+      "id": "000501",
+      "dots": 2786,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000501.lineart.png",
+      "inkPixels": 961036,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000501.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000501.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000501.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000501.json"
+    },
+    {
+      "id": "000502",
+      "dots": 2703,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000502.lineart.png",
+      "inkPixels": 943975,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000502.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000502.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000502.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000502.json"
+    },
+    {
+      "id": "000504",
+      "dots": 2937,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000504.lineart.png",
+      "inkPixels": 975602,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000504.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000504.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000504.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000504.json"
+    },
+    {
+      "id": "000506",
+      "dots": 2794,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000506.lineart.png",
+      "inkPixels": 1255433,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000506.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000506.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000506.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000506.json"
+    },
+    {
+      "id": "000601",
+      "dots": 2879,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000601.lineart.png",
+      "inkPixels": 920427,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000601.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000601.json"
+    },
+    {
+      "id": "000604",
+      "dots": 2876,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000604.lineart.png",
+      "inkPixels": 528004,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000604.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000604.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000604.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000604.json"
+    },
+    {
+      "id": "000701",
+      "dots": 2857,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000701.lineart.png",
+      "inkPixels": 1299168,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000701.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000701.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000701.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000701.json"
+    },
+    {
+      "id": "000706",
+      "dots": 3111,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000706.lineart.png",
+      "inkPixels": 1282076,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000706.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000706.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000706.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000706.json"
+    },
+    {
+      "id": "000707",
+      "dots": 2291,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000707.lineart.png",
+      "inkPixels": 892627,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000707.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000707.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000707.lineart.png"
+      },
+      "aspect": 0.92969,
+      "data": "app/renderer/public/characters/halftone/standing/000707.json"
+    },
+    {
+      "id": "000708",
+      "dots": 2347,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000708.lineart.png",
+      "inkPixels": 1016171,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000708.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000708.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000708.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/000708.json"
+    },
+    {
+      "id": "000801",
+      "dots": 2529,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000801.lineart.png",
+      "inkPixels": 1098211,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000801.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000801.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000801.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000801.json"
+    },
+    {
+      "id": "000804",
+      "dots": 2962,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000804.lineart.png",
+      "inkPixels": 1241736,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000804.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000804.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000804.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000804.json"
+    },
+    {
+      "id": "000806",
+      "dots": 2983,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000806.lineart.png",
+      "inkPixels": 1395241,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000806.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000806.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000806.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000806.json"
+    },
+    {
+      "id": "000807",
+      "dots": 2265,
+      "lineArt": "app/renderer/public/characters/halftone/standing/000807.lineart.png",
+      "inkPixels": 1148580,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/000807.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/000807.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/000807.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/000807.json"
+    },
+    {
+      "id": "001001",
+      "dots": 3066,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001001.lineart.png",
+      "inkPixels": 1372087,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001001.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/001001.json"
+    },
+    {
+      "id": "001002",
+      "dots": 2292,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001002.lineart.png",
+      "inkPixels": 813997,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001002.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001002.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001002.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/001002.json"
+    },
+    {
+      "id": "001004",
+      "dots": 2902,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001004.lineart.png",
+      "inkPixels": 1240935,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001004.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001004.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001004.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/001004.json"
+    },
+    {
+      "id": "001006",
+      "dots": 2129,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001006.lineart.png",
+      "inkPixels": 848721,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001006.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001006.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001006.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/001006.json"
+    },
+    {
+      "id": "001101",
+      "dots": 2716,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001101.lineart.png",
+      "inkPixels": 1086922,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001101.lineart.png"
+      },
+      "aspect": 0.89453,
+      "data": "app/renderer/public/characters/halftone/standing/001101.json"
+    },
+    {
+      "id": "001106",
+      "dots": 1940,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001106.lineart.png",
+      "inkPixels": 864927,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001106.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001106.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001106.lineart.png"
+      },
+      "aspect": 0.85156,
+      "data": "app/renderer/public/characters/halftone/standing/001106.json"
+    },
+    {
+      "id": "001107",
+      "dots": 1984,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001107.lineart.png",
+      "inkPixels": 700455,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001107.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001107.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001107.lineart.png"
+      },
+      "aspect": 0.88281,
+      "data": "app/renderer/public/characters/halftone/standing/001107.json"
+    },
+    {
+      "id": "001197",
+      "dots": 1806,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001197.lineart.png",
+      "inkPixels": 709482,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001197.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001197.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001197.lineart.png"
+      },
+      "aspect": 0.87109,
+      "data": "app/renderer/public/characters/halftone/standing/001197.json"
+    },
+    {
+      "id": "001201",
+      "dots": 2832,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001201.lineart.png",
+      "inkPixels": 1331791,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001201.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/001201.json"
+    },
+    {
+      "id": "001206",
+      "dots": 3206,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001206.lineart.png",
+      "inkPixels": 1431379,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001206.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001206.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001206.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/001206.json"
+    },
+    {
+      "id": "001207",
+      "dots": 2729,
+      "lineArt": "app/renderer/public/characters/halftone/standing/001207.lineart.png",
+      "inkPixels": 1116196,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/001207.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/001207.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/001207.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/001207.json"
+    },
+    {
+      "id": "002401",
+      "dots": 2648,
+      "lineArt": "app/renderer/public/characters/halftone/standing/002401.lineart.png",
+      "inkPixels": 1032948,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/002401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/002401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/002401.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/002401.json"
+    },
+    {
+      "id": "002403",
+      "dots": 2172,
+      "lineArt": "app/renderer/public/characters/halftone/standing/002403.lineart.png",
+      "inkPixels": 1030164,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/002403.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/002403.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/002403.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/002403.json"
+    },
+    {
+      "id": "002406",
+      "dots": 2455,
+      "lineArt": "app/renderer/public/characters/halftone/standing/002406.lineart.png",
+      "inkPixels": 1039720,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/002406.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/002406.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/002406.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/002406.json"
+    },
+    {
+      "id": "003001",
+      "dots": 2698,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003001.lineart.png",
+      "inkPixels": 1056816,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003001.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003001.json"
+    },
+    {
+      "id": "003101",
+      "dots": 2517,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003101.lineart.png",
+      "inkPixels": 932991,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003101.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003101.json"
+    },
+    {
+      "id": "003201",
+      "dots": 2494,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003201.lineart.png",
+      "inkPixels": 529724,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003201.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003201.json"
+    },
+    {
+      "id": "003202",
+      "dots": 2645,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003202.lineart.png",
+      "inkPixels": 1231514,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003202.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003202.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003202.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003202.json"
+    },
+    {
+      "id": "003203",
+      "dots": 3246,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003203.lineart.png",
+      "inkPixels": 939931,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003203.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003203.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003203.lineart.png"
+      },
+      "aspect": 0.92969,
+      "data": "app/renderer/public/characters/halftone/standing/003203.json"
+    },
+    {
+      "id": "003301",
+      "dots": 2596,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003301.lineart.png",
+      "inkPixels": 1050680,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003301.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003301.json"
+    },
+    {
+      "id": "003302",
+      "dots": 2502,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003302.lineart.png",
+      "inkPixels": 725895,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003302.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003302.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003302.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003302.json"
+    },
+    {
+      "id": "003303",
+      "dots": 2224,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003303.lineart.png",
+      "inkPixels": 700722,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003303.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003303.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003303.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003303.json"
+    },
+    {
+      "id": "003401",
+      "dots": 2551,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003401.lineart.png",
+      "inkPixels": 1074922,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003401.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003401.json"
+    },
+    {
+      "id": "003402",
+      "dots": 2315,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003402.lineart.png",
+      "inkPixels": 999237,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003402.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003402.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003402.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/003402.json"
+    },
+    {
+      "id": "003403",
+      "dots": 2476,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003403.lineart.png",
+      "inkPixels": 928462,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003403.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003403.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003403.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003403.json"
+    },
+    {
+      "id": "003501",
+      "dots": 2044,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003501.lineart.png",
+      "inkPixels": 839886,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003501.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003501.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003501.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/003501.json"
+    },
+    {
+      "id": "003601",
+      "dots": 1970,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003601.lineart.png",
+      "inkPixels": 826638,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003601.lineart.png"
+      },
+      "aspect": 0.94922,
+      "data": "app/renderer/public/characters/halftone/standing/003601.json"
+    },
+    {
+      "id": "003602",
+      "dots": 2140,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003602.lineart.png",
+      "inkPixels": 858244,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003602.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003602.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003602.lineart.png"
+      },
+      "aspect": 0.87891,
+      "data": "app/renderer/public/characters/halftone/standing/003602.json"
+    },
+    {
+      "id": "003603",
+      "dots": 3027,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003603.lineart.png",
+      "inkPixels": 725652,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003603.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003603.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003603.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/003603.json"
+    },
+    {
+      "id": "003604",
+      "dots": 1872,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003604.lineart.png",
+      "inkPixels": 737973,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003604.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003604.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003604.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/003604.json"
+    },
+    {
+      "id": "003701",
+      "dots": 2726,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003701.lineart.png",
+      "inkPixels": 1083803,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003701.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003701.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003701.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003701.json"
+    },
+    {
+      "id": "003702",
+      "dots": 2214,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003702.lineart.png",
+      "inkPixels": 622647,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003702.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003702.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003702.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003702.json"
+    },
+    {
+      "id": "003703",
+      "dots": 2345,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003703.lineart.png",
+      "inkPixels": 1002905,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003703.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003703.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003703.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003703.json"
+    },
+    {
+      "id": "003801",
+      "dots": 2164,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003801.lineart.png",
+      "inkPixels": 752037,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003801.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003801.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003801.lineart.png"
+      },
+      "aspect": 0.85156,
+      "data": "app/renderer/public/characters/halftone/standing/003801.json"
+    },
+    {
+      "id": "003802",
+      "dots": 2372,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003802.lineart.png",
+      "inkPixels": 891678,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003802.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003802.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003802.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003802.json"
+    },
+    {
+      "id": "003803",
+      "dots": 2334,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003803.lineart.png",
+      "inkPixels": 753369,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003803.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003803.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003803.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/003803.json"
+    },
+    {
+      "id": "003892",
+      "dots": 2376,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003892.lineart.png",
+      "inkPixels": 1006238,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003892.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003892.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003892.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/003892.json"
+    },
+    {
+      "id": "003901",
+      "dots": 2451,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003901.lineart.png",
+      "inkPixels": 950939,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003901.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003901.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003901.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/003901.json"
+    },
+    {
+      "id": "003902",
+      "dots": 2286,
+      "lineArt": "app/renderer/public/characters/halftone/standing/003902.lineart.png",
+      "inkPixels": 905622,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/003902.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/003902.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/003902.lineart.png"
+      },
+      "aspect": 0.92969,
+      "data": "app/renderer/public/characters/halftone/standing/003902.json"
+    },
+    {
+      "id": "004001",
+      "dots": 2261,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004001.lineart.png",
+      "inkPixels": 776726,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004001.lineart.png"
+      },
+      "aspect": 0.94922,
+      "data": "app/renderer/public/characters/halftone/standing/004001.json"
+    },
+    {
+      "id": "004002",
+      "dots": 2497,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004002.lineart.png",
+      "inkPixels": 826051,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004002.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004002.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004002.lineart.png"
+      },
+      "aspect": 0.94922,
+      "data": "app/renderer/public/characters/halftone/standing/004002.json"
+    },
+    {
+      "id": "004091",
+      "dots": 2620,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004091.lineart.png",
+      "inkPixels": 1032088,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004091.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004091.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004091.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/004091.json"
+    },
+    {
+      "id": "004101",
+      "dots": 2468,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004101.lineart.png",
+      "inkPixels": 1103261,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004101.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/004101.json"
+    },
+    {
+      "id": "004102",
+      "dots": 2398,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004102.lineart.png",
+      "inkPixels": 930711,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004102.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004102.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004102.lineart.png"
+      },
+      "aspect": 0.95703,
+      "data": "app/renderer/public/characters/halftone/standing/004102.json"
+    },
+    {
+      "id": "004201",
+      "dots": 2511,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004201.lineart.png",
+      "inkPixels": 445372,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004201.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/004201.json"
+    },
+    {
+      "id": "004202",
+      "dots": 2345,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004202.lineart.png",
+      "inkPixels": 751806,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004202.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004202.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004202.lineart.png"
+      },
+      "aspect": 0.88672,
+      "data": "app/renderer/public/characters/halftone/standing/004202.json"
+    },
+    {
+      "id": "004301",
+      "dots": 2587,
+      "lineArt": "app/renderer/public/characters/halftone/standing/004301.lineart.png",
+      "inkPixels": 730080,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/004301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/004301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/004301.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/004301.json"
+    },
+    {
+      "id": "020001",
+      "dots": 2390,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020001.lineart.png",
+      "inkPixels": 866919,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020001.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/020001.json"
+    },
+    {
+      "id": "020002",
+      "dots": 3055,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020002.lineart.png",
+      "inkPixels": 942410,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020002.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020002.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020002.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/020002.json"
+    },
+    {
+      "id": "020101",
+      "dots": 2767,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020101.lineart.png",
+      "inkPixels": 932979,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020101.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/020101.json"
+    },
+    {
+      "id": "020102",
+      "dots": 2270,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020102.lineart.png",
+      "inkPixels": 973976,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020102.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020102.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020102.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/020102.json"
+    },
+    {
+      "id": "020201",
+      "dots": 2155,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020201.lineart.png",
+      "inkPixels": 796521,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020201.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/020201.json"
+    },
+    {
+      "id": "020301",
+      "dots": 2299,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020301.lineart.png",
+      "inkPixels": 847363,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020301.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/020301.json"
+    },
+    {
+      "id": "020401",
+      "dots": 2151,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020401.lineart.png",
+      "inkPixels": 1003553,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020401.lineart.png"
+      },
+      "aspect": 0.87109,
+      "data": "app/renderer/public/characters/halftone/standing/020401.json"
+    },
+    {
+      "id": "020501",
+      "dots": 1935,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020501.lineart.png",
+      "inkPixels": 897677,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020501.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020501.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020501.lineart.png"
+      },
+      "aspect": 0.94141,
+      "data": "app/renderer/public/characters/halftone/standing/020501.json"
+    },
+    {
+      "id": "020601",
+      "dots": 2614,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020601.lineart.png",
+      "inkPixels": 671582,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020601.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/020601.json"
+    },
+    {
+      "id": "020701",
+      "dots": 2336,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020701.lineart.png",
+      "inkPixels": 840950,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020701.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020701.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020701.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/020701.json"
+    },
+    {
+      "id": "020801",
+      "dots": 2136,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020801.lineart.png",
+      "inkPixels": 698248,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020801.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020801.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020801.lineart.png"
+      },
+      "aspect": 0.93359,
+      "data": "app/renderer/public/characters/halftone/standing/020801.json"
+    },
+    {
+      "id": "020901",
+      "dots": 2170,
+      "lineArt": "app/renderer/public/characters/halftone/standing/020901.lineart.png",
+      "inkPixels": 756331,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/020901.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/020901.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/020901.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/020901.json"
+    },
+    {
+      "id": "021001",
+      "dots": 2346,
+      "lineArt": "app/renderer/public/characters/halftone/standing/021001.lineart.png",
+      "inkPixels": 1059919,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/021001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/021001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/021001.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/021001.json"
+    },
+    {
+      "id": "050001",
+      "dots": 2091,
+      "lineArt": "app/renderer/public/characters/halftone/standing/050001.lineart.png",
+      "inkPixels": 427503,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/050001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/050001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/050001.lineart.png"
+      },
+      "aspect": 0.83203,
+      "data": "app/renderer/public/characters/halftone/standing/050001.json"
+    },
+    {
+      "id": "050101",
+      "dots": 2203,
+      "lineArt": "app/renderer/public/characters/halftone/standing/050101.lineart.png",
+      "inkPixels": 360571,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/050101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/050101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/050101.lineart.png"
+      },
+      "aspect": 0.88281,
+      "data": "app/renderer/public/characters/halftone/standing/050101.json"
+    },
+    {
+      "id": "050201",
+      "dots": 1629,
+      "lineArt": "app/renderer/public/characters/halftone/standing/050201.lineart.png",
+      "inkPixels": 1026252,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/050201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/050201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/050201.lineart.png"
+      },
+      "aspect": 0.98148,
+      "data": "app/renderer/public/characters/halftone/standing/050201.json"
+    },
+    {
+      "id": "060301",
+      "dots": 2539,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060301.lineart.png",
+      "inkPixels": 738120,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060301.lineart.png"
+      },
+      "aspect": 0.94141,
+      "data": "app/renderer/public/characters/halftone/standing/060301.json"
+    },
+    {
+      "id": "060302",
+      "dots": 2646,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060302.lineart.png",
+      "inkPixels": 1361299,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060302.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060302.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060302.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060302.json"
+    },
+    {
+      "id": "060401",
+      "dots": 2690,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060401.lineart.png",
+      "inkPixels": 830051,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060401.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060401.json"
+    },
+    {
+      "id": "060402",
+      "dots": 2999,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060402.lineart.png",
+      "inkPixels": 1034118,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060402.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060402.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060402.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060402.json"
+    },
+    {
+      "id": "060403",
+      "dots": 2933,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060403.lineart.png",
+      "inkPixels": 761869,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060403.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060403.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060403.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060403.json"
+    },
+    {
+      "id": "060501",
+      "dots": 2587,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060501.lineart.png",
+      "inkPixels": 884688,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060501.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060501.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060501.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060501.json"
+    },
+    {
+      "id": "060502",
+      "dots": 2927,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060502.lineart.png",
+      "inkPixels": 1276389,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060502.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060502.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060502.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/060502.json"
+    },
+    {
+      "id": "060601",
+      "dots": 2858,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060601.lineart.png",
+      "inkPixels": 868232,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060601.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060601.json"
+    },
+    {
+      "id": "060602",
+      "dots": 3084,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060602.lineart.png",
+      "inkPixels": 1233823,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060602.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060602.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060602.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/060602.json"
+    },
+    {
+      "id": "060701",
+      "dots": 3358,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060701.lineart.png",
+      "inkPixels": 964951,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060701.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060701.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060701.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/060701.json"
+    },
+    {
+      "id": "060702",
+      "dots": 2568,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060702.lineart.png",
+      "inkPixels": 1201605,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060702.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060702.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060702.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060702.json"
+    },
+    {
+      "id": "060706",
+      "dots": 2709,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060706.lineart.png",
+      "inkPixels": 888321,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060706.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060706.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060706.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060706.json"
+    },
+    {
+      "id": "060801",
+      "dots": 2320,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060801.lineart.png",
+      "inkPixels": 798158,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060801.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060801.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060801.lineart.png"
+      },
+      "aspect": 0.94922,
+      "data": "app/renderer/public/characters/halftone/standing/060801.json"
+    },
+    {
+      "id": "060802",
+      "dots": 2570,
+      "lineArt": "app/renderer/public/characters/halftone/standing/060802.lineart.png",
+      "inkPixels": 862423,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/060802.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/060802.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/060802.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/060802.json"
+    },
+    {
+      "id": "061001",
+      "dots": 2692,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061001.lineart.png",
+      "inkPixels": 870575,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061001.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/061001.json"
+    },
+    {
+      "id": "061002",
+      "dots": 2852,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061002.lineart.png",
+      "inkPixels": 945070,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061002.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061002.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061002.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/061002.json"
+    },
+    {
+      "id": "061092",
+      "dots": 2910,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061092.lineart.png",
+      "inkPixels": 974234,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061092.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061092.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061092.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/061092.json"
+    },
+    {
+      "id": "061101",
+      "dots": 2962,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061101.lineart.png",
+      "inkPixels": 1154837,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061101.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/061101.json"
+    },
+    {
+      "id": "061102",
+      "dots": 2371,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061102.lineart.png",
+      "inkPixels": 1234404,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061102.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061102.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061102.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/061102.json"
+    },
+    {
+      "id": "061103",
+      "dots": 2807,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061103.lineart.png",
+      "inkPixels": 1093736,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061103.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061103.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061103.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/061103.json"
+    },
+    {
+      "id": "061302",
+      "dots": 3399,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061302.lineart.png",
+      "inkPixels": 1003499,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061302.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061302.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061302.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/061302.json"
+    },
+    {
+      "id": "061305",
+      "dots": 2973,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061305.lineart.png",
+      "inkPixels": 1296229,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061305.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061305.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061305.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/061305.json"
+    },
+    {
+      "id": "061402",
+      "dots": 2828,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061402.lineart.png",
+      "inkPixels": 762151,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061402.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061402.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061402.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/061402.json"
+    },
+    {
+      "id": "061404",
+      "dots": 2410,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061404.lineart.png",
+      "inkPixels": 1038366,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061404.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061404.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061404.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/061404.json"
+    },
+    {
+      "id": "061492",
+      "dots": 2523,
+      "lineArt": "app/renderer/public/characters/halftone/standing/061492.lineart.png",
+      "inkPixels": 1230585,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/061492.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/061492.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/061492.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/061492.json"
+    },
+    {
+      "id": "062001",
+      "dots": 2467,
+      "lineArt": "app/renderer/public/characters/halftone/standing/062001.lineart.png",
+      "inkPixels": 659108,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/062001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/062001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/062001.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/062001.json"
+    },
+    {
+      "id": "062002",
+      "dots": 2549,
+      "lineArt": "app/renderer/public/characters/halftone/standing/062002.lineart.png",
+      "inkPixels": 563608,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/062002.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/062002.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/062002.lineart.png"
+      },
+      "aspect": 0.95703,
+      "data": "app/renderer/public/characters/halftone/standing/062002.json"
+    },
+    {
+      "id": "063001",
+      "dots": 2203,
+      "lineArt": "app/renderer/public/characters/halftone/standing/063001.lineart.png",
+      "inkPixels": 1102973,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/063001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/063001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/063001.lineart.png"
+      },
+      "aspect": 0.94141,
+      "data": "app/renderer/public/characters/halftone/standing/063001.json"
+    },
+    {
+      "id": "063301",
+      "dots": 2441,
+      "lineArt": "app/renderer/public/characters/halftone/standing/063301.lineart.png",
+      "inkPixels": 1110079,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/063301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/063301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/063301.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/063301.json"
+    },
+    {
+      "id": "063401",
+      "dots": 2432,
+      "lineArt": "app/renderer/public/characters/halftone/standing/063401.lineart.png",
+      "inkPixels": 818230,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/063401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/063401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/063401.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/063401.json"
+    },
+    {
+      "id": "065102",
+      "dots": 2583,
+      "lineArt": "app/renderer/public/characters/halftone/standing/065102.lineart.png",
+      "inkPixels": 1021474,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/065102.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/065102.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/065102.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/065102.json"
+    },
+    {
+      "id": "065103",
+      "dots": 2454,
+      "lineArt": "app/renderer/public/characters/halftone/standing/065103.lineart.png",
+      "inkPixels": 881920,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/065103.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/065103.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/065103.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/065103.json"
+    },
+    {
+      "id": "065802",
+      "dots": 3001,
+      "lineArt": "app/renderer/public/characters/halftone/standing/065802.lineart.png",
+      "inkPixels": 937652,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/065802.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/065802.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/065802.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/065802.json"
+    },
+    {
+      "id": "066401",
+      "dots": 2459,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066401.lineart.png",
+      "inkPixels": 787879,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066401.lineart.png"
+      },
+      "aspect": 0.85156,
+      "data": "app/renderer/public/characters/halftone/standing/066401.json"
+    },
+    {
+      "id": "066402",
+      "dots": 3009,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066402.lineart.png",
+      "inkPixels": 730449,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066402.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066402.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066402.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/066402.json"
+    },
+    {
+      "id": "066403",
+      "dots": 2167,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066403.lineart.png",
+      "inkPixels": 824317,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066403.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066403.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066403.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/066403.json"
+    },
+    {
+      "id": "066801",
+      "dots": 2388,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066801.lineart.png",
+      "inkPixels": 936007,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066801.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066801.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066801.lineart.png"
+      },
+      "aspect": 0.92969,
+      "data": "app/renderer/public/characters/halftone/standing/066801.json"
+    },
+    {
+      "id": "066802",
+      "dots": 2624,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066802.lineart.png",
+      "inkPixels": 863777,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066802.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066802.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066802.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/066802.json"
+    },
+    {
+      "id": "066803",
+      "dots": 2334,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066803.lineart.png",
+      "inkPixels": 1307126,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066803.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066803.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066803.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/066803.json"
+    },
+    {
+      "id": "066902",
+      "dots": 2934,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066902.lineart.png",
+      "inkPixels": 950689,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066902.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066902.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066902.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/066902.json"
+    },
+    {
+      "id": "066906",
+      "dots": 2390,
+      "lineArt": "app/renderer/public/characters/halftone/standing/066906.lineart.png",
+      "inkPixels": 868584,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/066906.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/066906.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/066906.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/066906.json"
+    },
+    {
+      "id": "067002",
+      "dots": 2702,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067002.lineart.png",
+      "inkPixels": 1118995,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067002.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067002.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067002.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/067002.json"
+    },
+    {
+      "id": "067003",
+      "dots": 2516,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067003.lineart.png",
+      "inkPixels": 1035965,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067003.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067003.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067003.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067003.json"
+    },
+    {
+      "id": "067004",
+      "dots": 2371,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067004.lineart.png",
+      "inkPixels": 1041669,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067004.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067004.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067004.lineart.png"
+      },
+      "aspect": 0.85156,
+      "data": "app/renderer/public/characters/halftone/standing/067004.json"
+    },
+    {
+      "id": "067101",
+      "dots": 3481,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067101.lineart.png",
+      "inkPixels": 1118972,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067101.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/067101.json"
+    },
+    {
+      "id": "067102",
+      "dots": 2298,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067102.lineart.png",
+      "inkPixels": 794862,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067102.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067102.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067102.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067102.json"
+    },
+    {
+      "id": "067103",
+      "dots": 1949,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067103.lineart.png",
+      "inkPixels": 675780,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067103.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067103.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067103.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067103.json"
+    },
+    {
+      "id": "067201",
+      "dots": 2236,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067201.lineart.png",
+      "inkPixels": 1028048,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067201.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067201.json"
+    },
+    {
+      "id": "067202",
+      "dots": 3047,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067202.lineart.png",
+      "inkPixels": 997954,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067202.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067202.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067202.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/067202.json"
+    },
+    {
+      "id": "067301",
+      "dots": 2391,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067301.lineart.png",
+      "inkPixels": 340703,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067301.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/067301.json"
+    },
+    {
+      "id": "067302",
+      "dots": 3614,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067302.lineart.png",
+      "inkPixels": 1866254,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067302.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067302.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067302.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/067302.json"
+    },
+    {
+      "id": "067303",
+      "dots": 2342,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067303.lineart.png",
+      "inkPixels": 893294,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067303.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067303.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067303.lineart.png"
+      },
+      "aspect": 0.91797,
+      "data": "app/renderer/public/characters/halftone/standing/067303.json"
+    },
+    {
+      "id": "067401",
+      "dots": 2804,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067401.lineart.png",
+      "inkPixels": 1304003,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067401.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/067401.json"
+    },
+    {
+      "id": "067402",
+      "dots": 2268,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067402.lineart.png",
+      "inkPixels": 1056643,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067402.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067402.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067402.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/067402.json"
+    },
+    {
+      "id": "067403",
+      "dots": 2416,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067403.lineart.png",
+      "inkPixels": 1178699,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067403.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067403.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067403.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067403.json"
+    },
+    {
+      "id": "067491",
+      "dots": 2181,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067491.lineart.png",
+      "inkPixels": 795552,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067491.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067491.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067491.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067491.json"
+    },
+    {
+      "id": "067502",
+      "dots": 2409,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067502.lineart.png",
+      "inkPixels": 823330,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067502.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067502.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067502.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067502.json"
+    },
+    {
+      "id": "067503",
+      "dots": 2130,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067503.lineart.png",
+      "inkPixels": 806600,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067503.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067503.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067503.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/067503.json"
+    },
+    {
+      "id": "067504",
+      "dots": 2627,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067504.lineart.png",
+      "inkPixels": 1181882,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067504.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067504.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067504.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067504.json"
+    },
+    {
+      "id": "067601",
+      "dots": 2217,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067601.lineart.png",
+      "inkPixels": 896338,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067601.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067601.json"
+    },
+    {
+      "id": "067603",
+      "dots": 2146,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067603.lineart.png",
+      "inkPixels": 1026296,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067603.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067603.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067603.lineart.png"
+      },
+      "aspect": 0.92969,
+      "data": "app/renderer/public/characters/halftone/standing/067603.json"
+    },
+    {
+      "id": "067604",
+      "dots": 2855,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067604.lineart.png",
+      "inkPixels": 1174270,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067604.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067604.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067604.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067604.json"
+    },
+    {
+      "id": "067701",
+      "dots": 2322,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067701.lineart.png",
+      "inkPixels": 1133980,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067701.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067701.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067701.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067701.json"
+    },
+    {
+      "id": "067702",
+      "dots": 2468,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067702.lineart.png",
+      "inkPixels": 924244,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "contour": "app/renderer/public/characters/halftone/standing/067702.contour.lineart.png",
+        "duotone": "app/renderer/public/characters/halftone/standing/067702.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067702.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067702.poster-ghost.lineart.png",
+        "detailInk": "app/renderer/public/characters/halftone/standing/067702.detail-ink.lineart.png",
+        "backdropTrace": "app/renderer/public/characters/halftone/standing/067702.backdrop-trace.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067702.json",
+      "preview": "app/renderer/public/characters/halftone/standing/067702.preview.png"
+    },
+    {
+      "id": "067801",
+      "dots": 2588,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067801.lineart.png",
+      "inkPixels": 845625,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067801.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067801.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067801.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/067801.json"
+    },
+    {
+      "id": "067803",
+      "dots": 2282,
+      "lineArt": "app/renderer/public/characters/halftone/standing/067803.lineart.png",
+      "inkPixels": 1093521,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/067803.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/067803.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/067803.lineart.png"
+      },
+      "aspect": 0.94141,
+      "data": "app/renderer/public/characters/halftone/standing/067803.json"
+    },
+    {
+      "id": "100101",
+      "dots": 2468,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100101.lineart.png",
+      "inkPixels": 442140,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100101.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/100101.json"
+    },
+    {
+      "id": "100201",
+      "dots": 2840,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100201.lineart.png",
+      "inkPixels": 989092,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100201.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/100201.json"
+    },
+    {
+      "id": "100301",
+      "dots": 2526,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100301.lineart.png",
+      "inkPixels": 750922,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100301.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/100301.json"
+    },
+    {
+      "id": "100401",
+      "dots": 2913,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100401.lineart.png",
+      "inkPixels": 1018075,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100401.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/100401.json"
+    },
+    {
+      "id": "100501",
+      "dots": 3720,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100501.lineart.png",
+      "inkPixels": 942650,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100501.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100501.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100501.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/100501.json"
+    },
+    {
+      "id": "100502",
+      "dots": 3334,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100502.lineart.png",
+      "inkPixels": 1033465,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100502.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100502.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100502.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/100502.json"
+    },
+    {
+      "id": "100601",
+      "dots": 2597,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100601.lineart.png",
+      "inkPixels": 783882,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100601.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/100601.json"
+    },
+    {
+      "id": "100801",
+      "dots": 1969,
+      "lineArt": "app/renderer/public/characters/halftone/standing/100801.lineart.png",
+      "inkPixels": 890842,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/100801.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/100801.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/100801.lineart.png"
+      },
+      "aspect": 0.875,
+      "data": "app/renderer/public/characters/halftone/standing/100801.json"
+    },
+    {
+      "id": "101101",
+      "dots": 3090,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101101.lineart.png",
+      "inkPixels": 1007305,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101101.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101101.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101101.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/101101.json"
+    },
+    {
+      "id": "101102",
+      "dots": 2770,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101102.lineart.png",
+      "inkPixels": 940536,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101102.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101102.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101102.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101102.json"
+    },
+    {
+      "id": "101103",
+      "dots": 2905,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101103.lineart.png",
+      "inkPixels": 916661,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101103.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101103.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101103.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/101103.json"
+    },
+    {
+      "id": "101201",
+      "dots": 2976,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101201.lineart.png",
+      "inkPixels": 1063610,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101201.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101201.json"
+    },
+    {
+      "id": "101202",
+      "dots": 2610,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101202.lineart.png",
+      "inkPixels": 1323310,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101202.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101202.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101202.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101202.json"
+    },
+    {
+      "id": "101301",
+      "dots": 2319,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101301.lineart.png",
+      "inkPixels": 943695,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101301.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101301.json"
+    },
+    {
+      "id": "101302",
+      "dots": 2598,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101302.lineart.png",
+      "inkPixels": 801408,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101302.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101302.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101302.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101302.json"
+    },
+    {
+      "id": "101401",
+      "dots": 2266,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101401.lineart.png",
+      "inkPixels": 752725,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101401.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101401.json"
+    },
+    {
+      "id": "101402",
+      "dots": 2251,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101402.lineart.png",
+      "inkPixels": 827150,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101402.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101402.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101402.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/101402.json"
+    },
+    {
+      "id": "101501",
+      "dots": 2845,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101501.lineart.png",
+      "inkPixels": 851868,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101501.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101501.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101501.lineart.png"
+      },
+      "aspect": 0.94922,
+      "data": "app/renderer/public/characters/halftone/standing/101501.json"
+    },
+    {
+      "id": "101502",
+      "dots": 2550,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101502.lineart.png",
+      "inkPixels": 1309167,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101502.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101502.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101502.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101502.json"
+    },
+    {
+      "id": "101601",
+      "dots": 2726,
+      "lineArt": "app/renderer/public/characters/halftone/standing/101601.lineart.png",
+      "inkPixels": 830051,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/101601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/101601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/101601.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/101601.json"
+    },
+    {
+      "id": "103201",
+      "dots": 2928,
+      "lineArt": "app/renderer/public/characters/halftone/standing/103201.lineart.png",
+      "inkPixels": 849884,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/103201.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/103201.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/103201.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/103201.json"
+    },
+    {
+      "id": "103301",
+      "dots": 2513,
+      "lineArt": "app/renderer/public/characters/halftone/standing/103301.lineart.png",
+      "inkPixels": 763674,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/103301.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/103301.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/103301.lineart.png"
+      },
+      "aspect": 0.89844,
+      "data": "app/renderer/public/characters/halftone/standing/103301.json"
+    },
+    {
+      "id": "103401",
+      "dots": 2514,
+      "lineArt": "app/renderer/public/characters/halftone/standing/103401.lineart.png",
+      "inkPixels": 1265888,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/103401.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/103401.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/103401.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/103401.json"
+    },
+    {
+      "id": "103501",
+      "dots": 2645,
+      "lineArt": "app/renderer/public/characters/halftone/standing/103501.lineart.png",
+      "inkPixels": 877024,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/103501.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/103501.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/103501.lineart.png"
+      },
+      "aspect": 0.96094,
+      "data": "app/renderer/public/characters/halftone/standing/103501.json"
+    },
+    {
+      "id": "103601",
+      "dots": 2750,
+      "lineArt": "app/renderer/public/characters/halftone/standing/103601.lineart.png",
+      "inkPixels": 864309,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/103601.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/103601.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/103601.lineart.png"
+      },
+      "aspect": 0.91406,
+      "data": "app/renderer/public/characters/halftone/standing/103601.json"
+    },
+    {
+      "id": "103701",
+      "dots": 2367,
+      "lineArt": "app/renderer/public/characters/halftone/standing/103701.lineart.png",
+      "inkPixels": 934289,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/103701.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/103701.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/103701.lineart.png"
+      },
+      "aspect": 0.9375,
+      "data": "app/renderer/public/characters/halftone/standing/103701.json"
+    },
+    {
+      "id": "704001",
+      "dots": 2634,
+      "lineArt": "app/renderer/public/characters/halftone/standing/704001.lineart.png",
+      "inkPixels": 503290,
+      "lineArtPreset": "posterGhost",
+      "lineArtVariants": {
+        "duotone": "app/renderer/public/characters/halftone/standing/704001.duotone.lineart.png",
+        "pureTone": "app/renderer/public/characters/halftone/standing/704001.pure-tone.lineart.png",
+        "posterGhost": "app/renderer/public/characters/halftone/standing/704001.lineart.png"
+      },
+      "aspect": 0.96484,
+      "data": "app/renderer/public/characters/halftone/standing/704001.json"
+    }
+  ]
+}

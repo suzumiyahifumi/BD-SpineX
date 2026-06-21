@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BD-SpineX · Liquid Glass Tuner 液態玻璃調校台</title>
+<style>
+  :root{
+    --bg-0:#06070d; --gold:#f6c66b; --gold-2:#ffdf9e; --text:#eef1fb; --dim:#aab2cc; --faint:#707a98;
+    --stroke:rgba(255,255,255,.14);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    /* ---- live-tuned values (JS writes these) ---- */
+    --b:5px;        /* backdrop blur */
+    --s:1.9;        /* saturate */
+    --ta:0.12;      /* tint alpha */
+    --tc:14,16,30;  /* tint rgb */
+    --ba:0.20;      /* border alpha */
+    --sa:0.60;      /* top shine alpha */
+    --r:20px;       /* radius */
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,"PingFang TC","Noto Sans TC",sans-serif;color:var(--text);background:var(--bg-0);overflow-x:hidden}
+  /* aurora so the glass has something to refract */
+  .aurora{position:fixed;inset:0;z-index:-2;overflow:hidden;background:radial-gradient(1100px 760px at 12% -10%,#1a1640,transparent 58%),radial-gradient(900px 680px at 100% 0,#07212b,transparent 52%),radial-gradient(820px 640px at 60% 110%,#2a103a,transparent 55%),var(--bg-0)}
+  .aurora span{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;mix-blend-mode:screen;animation:drift 24s ease-in-out infinite}
+  .b1{width:42vw;height:42vw;left:-8vw;top:8vh;background:#7c5cff}
+  .b2{width:34vw;height:34vw;right:-6vw;top:24vh;background:#33e0e6;animation-delay:-8s}
+  .b3{width:30vw;height:30vw;left:30vw;top:60vh;background:#ff5ca8;animation-delay:-14s}
+  @keyframes drift{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(3vw,-3vh,0) scale(1.1)}}
+
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;max-width:1280px;margin:0 auto;padding:24px}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:var(--faint);font-size:13px;margin:0 0 18px}
+
+  /* high-contrast checkerboard strip behind samples so refraction is obvious */
+  .stage{position:relative;border-radius:24px;overflow:hidden;padding:26px;display:grid;gap:22px;
+    background:
+      repeating-linear-gradient(45deg,rgba(124,92,255,.5) 0 26px,rgba(51,224,230,.5) 26px 52px,rgba(255,92,168,.5) 52px 78px,rgba(246,198,107,.5) 78px 104px);
+    border:1px solid var(--stroke)}
+  .stage .label{position:absolute;top:10px;left:14px;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+
+  /* the tunable glass primitive — uses the live CSS vars + the SVG lens */
+  .glass{
+    position:relative;border-radius:var(--r);
+    background:rgba(var(--tc),var(--ta));
+    border:1px solid rgba(255,255,255,var(--ba));
+    -webkit-backdrop-filter:blur(var(--b)) saturate(var(--s));
+    backdrop-filter:blur(var(--b)) saturate(var(--s));
+    box-shadow:0 20px 50px rgba(0,0,0,.5),inset 0 1px 0 0 rgba(255,255,255,var(--sa)),inset 0 0 0 1px rgba(255,255,255,.05);
+  }
+  @supports (backdrop-filter:url(#lens)){
+    .glass{backdrop-filter:blur(var(--b)) url(#lens) saturate(var(--s))}
+  }
+  .card{padding:24px 26px}
+  .card h2{margin:0 0 6px;font-size:24px;letter-spacing:-.02em}
+  .card p{margin:0;color:var(--dim);font-size:14px}
+  .dock{display:flex;align-items:center;gap:16px;padding:14px 18px}
+  .cover{width:50px;height:50px;border-radius:13px;flex:none;background:conic-gradient(from 210deg,#6a5bff,#33e0e6,#ff5ca8,#6a5bff);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+  .dockMeta .e{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+  .dockMeta .t{font-size:16px;font-weight:750;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+  .pill{margin-left:auto;padding:11px 22px;border-radius:999px;background:linear-gradient(160deg,var(--gold),#d29a3e);color:#1a1206;font-weight:800;border:none}
+
+  /* controls */
+  .panel{background:rgba(11,13,24,.7);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid var(--stroke);border-radius:18px;padding:18px;align-self:start;position:sticky;top:24px;max-height:calc(100vh - 48px);overflow:auto}
+  .group{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:800;margin:18px 0 8px}
+  .group:first-child{margin-top:0}
+  .ctrl{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;margin-bottom:11px}
+  .ctrl label{font-size:13px;color:var(--dim);font-weight:600}
+  .ctrl .val{font-family:var(--mono);font-size:12px;color:var(--gold-2);justify-self:end}
+  .ctrl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--gold);margin:2px 0}
+  .ctrl .hint{grid-column:1/-1;font-size:11px;color:var(--faint);margin-top:-2px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px}
+  .btn{font:inherit;font-size:12px;font-weight:700;color:var(--text);background:rgba(255,255,255,.07);border:1px solid var(--stroke);border-radius:999px;padding:7px 13px;cursor:pointer}
+  .btn:hover{background:rgba(255,255,255,.14)}
+  .btn.primary{background:linear-gradient(160deg,var(--gold),#d29a3e);color:#1a1206;border:none}
+  .out{margin-top:14px}
+  .out pre{margin:0;background:rgba(0,0,0,.45);border:1px solid var(--stroke);border-radius:12px;padding:13px 14px;font-family:var(--mono);font-size:11.5px;line-height:1.55;color:#cdd6f4;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  .colorRow{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+  .colorRow label{font-size:13px;color:var(--dim);font-weight:600;flex:1}
+  .colorRow input[type=color]{width:42px;height:28px;border:1px solid var(--stroke);border-radius:8px;background:none;padding:0;cursor:pointer}
+  .note{font-size:12px;color:var(--faint);line-height:1.5;margin:14px 0 0}
+  .note b{color:var(--cyan,#5ff3f6)}
+  code{font-family:var(--mono);color:var(--gold-2)}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>
+
+<!-- The lens. JS edits its attributes live. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="lens" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence id="turb" type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="42" result="noise"/>
+    <feGaussianBlur id="soft" in="noise" stdDeviation="2.2" result="soft"/>
+    <feDisplacementMap id="disp" in="SourceGraphic" in2="soft" scale="48" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="wrap">
+  <div>
+    <h1>液態玻璃調校台 · Liquid Glass Tuner</h1>
+    <p class="sub">拖動右側滑桿，左側玻璃即時改變。背後是高對比彩條，方便看出折射。調到滿意後按「複製 CSS / SVG」把數值貼回程式碼。</p>
+    <div class="stage">
+      <span class="label">refraction test ▸ drag the sliders</span>
+      <div class="glass card">
+        <h2>把模組變成你的遊戲卡匣。</h2>
+        <p>這塊玻璃用的就是 app 裡 <code>.panel</code> / <code>.dock</code> 同一套技術。</p>
+      </div>
+      <div class="glass dock">
+        <div class="cover"></div>
+        <div class="dockMeta"><div class="e">Now Loading</div><div class="t">12 cartridges loaded</div></div>
+        <button class="pill">▶ Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="group">SVG 折射鏡片 (index.html · #liquid-lens)</div>
+    <div class="ctrl"><label>位移強度 scale</label><span class="val" id="v_scale">48</span>
+      <input type="range" id="scale" min="0" max="120" step="1" value="48">
+      <div class="hint">玻璃「液化」程度。越大波動越誇張。</div></div>
+    <div class="ctrl"><label>波紋大小 baseFrequency</label><span class="val" id="v_freq">0.0080</span>
+      <input type="range" id="freq" min="0.002" max="0.05" step="0.001" value="0.008">
+      <div class="hint">越小＝波紋越大、越像厚玻璃；越大＝細碎磨砂。</div></div>
+    <div class="ctrl"><label>雜訊層 numOctaves</label><span class="val" id="v_oct">2</span>
+      <input type="range" id="oct" min="1" max="4" step="1" value="2">
+      <div class="hint">層數越多細節越豐富（也越吃效能）。</div></div>
+    <div class="ctrl"><label>鏡片柔化 stdDeviation</label><span class="val" id="v_pre">2.2</span>
+      <input type="range" id="pre" min="0" max="6" step="0.1" value="2.2">
+      <div class="hint">柔化雜訊，讓折射更圓潤、少銳利噪點。</div></div>
+    <div class="ctrl"><label>亂數種子 seed</label><span class="val" id="v_seed">42</span>
+      <input type="range" id="seed" min="0" max="100" step="1" value="42">
+      <div class="hint">換一個不同的隨機紋路。</div></div>
+
+    <div class="group">CSS 玻璃面 (styles.css)</div>
+    <div class="ctrl"><label>霧化 backdrop blur</label><span class="val" id="v_blur">5px</span>
+      <input type="range" id="blur" min="0" max="24" step="0.5" value="5">
+      <div class="hint">越大越結霜不透；越小越清透通透。</div></div>
+    <div class="ctrl"><label>飽和 saturate</label><span class="val" id="v_sat">1.9</span>
+      <input type="range" id="sat" min="1" max="2.6" step="0.05" value="1.9">
+      <div class="hint">提高背後色彩的鮮豔度。</div></div>
+    <div class="ctrl"><label>底色濃度 tint alpha</label><span class="val" id="v_ta">0.12</span>
+      <input type="range" id="ta" min="0" max="0.7" step="0.01" value="0.12">
+      <div class="hint">玻璃自身的色濃度。越低越通透。</div></div>
+    <div class="colorRow"><label>底色 tint color</label><input type="color" id="tc" value="#0e101e"></div>
+    <div class="ctrl"><label>邊框亮度 border alpha</label><span class="val" id="v_ba">0.20</span>
+      <input type="range" id="ba" min="0" max="0.5" step="0.01" value="0.20">
+      <div class="hint">通透玻璃靠邊框與高光被看見。</div></div>
+    <div class="ctrl"><label>上緣高光 shine alpha</label><span class="val" id="v_sa">0.60</span>
+      <input type="range" id="sa" min="0" max="1" step="0.02" value="0.60">
+      <div class="hint">頂部那道反光，玻璃感的關鍵。</div></div>
+    <div class="ctrl"><label>圓角 radius</label><span class="val" id="v_r">20px</span>
+      <input type="range" id="r" min="0" max="40" step="1" value="20">
+      <div class="hint"></div></div>
+
+    <div class="group">預設 Presets</div>
+    <div class="row">
+      <button class="btn" data-preset="panel">面板 Panel</button>
+      <button class="btn" data-preset="dock">Dock（現在）</button>
+      <button class="btn" data-preset="button">按鈕 Button</button>
+      <button class="btn" data-preset="clearest">極通透</button>
+      <button class="btn" id="reset">重設</button>
+    </div>
+
+    <div class="out">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="group" style="margin:0">輸出（貼回程式碼）</div>
+        <button class="btn primary" id="copy">複製 CSS / SVG</button>
+      </div>
+      <pre id="code"></pre>
+    </div>
+
+    <p class="note">SVG 部分貼到 <b>app/renderer/index.html</b> 的 <code>#liquid-lens</code>；CSS 部分貼到 <b>app/renderer/src/styles.css</b> 的 <code>.panel</code> 或 <code>.dock</code>。注意 SVG 鏡片是全域共用的，改 <code>scale</code> 會同時影響所有玻璃。</p>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const root = document.documentElement.style;
+  const turb = $("turb"), soft = $("soft"), disp = $("disp");
+
+  const S = { scale:48, freq:0.008, oct:2, pre:2.2, seed:42, blur:5, sat:1.9, ta:0.12, tc:"#0e101e", ba:0.20, sa:0.60, r:20 };
+
+  function hexToRgb(h){const n=parseInt(h.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255];}
+
+  function apply(){
+    // SVG lens
+    turb.setAttribute("baseFrequency", S.freq.toFixed(3) + " " + (S.freq*1.5).toFixed(3));
+    turb.setAttribute("numOctaves", S.oct);
+    turb.setAttribute("seed", S.seed);
+    soft.setAttribute("stdDeviation", S.pre);
+    disp.setAttribute("scale", S.scale);
+    // CSS face
+    root.setProperty("--b", S.blur + "px");
+    root.setProperty("--s", S.sat);
+    root.setProperty("--ta", S.ta);
+    root.setProperty("--tc", hexToRgb(S.tc).join(","));
+    root.setProperty("--ba", S.ba);
+    root.setProperty("--sa", S.sa);
+    root.setProperty("--r", S.r + "px");
+    // readouts
+    $("v_scale").textContent=S.scale; $("v_freq").textContent=S.freq.toFixed(4); $("v_oct").textContent=S.oct;
+    $("v_pre").textContent=S.pre; $("v_seed").textContent=S.seed; $("v_blur").textContent=S.blur+"px";
+    $("v_sat").textContent=S.sat; $("v_ta").textContent=S.ta; $("v_ba").textContent=S.ba;
+    $("v_sa").textContent=S.sa; $("v_r").textContent=S.r+"px";
+    renderCode();
+  }
+
+  function renderCode(){
+    const [r,g,b]=hexToRgb(S.tc);
+    $("code").textContent =
+`/* index.html — #liquid-lens */
+<feTurbulence type="fractalNoise"
+  baseFrequency="${S.freq.toFixed(3)} ${(S.freq*1.5).toFixed(3)}"
+  numOctaves="${S.oct}" seed="${S.seed}"/>
+<feGaussianBlur stdDeviation="${S.pre}"/>
+<feDisplacementMap scale="${S.scale}"
+  xChannelSelector="R" yChannelSelector="G"/>
+
+/* styles.css — .panel / .dock */
+background: rgba(${r}, ${g}, ${b}, ${S.ta});
+border: 1px solid rgba(255,255,255,${S.ba});
+border-radius: ${S.r}px;
+backdrop-filter: blur(${S.blur}px) url(#liquid-lens) saturate(${S.sat});
+box-shadow: 0 20px 50px rgba(0,0,0,.5),
+  inset 0 1px 0 0 rgba(255,255,255,${S.sa});`;
+  }
+
+  // bind range/color inputs
+  const numKeys=["scale","freq","oct","pre","seed","blur","sat","ta","ba","sa","r"];
+  numKeys.forEach(k=>$(k).addEventListener("input",e=>{S[k]=parseFloat(e.target.value);apply();}));
+  $("tc").addEventListener("input",e=>{S.tc=e.target.value;apply();});
+
+  // presets mirror the real app values
+  const PRESETS = {
+    panel:    {scale:48,freq:0.008,oct:2,pre:2.2,seed:42,blur:8,sat:1.6,ta:0.05,tc:"#ffffff",ba:0.14,sa:0.50,r:20},
+    dock:     {scale:48,freq:0.008,oct:2,pre:2.2,seed:42,blur:3,sat:1.9,ta:0.12,tc:"#0e101e",ba:0.20,sa:0.60,r:20},
+    button:   {scale:48,freq:0.008,oct:2,pre:2.2,seed:42,blur:3,sat:1.5,ta:0.08,tc:"#ffffff",ba:0.14,sa:0.30,r:40},
+    clearest: {scale:60,freq:0.006,oct:2,pre:2.5,seed:42,blur:1.5,sat:2.0,ta:0.05,tc:"#0e101e",ba:0.26,sa:0.75,r:20},
+  };
+  function setAll(p){Object.assign(S,p);numKeys.forEach(k=>$(k).value=S[k]);$("tc").value=S.tc;apply();}
+  document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>setAll(PRESETS[b.dataset.preset])));
+  $("reset").addEventListener("click",()=>setAll({scale:48,freq:0.008,oct:2,pre:2.2,seed:42,blur:5,sat:1.9,ta:0.12,tc:"#0e101e",ba:0.20,sa:0.60,r:20}));
+
+  $("copy").addEventListener("click",async()=>{
+    try{await navigator.clipboard.writeText($("code").textContent);$("copy").textContent="已複製 ✓";setTimeout(()=>$("copy").textContent="複製 CSS / SVG",1400);}catch{}
+  });
+
+  apply();
+</script>
+</body>
+</html>

@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const gameVersion = readGameVersion();
-const releaseVersion = readReleaseVersion(gameVersion);
+const currentPackageVersion = await readCurrentPackageVersion();
+const gameVersion = readGameVersion(currentPackageVersion);
+const releaseVersion = readReleaseVersion(gameVersion, currentPackageVersion);
 
 await updatePackageVersions(releaseVersion);
 await assertRequiredReleaseInputs();
@@ -14,19 +14,19 @@ await assertNoPrivatePaths();
 
 console.log(`Prepared BD-SpineX release ${releaseVersion} for BrownDust II ${gameVersion}.`);
 
-function readGameVersion() {
+function readGameVersion(currentVersion) {
   const argVersion = process.argv.find((arg) => arg.startsWith("--game-version="))?.split("=")[1];
-  const version = argVersion ?? process.env.BD_SPINEX_GAME_VERSION;
+  const version = argVersion ?? process.env.BD_SPINEX_GAME_VERSION ?? supportedGameVersion(currentVersion);
   if (!version || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
-    throw new Error("Set BD_SPINEX_GAME_VERSION=major.minor.patch[-suffix] or pass --game-version=major.minor.patch[-suffix].");
+    throw new Error("Set package.json version, BD_SPINEX_GAME_VERSION=major.minor.patch[-suffix], or pass --game-version=major.minor.patch[-suffix].");
   }
 
   return supportedGameVersion(version);
 }
 
-function readReleaseVersion(gameVersion) {
+function readReleaseVersion(gameVersion, currentVersion) {
   const argVersion = process.argv.find((arg) => arg.startsWith("--release-version="))?.split("=")[1];
-  const version = argVersion ?? process.env.BD_SPINEX_RELEASE_VERSION ?? gameVersion;
+  const version = argVersion ?? process.env.BD_SPINEX_RELEASE_VERSION ?? currentVersion ?? gameVersion;
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
     throw new Error("Set BD_SPINEX_RELEASE_VERSION=major.minor.patch[-suffix] or pass --release-version=major.minor.patch[-suffix].");
   }
@@ -55,6 +55,19 @@ async function updatePackageVersions(version) {
     lockJson.packages[""].version = version;
   }
   await writeJson(lockPath, lockJson);
+
+  const tauriConfigPath = path.join(root, "src-tauri/tauri.conf.json");
+  const tauriConfig = JSON.parse(await fs.readFile(tauriConfigPath, "utf8"));
+  tauriConfig.version = version;
+  await writeJson(tauriConfigPath, tauriConfig);
+
+  await updateTomlPackageVersion(path.join(root, "src-tauri/Cargo.toml"), version);
+  await updateCargoLockPackageVersion(path.join(root, "src-tauri/Cargo.lock"), "bd-spinex-tauri", version);
+}
+
+async function readCurrentPackageVersion() {
+  const packageJson = await readJson(path.join(root, "package.json"));
+  return typeof packageJson.version === "string" ? packageJson.version : "";
 }
 
 async function assertRequiredReleaseInputs() {
@@ -119,7 +132,6 @@ async function assertNoPrivatePaths() {
   const privatePatterns = [
     "/Users/",
     "/Volumes/",
-    os.userInfo().username,
     root
   ].filter(Boolean);
   const leaks = [];
@@ -161,6 +173,30 @@ async function writeJson(filePath, data) {
 
 async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, "utf8"));
+}
+
+async function updateTomlPackageVersion(filePath, version) {
+  const text = await fs.readFile(filePath, "utf8");
+  const pattern = /^version = "[^"]+"/m;
+  if (!pattern.test(text)) {
+    throw new Error(`Could not update package version in ${path.relative(root, filePath)}.`);
+  }
+  const next = text.replace(pattern, `version = "${version}"`);
+  await fs.writeFile(filePath, next, "utf8");
+}
+
+async function updateCargoLockPackageVersion(filePath, packageName, version) {
+  const text = await fs.readFile(filePath, "utf8");
+  const pattern = new RegExp(`(\\[\\[package\\]\\]\\nname = "${escapeRegExp(packageName)}"\\nversion = ")[^"]+(")`);
+  if (!pattern.test(text)) {
+    throw new Error(`Could not update ${packageName} version in ${path.relative(root, filePath)}.`);
+  }
+  const next = text.replace(pattern, `$1${version}$2`);
+  await fs.writeFile(filePath, next, "utf8");
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function isSha256(value) {

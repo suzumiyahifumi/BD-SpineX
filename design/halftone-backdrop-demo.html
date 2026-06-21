@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BD-SpineX · Halftone Backdrop Demo</title>
+<style>
+@font-face { font-family:"BD Cond"; font-weight:700; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-700.ttf") format("truetype"); }
+@font-face { font-family:"BD Cond"; font-weight:800; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-800.ttf") format("truetype"); }
+@font-face { font-family:"BD TC"; font-weight:700; font-display:swap; src:url("../app/renderer/public/fonts/noto-sans-tc-700.ttf") format("truetype"); }
+
+:root {
+  color-scheme: dark;
+  --ink:#0E0D0C;
+  --ink-2:#17150F;
+  --paper:#EDE0C4;
+  --paper-dim:#B9AD8E;
+  --red:#E2402A;
+  --red-deep:#9E2317;
+  --amber:#E8A22C;
+  --stroke:rgba(237,224,196,0.16);
+  --glass:rgba(237,224,196,0.08);
+  --cond:"BD Cond","Oswald","Helvetica Neue",sans-serif;
+  --tc:"BD TC","PingFang TC","Noto Sans TC",sans-serif;
+}
+
+* { box-sizing:border-box; }
+html, body { width:100%; height:100%; }
+body {
+  margin:0;
+  overflow:hidden;
+  background:
+    radial-gradient(1000px 700px at 9% -8%, #241a10 0%, transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, #2a120b 0%, transparent 55%),
+    var(--ink);
+  color:var(--paper);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",var(--tc),sans-serif;
+}
+
+body::before {
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index:3;
+}
+
+.stage {
+  position:fixed;
+  inset:0;
+  z-index:1;
+}
+
+.printBackdrop {
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+.chrome {
+  position:relative;
+  z-index:2;
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:minmax(160px, 232px) minmax(0, 1fr);
+  pointer-events:none;
+}
+
+.rail {
+  position:relative;
+  min-height:100vh;
+  padding:18px 16px 18px 22px;
+  border-right:1px solid var(--stroke);
+  background:linear-gradient(180deg, rgba(20,16,9,.68), rgba(11,10,8,.74));
+  overflow:hidden;
+  -webkit-backdrop-filter:blur(14px) saturate(1.28);
+  backdrop-filter:blur(14px) saturate(1.28);
+}
+
+.rail::before {
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:5px;
+  background:var(--red);
+  box-shadow:2px 0 0 var(--red-deep);
+}
+
+.brand {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  font-family:var(--cond);
+  text-transform:uppercase;
+}
+
+.mark {
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  background:var(--red);
+  color:var(--paper);
+  font-weight:800;
+  font-size:20px;
+  clip-path:polygon(0 0,100% 0,100% 100%,24% 100%);
+}
+
+.name {
+  font-weight:800;
+  font-size:18px;
+  letter-spacing:.05em;
+  line-height:1;
+}
+
+.sub {
+  margin-top:4px;
+  color:var(--paper-dim);
+  font-weight:700;
+  font-size:10px;
+  letter-spacing:.16em;
+}
+
+.nav {
+  margin-top:34px;
+  display:grid;
+  gap:4px;
+  font-family:var(--cond);
+}
+
+.nav button,
+.controlBar button,
+.profileSwitch button {
+  pointer-events:auto;
+  cursor:pointer;
+  border:0;
+  font:inherit;
+}
+
+.nav button {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:37px;
+  padding:8px 9px;
+  border-left:3px solid color-mix(in srgb, var(--red) 30%, transparent);
+  background:linear-gradient(90deg, color-mix(in srgb, var(--red) 7%, transparent), transparent 64%);
+  color:var(--paper-dim);
+  text-align:left;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.nav button.active {
+  color:var(--paper);
+  border-left-color:var(--amber);
+  background:linear-gradient(100deg, var(--red) 0 78%, transparent 78%);
+}
+
+.nav .ix {
+  width:22px;
+  font-weight:800;
+  opacity:.7;
+}
+
+.nav .label {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:700;
+  font-size:15px;
+}
+
+.railFoot {
+  position:absolute;
+  left:22px;
+  right:16px;
+  bottom:18px;
+  padding-top:13px;
+  border-top:3px solid var(--red);
+  font-family:var(--cond);
+}
+
+.bigCount {
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+}
+
+.bigCount b {
+  color:var(--amber);
+  font-size:64px;
+  line-height:.78;
+  text-shadow:4px 4px 0 var(--red-deep);
+}
+
+.bigCount span {
+  color:var(--paper-dim);
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  line-height:1.2;
+}
+
+.main {
+  position:relative;
+  min-width:0;
+  padding:28px;
+}
+
+.mast {
+  display:flex;
+  align-items:flex-start;
+  gap:18px;
+}
+
+.mast h1 {
+  margin:0;
+  font-family:var(--cond);
+  font-size:clamp(40px, 8vw, 112px);
+  font-weight:800;
+  line-height:.82;
+  text-transform:uppercase;
+  color:var(--paper);
+  text-shadow:6px 6px 0 rgba(158,35,23,.82);
+}
+
+.mast h1 span { color:var(--red); }
+
+.stamp {
+  margin-top:7px;
+  padding:5px 10px;
+  border:1.5px solid var(--amber);
+  color:var(--amber);
+  font-family:var(--cond);
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.tunePanel {
+  position:absolute;
+  right:28px;
+  bottom:88px;
+  width:min(288px, calc(100vw - 56px));
+  display:grid;
+  gap:10px;
+  padding:12px 13px;
+  border:1px solid var(--stroke);
+  background:rgba(14,13,12,.62);
+  -webkit-backdrop-filter:blur(10px) saturate(1.25);
+  backdrop-filter:blur(10px) saturate(1.25);
+  pointer-events:auto;
+}
+
+.tuneRow {
+  display:grid;
+  grid-template-columns:54px minmax(0, 1fr) 34px;
+  align-items:center;
+  gap:9px;
+  font-family:var(--cond);
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--paper-dim);
+}
+
+.tuneRow output {
+  color:var(--amber);
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+}
+
+.tuneRow input {
+  width:100%;
+  accent-color:var(--red);
+}
+
+.profileSwitch {
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:7px;
+  padding-top:2px;
+}
+
+.profileSwitch button {
+  min-width:0;
+  height:30px;
+  padding:0 6px;
+  border:1px solid rgba(237,224,196,.32);
+  background:rgba(237,224,196,.05);
+  color:var(--paper-dim);
+  font-family:var(--cond);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+
+.profileSwitch button.active {
+  border-color:var(--amber);
+  background:var(--amber);
+  color:var(--ink);
+  box-shadow:2px 2px 0 var(--red-deep);
+}
+
+.controlBar {
+  position:absolute;
+  right:28px;
+  bottom:28px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  border:1px solid var(--stroke);
+  background:rgba(14,13,12,.58);
+  -webkit-backdrop-filter:blur(10px) saturate(1.25);
+  backdrop-filter:blur(10px) saturate(1.25);
+  pointer-events:auto;
+}
+
+.controlBar button {
+  min-width:38px;
+  height:36px;
+  padding:0 11px;
+  border:1.5px solid var(--red-deep);
+  background:var(--red);
+  color:var(--paper);
+  box-shadow:3px 3px 0 var(--red-deep);
+  font-family:var(--cond);
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.controlBar button.ghost {
+  background:transparent;
+  border-color:var(--paper);
+  box-shadow:none;
+}
+
+.controlBar button.active {
+  border-color:var(--amber);
+  background:var(--amber);
+  color:var(--ink);
+  box-shadow:3px 3px 0 var(--red-deep);
+}
+
+.controlBar button:active {
+  transform:translate(1px, 1px);
+  box-shadow:2px 2px 0 var(--red-deep);
+}
+
+@media (max-width: 760px) {
+  .chrome { grid-template-columns:1fr; }
+  .rail {
+    position:absolute;
+    left:12px;
+    top:12px;
+    min-height:0;
+    width:min(232px, calc(100vw - 24px));
+    padding:14px 14px 14px 20px;
+    border:1px solid var(--stroke);
+  }
+  .nav, .railFoot { display:none; }
+  .main { padding:132px 18px 18px; }
+  .tunePanel { left:18px; right:18px; bottom:76px; width:auto; }
+  .controlBar { left:18px; right:18px; bottom:18px; justify-content:center; }
+}
+</style>
+</head>
+<body>
+<div class="stage" aria-hidden="true">
+  <canvas class="printBackdrop" id="printBackdrop"></canvas>
+</div>
+
+<div class="chrome">
+  <aside class="rail">
+    <div class="brand">
+      <span class="mark">B</span>
+      <div>
+        <div class="name">BD-SpineX</div>
+        <div class="sub">Night Press · Dot Field</div>
+      </div>
+    </div>
+    <div class="nav" id="characterNav"></div>
+    <div class="railFoot">
+      <div class="bigCount"><b id="dotCount">0</b><span>Halftone<br>points</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="mast">
+      <h1>Print<span>/</span><br>Reform</h1>
+      <div class="stamp" id="currentId">000201</div>
+    </div>
+    <div class="tunePanel" aria-label="Halftone tuning">
+      <label class="tuneRow">
+        <span>Dots</span>
+        <input id="dotStrength" type="range" min="0.35" max="1.35" step="0.05" value="0.35" />
+        <output id="dotStrengthValue">0.35</output>
+      </label>
+      <label class="tuneRow">
+        <span>Ink</span>
+        <input id="lineStrength" type="range" min="0.25" max="2" step="0.05" value="2" />
+        <output id="lineStrengthValue">2</output>
+      </label>
+      <label class="tuneRow">
+        <span>Width</span>
+        <input id="lineWidth" type="range" min="0.35" max="1.8" step="0.05" value="1" />
+        <output id="lineWidthValue">1</output>
+      </label>
+      <div class="profileSwitch" id="lineProfileSwitch" aria-label="Duotone profile"></div>
+    </div>
+    <div class="controlBar">
+      <button type="button" class="ghost" id="prevBtn">Prev</button>
+      <button type="button" id="shuffleBtn">Shuffle</button>
+      <button type="button" class="ghost" id="freezeBtn">Freeze</button>
+      <button type="button" class="ghost" id="nextBtn">Next</button>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+const IDS = ["000201", "067702", "000101"];
+const DATA_DIR = "../app/renderer/public/characters/halftone/standing";
+const ASSET_REV = Date.now();
+const PAGE_PARAMS = new URLSearchParams(location.search);
+const START_SETTLED = PAGE_PARAMS.has("settled");
+const START_INDEX = Math.max(0, IDS.indexOf(PAGE_PARAMS.get("id") ?? IDS[0]));
+const REQUESTED_LINE_ART = PAGE_PARAMS.get("line") ?? PAGE_PARAMS.get("lineArt") ?? "";
+const DUOTONE_PROFILES = [
+  { key: "posterGhost", label: "Ghost", defaultInk: 2 },
+  { key: "detailInk", label: "Detail", defaultInk: 0.9 },
+  { key: "backdropTrace", label: "Trace", defaultInk: 2 }
+];
+const START_PROFILE = normalizeLineArtProfile(PAGE_PARAMS.get("profile") ?? REQUESTED_LINE_ART) || "posterGhost";
+const START_LINE_ART_KEY = REQUESTED_LINE_ART === "contour" ? "contour" : START_PROFILE;
+const COLORS = {
+  red: [226, 64, 42],
+  redDeep: [158, 35, 23],
+  amber: [232, 162, 44],
+  paper: [237, 224, 196]
+};
+
+const canvas = document.getElementById("printBackdrop");
+const ctx = canvas.getContext("2d", { alpha: true });
+const dotCount = document.getElementById("dotCount");
+const currentId = document.getElementById("currentId");
+const nav = document.getElementById("characterNav");
+const lineProfileSwitch = document.getElementById("lineProfileSwitch");
+const state = {
+  width: 0,
+  height: 0,
+  dpr: 1,
+  current: 0,
+  shapes: [],
+  particles: [],
+  transition: null,
+  settledAt: 0,
+  nextAt: 0,
+  frozen: false,
+  frozenAt: 0,
+  lineArtProfile: START_PROFILE,
+  pointer: { x: 0, y: 0, active: false },
+  tuning: {
+    dotStrength: 0.35,
+    lineStrength: 2,
+    lineWidth: 1
+  }
+};
+
+for (const [index, id] of IDS.entries()) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.innerHTML = `<span class="ix">${String(index + 1).padStart(2, "0")}</span><span class="label">${id}</span>`;
+  button.addEventListener("click", () => startTransition(index, true));
+  nav.append(button);
+}
+
+for (const profile of DUOTONE_PROFILES) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.lineProfile = profile.key;
+  button.textContent = profile.label;
+  button.addEventListener("click", () => setLineArtProfile(profile.key, true));
+  lineProfileSwitch.append(button);
+}
+
+document.getElementById("prevBtn").addEventListener("click", () => startTransition((state.current + IDS.length - 1) % IDS.length, true));
+document.getElementById("nextBtn").addEventListener("click", () => startTransition((state.current + 1) % IDS.length, true));
+document.getElementById("shuffleBtn").addEventListener("click", () => {
+  startTransition((state.current + 1 + Math.floor(Math.random() * (IDS.length - 1))) % IDS.length, true);
+});
+document.getElementById("freezeBtn").addEventListener("click", () => setFrozen(!state.frozen));
+
+bindTuningControl("dotStrength", "dotStrengthValue");
+bindTuningControl("lineStrength", "lineStrengthValue");
+bindTuningControl("lineWidth", "lineWidthValue");
+updateFreezeButton();
+
+window.addEventListener("resize", resize, { passive: true });
+window.addEventListener("pointermove", (event) => {
+  state.pointer = { x: event.clientX, y: event.clientY, active: true };
+}, { passive: true });
+window.addEventListener("pointerleave", () => {
+  state.pointer.active = false;
+}, { passive: true });
+
+const loaded = await Promise.all(IDS.map(async (id) => {
+  const response = await fetch(`${DATA_DIR}/${id}.json?v=${ASSET_REV}`);
+  if (!response.ok) throw new Error(`Failed to load ${id}`);
+  const shape = await response.json();
+  shape.lineArtImages = await loadLineArtImages(shape);
+  applyLineArtKey(shape, START_LINE_ART_KEY);
+  return shape;
+}));
+
+state.shapes = loaded;
+setLineArtProfile(START_PROFILE, false);
+resize();
+seedInitialParticles(START_INDEX);
+requestAnimationFrame(tick);
+
+function normalizeLineArtProfile(value) {
+  const normalized = (value ?? "").replace(/[-_\s]/g, "").toLowerCase();
+  if (normalized === "duotone") return "posterGhost";
+  if (normalized === "posterghost" || normalized === "ghost") return "posterGhost";
+  if (normalized === "detailink" || normalized === "detail") return "detailInk";
+  if (normalized === "backdroptrace" || normalized === "trace") return "backdropTrace";
+  return "";
+}
+
+async function loadLineArtImages(shape) {
+  const variants = shape.lineArtVariants ?? {};
+  const entries = Object.entries(variants).filter(([, variant]) => variant?.image);
+  const loadedImages = await Promise.all(entries.map(async ([key, variant]) => [
+    key,
+    await loadImage(`${DATA_DIR}/${variant.image}?v=${ASSET_REV}`)
+  ]));
+  return Object.fromEntries(loadedImages);
+}
+
+function applyLineArtKey(shape, key) {
+  const variant = shape.lineArtVariants?.[key] ?? shape.lineArtVariants?.duotone ?? shape.lineArt;
+  shape.lineArt = variant;
+  shape.lineArtImage = shape.lineArtImages?.[key] ?? shape.lineArtImages?.duotone ?? shape.lineArtImage;
+}
+
+function setLineArtProfile(profileKey, manual) {
+  const profile = DUOTONE_PROFILES.find((item) => item.key === profileKey) ?? DUOTONE_PROFILES[0];
+  state.lineArtProfile = profile.key;
+  for (const shape of state.shapes) {
+    applyLineArtKey(shape, profile.key);
+  }
+  setTuningValue("lineStrength", "lineStrengthValue", profile.defaultInk);
+  updateProfileButtons();
+
+  if (manual) {
+    const params = new URLSearchParams(location.search);
+    params.set("line", "duotone");
+    params.set("profile", profile.key);
+    history.replaceState(null, "", `${location.pathname}?${params}`);
+  }
+}
+
+function updateProfileButtons() {
+  for (const button of lineProfileSwitch.children) {
+    button.classList.toggle("active", button.dataset.lineProfile === state.lineArtProfile);
+  }
+}
+
+function resize() {
+  state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  state.width = window.innerWidth;
+  state.height = window.innerHeight;
+  canvas.width = Math.round(state.width * state.dpr);
+  canvas.height = Math.round(state.height * state.dpr);
+  canvas.style.width = `${state.width}px`;
+  canvas.style.height = `${state.height}px`;
+  ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+
+  if (state.shapes.length && state.particles.length) {
+    startTransition(state.current, false, 1);
+  }
+}
+
+function seedInitialParticles(shapeIndex) {
+  const targets = mapShapeToCanvas(state.shapes[shapeIndex]);
+  state.current = shapeIndex;
+  state.particles = targets.map((target, index) => {
+    const scatter = scatterPoint(index, shapeIndex);
+    const x = START_SETTLED ? target.x : scatter.x;
+    const y = START_SETTLED ? target.y : scatter.y;
+    const alpha = START_SETTLED ? target.alpha : target.alpha * 0.34;
+    return {
+      x,
+      y,
+      alpha,
+      size: target.size,
+      tone: target.tone,
+      kind: target.kind,
+      tx: target.x,
+      ty: target.y,
+      targetAlpha: target.alpha,
+      seed: hash(index, shapeIndex + 7)
+    };
+  });
+  state.transition = START_SETTLED ? null : buildTransition(targets, 0, 2600);
+  state.settledAt = START_SETTLED ? performance.now() - 1400 : 0;
+  state.nextAt = performance.now() + 7800;
+  updateLabels();
+}
+
+function startTransition(nextIndex, manual = false, durationScale = 1) {
+  if (!state.shapes[nextIndex]) return;
+  if (manual && state.frozen) setFrozen(false);
+  const targets = mapShapeToCanvas(state.shapes[nextIndex]);
+  state.transition = buildTransition(targets, nextIndex, Math.round((manual ? 3200 : 3800) * durationScale));
+  state.settledAt = 0;
+  state.current = nextIndex;
+  state.nextAt = performance.now() + (manual ? 8200 : 8800);
+  updateLabels();
+}
+
+function buildTransition(targets, nextIndex, duration) {
+  const now = performance.now();
+  const count = Math.max(state.particles.length, targets.length);
+  const nextParticles = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const particle = state.particles[index] ?? createDormantParticle(index, nextIndex);
+    const target = targets[index % targets.length];
+    const chaos = chaosPoint(index, nextIndex);
+    nextParticles.push({
+      ...particle,
+      fromX: particle.x,
+      fromY: particle.y,
+      fromAlpha: particle.alpha ?? 0,
+      chaosX: chaos.x,
+      chaosY: chaos.y,
+      tx: target.x,
+      ty: target.y,
+      targetAlpha: index < targets.length ? target.alpha : 0,
+      fromSize: particle.size || target.size,
+      targetSize: index < targets.length ? target.size : 0,
+      tone: index < targets.length ? target.tone : particle.tone,
+      kind: index < targets.length ? target.kind : particle.kind ?? 0,
+      seed: particle.seed ?? hash(index, nextIndex + 7)
+    });
+  }
+
+  state.particles = nextParticles;
+  return { start: now, duration, nextIndex };
+}
+
+function createDormantParticle(index, nextIndex) {
+  const edge = randomEdgePoint(hash(index, nextIndex + 3));
+  return {
+    x: edge.x,
+    y: edge.y,
+    alpha: 0,
+    size: 0,
+    tone: 0,
+    kind: 0,
+    seed: hash(index, nextIndex + 7)
+  };
+}
+
+function tick(now) {
+  const renderNow = state.frozen ? state.frozenAt : now;
+  drawBackground(renderNow);
+  if (!state.frozen) updateParticles(now);
+  drawParticles(renderNow);
+  drawLineArt(renderNow);
+
+  if (!state.frozen && now > state.nextAt) {
+    startTransition((state.current + 1) % state.shapes.length);
+  }
+
+  requestAnimationFrame(tick);
+}
+
+function updateParticles(now) {
+  const transition = state.transition;
+  if (!transition) return;
+  const t = clamp((now - transition.start) / transition.duration, 0, 1);
+  const split = 0.48;
+
+  for (const particle of state.particles) {
+    if (t < split) {
+      const q = easeInOutCubic(t / split);
+      const shake = Math.sin(now * 0.012 + particle.seed) * 10 * q;
+      particle.x = lerp(particle.fromX, particle.chaosX, q) + shake;
+      particle.y = lerp(particle.fromY, particle.chaosY, q) + Math.cos(now * 0.01 + particle.seed) * 6 * q;
+      particle.size = lerp(particle.fromSize || 0, Math.max(particle.fromSize || 0, particle.targetSize || 0) * 0.72, q);
+      particle.alpha = lerp(particle.fromAlpha || 0, Math.max(0.18, (particle.fromAlpha || particle.targetAlpha || 0) * 0.58), q);
+    } else {
+      const q = easeOutExpo((t - split) / (1 - split));
+      particle.x = lerp(particle.chaosX, particle.tx, q);
+      particle.y = lerp(particle.chaosY, particle.ty, q);
+      particle.size = lerp(Math.max(particle.fromSize || 0, particle.targetSize || 0) * 0.72, particle.targetSize || 0, q);
+      particle.alpha = lerp(Math.max(0.18, (particle.fromAlpha || particle.targetAlpha || 0) * 0.58), particle.targetAlpha || 0, q);
+    }
+
+    if (state.pointer.active) {
+      const dx = particle.x - state.pointer.x;
+      const dy = particle.y - state.pointer.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < 12000) {
+        const force = (1 - distSq / 12000) * 18;
+        const angle = Math.atan2(dy, dx);
+        particle.x += Math.cos(angle) * force;
+        particle.y += Math.sin(angle) * force;
+      }
+    }
+  }
+
+  if (t >= 1) {
+    state.transition = null;
+    state.settledAt = now;
+    state.particles = state.particles.filter((particle) => particle.targetAlpha > 0.01);
+  }
+}
+
+function bindTuningControl(inputId, outputId) {
+  const input = document.getElementById(inputId);
+  const sync = () => {
+    setTuningValue(inputId, outputId, Number(input.value));
+  };
+  input.addEventListener("input", sync);
+  sync();
+}
+
+function setTuningValue(inputId, outputId, value) {
+  const input = document.getElementById(inputId);
+  const output = document.getElementById(outputId);
+  state.tuning[inputId] = value;
+  input.value = String(value);
+  output.value = value.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function setFrozen(frozen) {
+  if (state.frozen === frozen) return;
+  const now = performance.now();
+
+  if (frozen) {
+    state.frozenAt = now;
+  } else {
+    const pausedFor = now - state.frozenAt;
+    if (state.transition) state.transition.start += pausedFor;
+    if (state.settledAt) state.settledAt += pausedFor;
+    state.nextAt += pausedFor;
+    state.frozenAt = 0;
+  }
+
+  state.frozen = frozen;
+  updateFreezeButton();
+}
+
+function updateFreezeButton() {
+  const button = document.getElementById("freezeBtn");
+  button.classList.toggle("active", state.frozen);
+  button.textContent = state.frozen ? "Frozen" : "Freeze";
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load ${src}`));
+    image.src = src;
+  });
+}
+
+function drawBackground(now) {
+  ctx.clearRect(0, 0, state.width, state.height);
+  const base = ctx.createLinearGradient(0, 0, state.width, state.height);
+  base.addColorStop(0, "#100e0b");
+  base.addColorStop(0.42, "#0e0d0c");
+  base.addColorStop(1, "#17110c");
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, state.width, state.height);
+
+  radial(80, -80, 720, "rgba(36,26,16,0.72)");
+  radial(state.width + 60, 10, 620, "rgba(42,18,11,0.58)");
+  radial(state.width * 0.58, state.height + 130, 620, "rgba(158,35,23,0.20)");
+
+  ctx.save();
+  ctx.globalAlpha = 0.44;
+  ctx.strokeStyle = "rgba(237,224,196,0.055)";
+  ctx.lineWidth = 1;
+  const gridOffset = (now * 0.004) % 40;
+  for (let x = -gridOffset; x < state.width; x += 40) line(x, 0, x, state.height);
+  for (let y = gridOffset; y < state.height; y += 40) line(0, y, state.width, y);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = "rgba(226,64,42,0.55)";
+  for (let y = 7; y < state.height; y += 18) {
+    for (let x = (Math.floor(y / 18) % 2) * 9; x < state.width; x += 18) {
+      if ((hash(Math.floor(x), Math.floor(y)) % 10) < 3) ctx.fillRect(x, y, 2, 2);
+    }
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = "#EDE0C4";
+  ctx.font = "800 24vw BD Cond, sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "top";
+  ctx.fillText(IDS[state.current], state.width - 24, -18);
+  ctx.restore();
+}
+
+function drawParticles(now) {
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  for (const particle of state.particles) {
+    if (particle.alpha <= 0.01 || particle.size <= 0.1) continue;
+    const particleAlpha = particle.alpha * state.tuning.dotStrength;
+    const pulse = 1 + Math.sin(now * 0.003 + particle.seed) * 0.035;
+    const size = particle.size * pulse;
+    const x = Math.round(particle.x - size * 0.5);
+    const y = Math.round(particle.y - size * 0.5);
+
+    const isContour = particle.kind === 1;
+    const isHighlight = particle.kind === 2;
+
+    if (particle.tone !== 1) {
+      fillRect(x + size * 0.34, y + size * 0.34, size, size, COLORS.redDeep, particleAlpha * (isContour ? 0.58 : 0.38));
+    }
+
+    const color = particle.tone === 2 ? COLORS.amber : particle.tone === 1 ? COLORS.redDeep : COLORS.red;
+    fillRect(x, y, size, size, color, particleAlpha * (isHighlight ? 0.88 : 1));
+
+    if (size > 7 || isContour) {
+      fillRect(x + 1, y + 1, Math.max(1, size - 2), 1, COLORS.paper, particleAlpha * (isContour ? 0.16 : 0.07));
+      fillRect(x + 1, y + Math.max(1, size - 2), Math.max(1, size - 2), 1, COLORS.redDeep, particleAlpha * (isContour ? 0.22 : 0.13));
+    }
+  }
+  ctx.restore();
+}
+
+function drawLineArt(now) {
+  const shape = state.shapes[state.current];
+  const lineArt = shape?.lineArtImage;
+  if (!lineArt || state.transition || !state.settledAt) return;
+
+  const fade = clamp((now - state.settledAt) / 1200, 0, 1);
+  if (fade <= 0) return;
+
+  const layout = shapeLayout(shape);
+  const opacity = clamp(fade * state.tuning.lineStrength * 0.82, 0, 1);
+  const spread = Math.max(0, state.tuning.lineWidth - 0.76) * Math.max(1, layout.baseSize * 0.18);
+  const left = layout.left;
+  const top = layout.top;
+  const width = layout.shapeWidth;
+  const height = layout.shapeHeight;
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.imageSmoothingEnabled = true;
+
+  if (spread > 0.18) {
+    const offsets = [
+      [-spread, 0],
+      [spread, 0],
+      [0, -spread],
+      [0, spread],
+      [-spread * 0.72, -spread * 0.72],
+      [spread * 0.72, -spread * 0.72],
+      [-spread * 0.72, spread * 0.72],
+      [spread * 0.72, spread * 0.72]
+    ];
+    ctx.globalAlpha = opacity * 0.2;
+    for (const [offsetX, offsetY] of offsets) {
+      ctx.drawImage(lineArt, left + offsetX, top + offsetY, width, height);
+    }
+  }
+
+  ctx.globalAlpha = opacity;
+  ctx.drawImage(lineArt, left, top, width, height);
+  ctx.restore();
+}
+
+function mapShapeToCanvas(shape) {
+  const layout = shapeLayout(shape);
+  return shape.dots.map((dot, index) => ({
+    x: layout.left + dot[0] * layout.shapeWidth,
+    y: layout.top + dot[1] * layout.shapeHeight,
+    size: layout.baseSize * dot[2],
+    alpha: dot[3],
+    tone: dot[4],
+    kind: dot[5] ?? 0,
+    index
+  }));
+}
+
+function shapeLayout(shape) {
+  const aspect = shape.aspect || 1;
+  const isCompact = state.width < 760;
+  let shapeHeight = isCompact
+    ? Math.max(state.height * 1.06, (state.width * 1.22) / aspect)
+    : Math.max(state.height * 1.18, (state.width * 0.78) / aspect);
+  shapeHeight = Math.min(shapeHeight, state.height * (isCompact ? 1.26 : 1.72));
+  const shapeWidth = shapeHeight * aspect;
+  const centerX = state.width * (isCompact ? 0.52 : 0.63);
+  const centerY = state.height * (isCompact ? 0.62 : 0.58);
+  const left = centerX - shapeWidth * 0.5;
+  const top = centerY - shapeHeight * 0.5;
+  const baseSize = clamp(shapeHeight / 132, 3.2, 11.5);
+  return { left, top, shapeWidth, shapeHeight, baseSize };
+}
+
+function chaosPoint(index, nextIndex) {
+  const a = seeded(index, nextIndex + 17);
+  const b = seeded(index, nextIndex + 29);
+  const edgeBias = seeded(index, nextIndex + 41);
+  const margin = Math.max(70, Math.min(state.width, state.height) * 0.12);
+
+  if (edgeBias < 0.7) {
+    const side = Math.floor(a * 4);
+    if (side === 0) return { x: lerp(-margin, state.width + margin, b), y: -margin * seeded(index, nextIndex + 53) };
+    if (side === 1) return { x: state.width + margin * seeded(index, nextIndex + 61), y: lerp(-margin, state.height + margin, b) };
+    if (side === 2) return { x: lerp(-margin, state.width + margin, b), y: state.height + margin * seeded(index, nextIndex + 67) };
+    return { x: -margin * seeded(index, nextIndex + 71), y: lerp(-margin, state.height + margin, b) };
+  }
+
+  return {
+    x: lerp(-margin, state.width + margin, a),
+    y: lerp(-margin, state.height + margin, b)
+  };
+}
+
+function scatterPoint(index, nextIndex) {
+  const margin = Math.max(24, Math.min(state.width, state.height) * 0.04);
+  return {
+    x: lerp(-margin, state.width + margin, seeded(index, nextIndex + 83)),
+    y: lerp(-margin, state.height + margin, seeded(index, nextIndex + 89))
+  };
+}
+
+function randomEdgePoint(seed) {
+  const a = seeded(seed, 1);
+  const b = seeded(seed, 2);
+  const side = Math.floor(a * 4);
+  const margin = Math.max(80, Math.min(state.width, state.height) * 0.14);
+  if (side === 0) return { x: state.width * b, y: -margin };
+  if (side === 1) return { x: state.width + margin, y: state.height * b };
+  if (side === 2) return { x: state.width * b, y: state.height + margin };
+  return { x: -margin, y: state.height * b };
+}
+
+function updateLabels() {
+  currentId.textContent = IDS[state.current];
+  dotCount.textContent = state.shapes[state.current]?.dots.length ?? 0;
+  for (const [index, button] of [...nav.children].entries()) {
+    button.classList.toggle("active", index === state.current);
+  }
+}
+
+function fillRect(x, y, width, height, color, alpha) {
+  ctx.globalAlpha = clamp(alpha, 0, 1);
+  ctx.fillStyle = `rgb(${color[0]} ${color[1]} ${color[2]})`;
+  ctx.fillRect(x, y, width, height);
+}
+
+function radial(x, y, radius, color) {
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, color);
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, state.width, state.height);
+}
+
+function line(x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+function seeded(a, b) {
+  return (hash(a, b) % 100000) / 100000;
+}
+
+function hash(a, b) {
+  let value = (Math.imul((a + 0x9e3779b9) >>> 0, 2654435761) ^ Math.imul((b + 0x85ebca6b) >>> 0, 2246822519)) >>> 0;
+  value ^= value >>> 16;
+  value = Math.imul(value, 2246822507) >>> 0;
+  value ^= value >>> 13;
+  value = Math.imul(value, 3266489909) >>> 0;
+  value ^= value >>> 16;
+  return value >>> 0;
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function easeOutExpo(t) {
+  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+</script>
+</body>
+</html>

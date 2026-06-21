@@ -1,0 +1,1396 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BD-SpineX · 印刷海報風格設計書 (Soviet Print)</title>
+<style>
+/* fonts the app already ships (relative to /design) */
+@font-face { font-family:"BD Cond"; font-weight:700; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-700.ttf") format("truetype"); }
+@font-face { font-family:"BD Cond"; font-weight:800; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-800.ttf") format("truetype"); }
+@font-face { font-family:"BD Cond"; font-weight:600; font-display:swap; src:url("../app/renderer/public/fonts/barlow-condensed-600.ttf") format("truetype"); }
+@font-face { font-family:"BD TC"; font-weight:700; font-display:swap; src:url("../app/renderer/public/fonts/noto-sans-tc-700.ttf") format("truetype"); }
+@font-face { font-family:"BD TC"; font-weight:500; font-display:swap; src:url("../app/renderer/public/fonts/noto-sans-tc-500.ttf") format("truetype"); }
+
+/* ============== page = "Night Press" environment ============== */
+:root{
+  --ink:#0E0D0C; --ink-2:#17150F; --ink-3:#211d14;
+  --paper:#EDE0C4; --paper-dim:#B9AD8E; --paper-2:#E4D3AC;
+  --red:#E2402A; --red-deep:#9E2317; --amber:#E8A22C; --gold:#F2C14E;
+  --glass:rgba(237,224,196,0.08); --stroke:rgba(237,224,196,0.16);
+  --cond:"BD Cond","Oswald","Archivo Narrow","Helvetica Neue",sans-serif;
+  --tc:"BD TC","PingFang TC","Noto Sans TC",sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,var(--tc),sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--ink); color:var(--paper);
+  font-family:var(--body); -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(1000px 700px at 8% -8%, #241a10 0%, transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, #2a120b 0%, transparent 55%);
+  background-attachment:fixed;
+}
+/* halftone / riso grain overlay */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 26px}
+section{padding:54px 0}
+h1,h2,h3,h4{font-family:var(--cond);font-weight:800;letter-spacing:.01em;margin:0;text-transform:uppercase;line-height:.98}
+.tc{font-family:var(--tc);text-transform:none;letter-spacing:0}
+p{color:var(--paper-dim);line-height:1.7;font-size:15px}
+.kicker{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.28em;font-size:12px;color:var(--red)}
+code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;color:var(--gold)}
+.rule{height:0;border:0;border-top:3px solid var(--paper);opacity:.85}
+.rule.red{border-top-color:var(--red)}
+.thinrule{height:1px;background:var(--stroke);border:0}
+
+/* star + arrow motifs */
+.star{display:inline-block;width:1em;height:1em;background:var(--red);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);vertical-align:-.12em}
+
+/* ===== top bar ===== */
+.top{position:sticky;top:0;z-index:40;background:rgba(14,13,12,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:2px solid var(--red)}
+.top .wrap{display:flex;align-items:center;gap:16px;padding-top:12px;padding-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--cond);font-weight:800;font-size:20px;text-transform:uppercase}
+.brand .mark{width:30px;height:30px;background:var(--red);color:var(--paper);display:grid;place-items:center;font-weight:800;clip-path:polygon(0 0,100% 0,100% 100%,18% 100%)}
+.top nav{margin-left:auto;display:flex;gap:2px;flex-wrap:wrap}
+.top nav a{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--paper-dim);text-decoration:none;padding:7px 11px}
+.top nav a:hover{color:var(--paper);background:var(--glass)}
+
+/* ===== hero poster ===== */
+.hero{position:relative;overflow:hidden;border:2px solid var(--paper);background:var(--ink-2);margin-top:26px}
+.hero .band{position:absolute;inset:0;background:
+  linear-gradient(115deg, transparent 38%, var(--red) 38% 52%, transparent 52%),
+  linear-gradient(115deg, transparent 54%, var(--red-deep) 54% 60%, transparent 60%);opacity:.9}
+.hero .grid{position:absolute;inset:0;background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);background-size:34px 34px;opacity:.5}
+.hero .inner{position:relative;padding:46px 40px;display:grid;grid-template-columns:1.4fr .9fr;gap:20px;align-items:center}
+.hero h1{font-size:clamp(40px,8vw,92px);color:var(--paper)}
+.hero h1 .o{color:var(--red)}
+.hero .sub{margin-top:14px;max-width:42ch}
+.hero .big{font-family:var(--cond);font-weight:800;font-size:clamp(90px,18vw,200px);line-height:.8;color:var(--amber);text-align:right;text-shadow:6px 6px 0 var(--red-deep)}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.tag{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;padding:6px 11px;border:1.5px solid var(--paper);color:var(--paper)}
+.tag.red{background:var(--red);border-color:var(--red);color:var(--paper)}
+
+/* ===== thesis cards ===== */
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:760px){.grid4{grid-template-columns:1fr}.hero .inner{grid-template-columns:1fr}.hero .big{text-align:left}}
+.note{border:2px solid var(--paper);background:var(--ink-2);padding:18px 18px 16px;position:relative}
+.note .n{position:absolute;top:-14px;left:14px;background:var(--red);color:var(--paper);font-family:var(--cond);font-weight:800;font-size:18px;width:30px;height:30px;display:grid;place-items:center}
+.note h3{font-size:19px;color:var(--paper);margin:6px 0 8px}
+.note p{margin:0;font-size:14px}
+
+/* ===== scheme tiles ===== */
+.schemes{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:900px){.schemes{grid-template-columns:1fr}}
+.scheme{border:2px solid var(--paper);background:var(--surface,#17150F)}
+.scheme .hd{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--red);color:var(--paper)}
+.scheme .hd .id{font-family:var(--cond);font-weight:800;font-size:20px}
+.scheme .hd .rec{margin-left:auto;font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.1em;border:1.5px solid var(--paper);padding:2px 7px}
+
+/* mini app mock — reads scheme tokens */
+.mock{--bg:#0E0D0C;--surface:#17150F;--ink:#0E0D0C;--paper:#EDE0C4;--paper-dim:#a99e84;--red:#E2402A;--red-deep:#9E2317;--amber:#E8A22C;--tray:#0b0a08;--glass:rgba(237,224,196,.08);--mstroke:rgba(237,224,196,.18)}
+.mock{background:var(--bg);color:var(--paper);font-family:var(--body);display:grid;grid-template-columns:96px 1fr;min-height:320px;border-top:1px solid var(--mstroke)}
+.mock .rail{background:var(--surface);border-right:1px solid var(--mstroke);padding:12px 8px;display:flex;flex-direction:column;gap:3px}
+.mock .rail .b{font-family:var(--cond);font-weight:800;text-transform:uppercase;font-size:13px;color:var(--paper);padding:6px 8px}
+.mock .rail a{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:11.5px;color:var(--paper-dim);padding:6px 8px;border-left:3px solid transparent}
+.mock .rail a.on{color:var(--paper);background:var(--red);border-left-color:var(--amber)}
+.mock .main{padding:12px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.mock .titleband{position:relative;padding:8px 12px;background:linear-gradient(100deg,var(--red) 0 70%,transparent 70%);color:var(--paper);overflow:hidden}
+.mock .titleband h4{font-size:22px;color:var(--paper)}
+.mock .titleband .big{position:absolute;right:10px;top:-8px;font-family:var(--cond);font-weight:800;font-size:46px;color:var(--paper);opacity:.9}
+.mock .btns{display:flex;gap:8px;flex-wrap:wrap}
+.mock .tray{margin-top:auto;background:var(--tray);border:1px solid var(--mstroke);padding:8px;display:flex;gap:8px;align-items:center}
+.mock .cart{width:74px;height:58px;border-radius:6px;background:linear-gradient(180deg,#d2d5da,#9ca2ab);box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 3px 0 #828894,0 6px 8px rgba(0,0,0,.5);position:relative;flex:none}
+.mock .cart::after{content:"原樣";font-family:var(--tc);position:absolute;inset:auto 0 3px;text-align:center;font-size:8px;color:#3a3f48}
+.dock{flex:1;height:46px;border-radius:10px;border:1px solid rgba(237,224,196,.18);background:var(--glass);-webkit-backdrop-filter:blur(6px) saturate(1.4);backdrop-filter:blur(6px) saturate(1.4);display:flex;align-items:center;gap:8px;padding:0 12px;overflow:hidden}
+@supports(backdrop-filter:url(#lens)){.dock{backdrop-filter:blur(3px) url(#lens) saturate(1.5)}}
+.dock .disc{width:30px;height:30px;border-radius:8px;background:conic-gradient(from 210deg,#6a5bff,#33e0e6,#ff5ca8,#6a5bff);flex:none}
+.dock .nl{font-family:var(--cond);font-weight:700;text-transform:uppercase;font-size:11px;color:var(--amber)}
+.dock .nl b{display:block;color:var(--paper);font-size:14px}
+.dock .apply{margin-left:auto}
+
+/* ===== print↔glass buttons ===== */
+.pbtn{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;border:1.5px solid var(--ink,#0E0D0C);border-radius:5px;padding:9px 15px;cursor:pointer;transition:.16s;position:relative}
+.pbtn.primary{background:var(--red);color:var(--paper);border-color:var(--red-deep);box-shadow:3px 3px 0 var(--red-deep)}
+.pbtn.primary:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--red-deep);background:var(--red);-webkit-backdrop-filter:blur(6px) saturate(1.5);backdrop-filter:blur(6px) saturate(1.5)}
+.pbtn.paper{background:var(--paper);color:var(--ink,#0E0D0C);border-color:var(--ink,#0E0D0C);box-shadow:3px 3px 0 rgba(0,0,0,.35)}
+.pbtn.paper:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 rgba(0,0,0,.35)}
+.pbtn.ghost{background:transparent;color:var(--paper);border-color:var(--paper)}
+.pbtn.ghost:hover{background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.pbtn.sm{font-size:11px;padding:6px 10px;box-shadow:2px 2px 0 var(--red-deep)}
+
+/* swatches */
+.sw{display:flex;flex-wrap:wrap;gap:0;border:2px solid var(--paper)}
+.sw i{flex:1 1 0;min-width:34px;height:42px;position:relative}
+.sw i b{position:absolute;left:3px;bottom:2px;font-family:ui-monospace,monospace;font-size:8px;color:#0009;mix-blend-mode:hard-light}
+
+/* element library */
+.lib{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:760px){.lib{grid-template-columns:1fr}}
+.demo{border:2px solid var(--paper);background:var(--ink-2);padding:16px}
+.demo h4{color:var(--paper);font-size:16px;margin-bottom:12px}
+.giant{font-family:var(--cond);font-weight:800;font-size:74px;line-height:.85;color:var(--amber);text-shadow:4px 4px 0 var(--red-deep)}
+.giant small{font-family:var(--cond);font-weight:700;font-size:15px;letter-spacing:.18em;color:var(--paper-dim);display:block;text-transform:uppercase}
+.halftone{height:60px;border:1px solid var(--stroke);background:radial-gradient(var(--red) 22%,transparent 23%) 0 0/9px 9px,radial-gradient(var(--red) 22%,transparent 23%) 4.5px 4.5px/9px 9px;background-color:var(--ink)}
+.typescale div{font-family:var(--cond);text-transform:uppercase;color:var(--paper);line-height:1.05}
+
+/* keep/change map */
+.map{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.map{grid-template-columns:1fr}}
+.map .col{border:2px solid var(--paper);padding:14px}
+.map .col.keep{border-color:var(--amber)}
+.map .col h4{color:var(--paper);margin-bottom:8px}
+.map ul{margin:0;padding-left:18px;color:var(--paper-dim);font-size:14px;line-height:1.7}
+.tagline{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+.keep .tagline{color:var(--amber)} .change .tagline{color:var(--red)}
+
+/* code */
+.code{border:2px solid var(--paper);background:#0a0908}
+.code .bar{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:11px;color:var(--paper-dim);padding:7px 12px;border-bottom:1px solid var(--stroke)}
+.code pre{margin:0;padding:13px 15px;overflow:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.65;color:#d9cda8}
+.code .k{color:var(--amber)} .code .v{color:#e98}
+
+/* ===== §08 sidebar redesign sketch — "The Press Spine" ===== */
+.sbgrid{display:grid;grid-template-columns:250px 250px 1fr;gap:22px;align-items:start}
+@media(max-width:980px){.sbgrid{grid-template-columns:1fr}}
+.sbcap{font-family:var(--cond);font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-size:13px;color:var(--paper);margin-bottom:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sbcap .pill{font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.1em;border:1.5px solid var(--red);color:var(--red);padding:2px 7px}
+.sbcap .pill.amber{border-color:var(--amber);color:var(--amber)}
+
+/* rail shell */
+.sbrail{position:relative;display:flex;flex-direction:column;gap:13px;min-height:592px;padding:16px 14px 14px 22px;border:2px solid var(--paper);background:linear-gradient(180deg,#141009,#0b0a08);font-family:var(--cond);overflow:hidden}
+.sbrail::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red);box-shadow:2px 0 0 var(--red-deep);z-index:2}
+.sbrail::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.05;background-image:radial-gradient(var(--paper) 1px,transparent 1.5px);background-size:7px 7px}
+
+/* brand / masthead */
+.sbbrand{position:relative;z-index:1;display:flex;align-items:center;gap:11px}
+.sbmark{flex:none;width:38px;height:38px;background:var(--red);color:var(--paper);display:grid;place-items:center;font-family:var(--cond);font-weight:800;font-size:21px;clip-path:polygon(0 0,100% 0,100% 100%,24% 100%)}
+.sbmark.light{background:var(--paper);color:var(--red-deep)}
+.sbname{font-weight:800;font-size:19px;letter-spacing:.04em;color:var(--paper);line-height:1}
+.sbsub{margin-top:4px;font-weight:700;font-size:10px;letter-spacing:.15em;color:var(--paper-dim);text-transform:uppercase}
+.sbedition{margin-top:5px;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:9.5px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase}
+.sbedition i{width:20px;height:1px;background:var(--amber);opacity:.6}
+
+/* nav */
+.sbnav{position:relative;z-index:1;display:flex;flex-direction:column;gap:2px}
+.sbgroup{display:flex;align-items:center;gap:8px;margin:11px 2px 3px;font-weight:700;font-size:10px;letter-spacing:.2em;color:var(--red);text-transform:uppercase}
+.sbgroup .tc{font-family:var(--tc);letter-spacing:.04em;color:var(--paper-dim)}
+.sbgroup i{flex:1;height:1px;background:var(--stroke)}
+.sbitem{position:relative;display:flex;align-items:center;gap:11px;padding:9px 10px 9px 9px;border-left:3px solid color-mix(in srgb,var(--red) 30%,transparent);background:linear-gradient(90deg,color-mix(in srgb,var(--red) 6%,transparent),transparent 60%);color:var(--paper-dim)}
+.sbitem .ix{flex:none;width:18px;font-weight:800;font-size:12px;opacity:.7}
+.sbitem .nm{flex:1;font-weight:700;font-size:15.5px;letter-spacing:.04em;text-transform:uppercase}
+.sbitem .tick{flex:none;width:13px;height:2px;background:color-mix(in srgb,var(--red) 45%,transparent);transform:skewX(-18deg)}
+.sbitem .cnt{flex:none;font-weight:800;font-size:11px;color:var(--ink);background:var(--amber);padding:1px 6px}
+.sbitem .st{flex:none;color:var(--amber);font-size:13px}
+.sbitem.hov,.sbitem:hover{color:var(--paper);border-left-color:var(--amber);background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 16%,transparent),transparent 64%);box-shadow:2px 2px 0 color-mix(in srgb,var(--red-deep) 46%,transparent)}
+.sbitem.on{color:var(--paper);border-left-color:var(--amber);background:linear-gradient(100deg,var(--red) 0 78%,transparent 78%)}
+.sbitem.on .ix{color:var(--paper);opacity:.92}
+.sbitem.on .tick{display:none}
+
+/* foot */
+.sbfoot{margin-top:auto;position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;padding-top:13px;border-top:3px solid var(--red)}
+.sbstamp{display:flex;align-items:center;gap:11px}
+.sbstamp .seal{flex:none;width:34px;height:34px;border-radius:50%;border:2.4px solid var(--amber);color:var(--amber);display:grid;place-items:center;font-weight:800;font-size:17px;transform:rotate(-9deg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--amber) 28%,transparent)}
+.sbstamp .seal.bad{border-color:var(--red);color:var(--red);transform:rotate(7deg)}
+.sbstamp .lbl b{display:block;font-weight:800;font-size:13px;letter-spacing:.04em;color:var(--paper);text-transform:uppercase;line-height:1}
+.sbstamp .lbl span{display:block;margin-top:3px;font-weight:700;font-size:9.5px;letter-spacing:.13em;color:var(--paper-dim);text-transform:uppercase}
+.sbcount{display:flex;align-items:baseline;gap:11px}
+.sbcount b{font-weight:800;font-size:74px;line-height:.78;color:var(--amber);text-shadow:4px 4px 0 var(--red-deep)}
+.sbcount span{font-weight:700;font-size:11px;letter-spacing:.16em;color:var(--paper-dim);text-transform:uppercase;line-height:1.2}
+.sbcount.big b{font-size:104px}
+.sbgauge{position:relative;height:9px;border:1.5px solid var(--stroke);background:#070605;overflow:hidden}
+.sbgauge i{position:absolute;inset:0 59% 0 0;background:repeating-linear-gradient(90deg,var(--red) 0 6px,var(--red-deep) 6px 9px)}
+.sbcolo{position:relative;display:flex;align-items:center;gap:9px;padding:6px 9px;background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 rgba(0,0,0,.36)}
+.sbcolo::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
+.sbcolo .k{padding-left:7px;font-weight:800;font-size:9px;letter-spacing:.12em;color:var(--red-deep);text-transform:uppercase}
+.sbcolo .v{margin-left:auto;font-family:var(--cond);font-weight:700;font-size:12px;color:var(--ink)}
+.sbreg{flex:none;position:relative;width:14px;height:14px;border:1.5px solid var(--red-deep);border-radius:50%}
+.sbreg::before,.sbreg::after{content:"";position:absolute;background:var(--red-deep)}
+.sbreg::before{left:50%;top:-3px;bottom:-3px;width:1.5px;transform:translateX(-50%)}
+.sbreg::after{top:50%;left:-3px;right:-3px;height:1.5px;transform:translateY(-50%)}
+
+/* variant B masthead */
+.sbrail.masthead .mast{position:relative;z-index:1;margin:-16px -14px 4px -22px;padding:16px 16px 14px 22px;background:linear-gradient(110deg,var(--red) 0 72%,var(--red-deep) 72%);display:grid;grid-template-columns:auto 1fr;column-gap:11px;align-items:center}
+.sbrail.masthead .mast .sbmark{grid-row:1 / span 2}
+.sbrail.masthead .mname{align-self:end;font-weight:800;font-size:20px;letter-spacing:.04em;color:var(--paper);line-height:1}
+.sbrail.masthead .msub{align-self:start;margin-top:3px;font-weight:700;font-size:9.5px;letter-spacing:.14em;color:color-mix(in srgb,var(--paper) 80%,transparent);text-transform:uppercase}
+.sbnav.tight .sbitem{padding:7px 10px}
+.sbnav.tight .sbitem .nm{font-size:14px}
+.sbfoot.tight{border-top:0;padding-top:4px}
+
+/* annotations */
+.sbanno{border:2px solid var(--paper);background:var(--ink-2);padding:14px 15px;margin-bottom:14px}
+.sbanno h4{color:var(--paper);font-size:15px;margin:0 0 9px}
+.sbanno ol{margin:0;padding-left:20px;color:var(--paper-dim);font-size:13px;line-height:1.66}
+.sbanno ol b{color:var(--amber)}
+.sbanno ol .tc{color:var(--paper)}
+
+/* ===== §09 LIBRARY page tuning sketch ===== */
+@keyframes lbspin{to{transform:rotate(360deg)}}
+.lbcols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media(max-width:860px){.lbcols{grid-template-columns:1fr}}
+.lbcap{font-family:var(--cond);font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-size:13px;color:var(--paper);margin:0 0 9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lbcap .pill{font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.1em;padding:2px 7px;border:1.5px solid var(--amber);color:var(--amber)}
+.lbcap .pill.keep{border-color:#67c98a;color:#8fe0ad}
+
+/* press-bed background */
+.lbbed{position:relative;overflow:hidden;border:2px solid var(--paper);min-height:288px;padding:20px;display:flex;gap:20px;align-items:flex-end;
+  background:radial-gradient(420px 300px at 12% -12%, #241a10, transparent 60%),radial-gradient(360px 280px at 102% -6%, #2a120b, transparent 55%),#0b0a08}
+.lbbed::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.07;background-image:radial-gradient(var(--red) 1px,transparent 1.5px),radial-gradient(var(--amber) 1px,transparent 1.5px);background-size:16px 16px,16px 16px;background-position:0 0,8px 8px}
+.lbbed::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);background-size:40px 40px}
+.lbwm{position:absolute;right:10px;top:-40px;z-index:0;font-family:var(--cond);font-weight:800;font-size:200px;line-height:1;letter-spacing:-.02em;color:rgba(237,224,196,.045)}
+.lbreg{position:absolute;z-index:1;width:18px;height:18px;border:1.5px solid rgba(237,224,196,.32);border-radius:50%}
+.lbreg::before,.lbreg::after{content:"";position:absolute;background:rgba(237,224,196,.32)}
+.lbreg::before{left:50%;top:-4px;bottom:-4px;width:1.5px;transform:translateX(-50%)}
+.lbreg::after{top:50%;left:-4px;right:-4px;height:1.5px;transform:translateY(-50%)}
+.lbslot{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px}
+.lbcart{width:150px;height:100px;border-radius:7px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 4px 0 #244674,0 10px 16px rgba(0,0,0,.5);position:relative}
+.lbcart::after{content:"卡帶不動";font-family:var(--tc);position:absolute;inset:auto 0 7px;text-align:center;font-size:9px;color:rgba(255,255,255,.5)}
+
+/* nameplate (cart label) */
+.lbplate{position:relative;width:172px;overflow:hidden;background:var(--paper);box-shadow:3px 3px 0 rgba(0,0,0,.42)}
+.lbplate::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:transparent;z-index:2}
+.lbplate.mounted{box-shadow:3px 3px 0 var(--red-deep)}
+.lbplate.mounted::before{background:var(--red)}
+.lbplate.staged::before{background:var(--amber)}
+.lbkind{display:flex;align-items:center;justify-content:space-between;gap:6px;background:#171511;padding:4px 8px}
+.lbkind span{font-family:var(--cond);font-weight:700;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.lbkind i{font-family:var(--cond);font-style:normal;font-weight:800;font-size:10px;width:15px;height:15px;display:grid;place-items:center;background:var(--paper-dim);color:var(--ink)}
+.lbplate.mounted .lbkind i{background:var(--red);color:var(--paper)}
+.lbplate.staged .lbkind i{background:var(--amber);color:var(--ink)}
+.lbttl{font-family:var(--cond);font-weight:800;font-size:15px;line-height:1.06;letter-spacing:.02em;text-transform:uppercase;color:var(--ink);padding:7px 9px 9px;text-align:left}
+.lbplates{display:flex;gap:16px;flex-wrap:wrap}
+
+/* dock */
+/* dock = one glass strip; the page (cartridges) scrolls & refracts THROUGH every element, buttons included */
+.lbstage{position:relative;overflow:hidden;border:1px solid var(--stroke);background:#0b0a08}
+.lbback{position:absolute;inset:0;z-index:0;display:flex;align-items:center;gap:12px;padding:0 14px;width:max-content;opacity:.95;animation:lbconvey 18s linear infinite}
+.lbmini{flex:none;position:relative;width:64px;height:38px;border-radius:4px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 0 #244674}
+.lbmini::after{content:"";position:absolute;left:7px;right:7px;top:7px;bottom:8px;border-radius:2px;background:rgba(7,8,12,.72)}
+@keyframes lbconvey{to{transform:translateX(-50%)}}
+.lbbar{position:relative;z-index:2;display:flex;align-items:center;gap:11px;padding:12px}
+.lbnowg{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:7px 12px;border:1px solid var(--stroke);border-left:3px solid var(--red);background:linear-gradient(100deg,rgba(237,224,196,.05),rgba(237,224,196,.012));-webkit-backdrop-filter:blur(3px) saturate(1.5);backdrop-filter:blur(3px) saturate(1.5)}
+.lbcartIco{flex:none;position:relative;width:27px;height:21px;border-radius:3px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.lbcartIco::after{content:"";position:absolute;left:4px;right:4px;top:4px;bottom:5px;border-radius:1px;background:rgba(7,8,12,.7)}
+.lbmeta .eb{font-family:var(--cond);font-weight:700;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.lbmeta .ti{font-family:var(--cond);font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:var(--paper);line-height:1.05;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.lbgbtn{flex:none;height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;border:1px solid rgba(237,224,196,.3);background:rgba(237,224,196,.05);color:var(--paper);font-family:var(--cond);font-weight:700;font-size:14px;letter-spacing:.05em;text-transform:uppercase;cursor:default;-webkit-backdrop-filter:blur(6px) saturate(1.4);backdrop-filter:blur(6px) saturate(1.4)}
+.lbgbtn.ic{width:38px;padding:0;font-size:15px}
+.lbgbtn.on{border-color:var(--amber);color:var(--amber)}
+.lbgbtn.apply{border:1.5px solid var(--red);background:linear-gradient(160deg,rgba(226,64,42,.44),rgba(158,35,23,.30));box-shadow:3px 3px 0 rgba(158,35,23,.5),0 0 18px rgba(226,64,42,.34)}
+.lbgbtn.apply .cnt{font-style:normal;font-weight:800;font-size:11px;background:var(--amber);color:var(--ink);padding:1px 6px}
+.lbgbtn.launch{border-color:color-mix(in srgb,var(--amber) 58%,transparent);color:var(--amber)}
+.lbdiv{flex:none;width:2px;height:30px;background:var(--red);transform:skewX(-12deg);opacity:.7}
+@supports ((backdrop-filter:blur(1px) url(#lens)) or (-webkit-backdrop-filter:blur(1px) url(#lens))){.lbnowg,.lbgbtn{-webkit-backdrop-filter:blur(2px) url(#lens) saturate(1.55);backdrop-filter:blur(2px) url(#lens) saturate(1.55)}}
+
+/* pending with halftone ground */
+.lbpending{position:relative;overflow:hidden;border:1.5px solid rgba(237,224,196,.28);background:rgba(14,13,12,.62);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);padding:11px}
+.lbpending::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.6;background:repeating-linear-gradient(0deg,rgba(237,224,196,.05) 0 1px,transparent 1px 5px),radial-gradient(60px 26px at 90% 6%,color-mix(in srgb,var(--amber) 22%,transparent),transparent 72%);mix-blend-mode:screen}
+.lbpending::after{content:"";position:absolute;top:0;right:0;width:42px;height:5px;background:var(--red);clip-path:polygon(12px 0,100% 0,100% 100%,0 100%)}
+.lbpHead{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.lbpHead b{font-family:var(--cond);font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.lbpHead em{font-style:normal;font-family:var(--cond);font-weight:800;font-size:13px;color:var(--paper);background:var(--red);padding:1px 8px}
+.lbpRow{position:relative;z-index:1;display:flex;align-items:center;gap:9px;padding:5px 8px;margin-bottom:5px;background:rgba(237,224,196,.05)}
+.lbpRow i{flex:none;width:8px;height:18px;background:var(--amber)}
+.lbpRow.rm i{background:var(--red)}
+.lbpRow span{font-family:var(--cond);font-weight:700;font-size:13px;letter-spacing:.02em;text-transform:uppercase;color:var(--paper)}
+
+/* ===== §10–13 secondary pages (Settings / Stats / Roster / Profiles) ===== */
+.pgbed{position:relative;overflow:hidden;border:2px solid var(--paper);padding:20px;background:radial-gradient(420px 300px at 10% -14%,#241a10,transparent 60%),radial-gradient(360px 260px at 102% -6%,#2a120b,transparent 55%),#0b0a08}
+.pgbed::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.06;background-image:radial-gradient(var(--red) 1px,transparent 1.5px),radial-gradient(var(--amber) 1px,transparent 1.5px);background-size:16px 16px,16px 16px;background-position:0 0,8px 8px}
+.pghd{position:relative;z-index:1;display:flex;align-items:center;gap:10px;margin:0 0 13px;font-family:var(--cond);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--paper);font-size:15px}
+.pghd .num{color:var(--red);font-size:13px;letter-spacing:.1em}
+.pghd .tc{font-family:var(--tc);color:var(--paper-dim);font-weight:700;font-size:12px;letter-spacing:0}
+.pghd i{flex:1;height:2px;background:var(--red);opacity:.85}
+/* the important glass component */
+.glasscard{position:relative;border:1px solid var(--stroke);background:var(--glass);-webkit-backdrop-filter:blur(8px) saturate(1.4);backdrop-filter:blur(8px) saturate(1.4);box-shadow:inset 0 1px 0 rgba(237,224,196,.14),0 8px 18px rgba(0,0,0,.3);padding:14px}
+@supports ((backdrop-filter:blur(1px) url(#lens)) or (-webkit-backdrop-filter:blur(1px) url(#lens))){.glasscard{-webkit-backdrop-filter:blur(3px) url(#lens) saturate(1.5);backdrop-filter:blur(3px) url(#lens) saturate(1.5)}}
+
+/* §10 settings — press console */
+.cfg{display:grid;grid-template-columns:172px 1fr;gap:20px;align-items:start}
+@media(max-width:820px){.cfg{grid-template-columns:1fr}}
+.cfgindex{display:flex;flex-direction:column;gap:2px}
+.cfgindex a{display:flex;gap:9px;align-items:center;padding:8px 10px;border-left:3px solid color-mix(in srgb,var(--red) 30%,transparent);color:var(--paper-dim);font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:14px;text-decoration:none}
+.cfgindex a.on{background:linear-gradient(100deg,var(--red) 0 78%,transparent 78%);color:var(--paper);border-left-color:var(--amber)}
+.cfgindex a .n{font-weight:800;font-size:11px;opacity:.7;width:16px}
+.cfgindex a.on .n{opacity:.9}
+.cfgbody{display:flex;flex-direction:column;gap:18px}
+.cfgconsole{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cfgconsole .seal{flex:none;width:42px;height:42px;border-radius:50%;border:2.4px solid var(--amber);color:var(--amber);display:grid;place-items:center;font-weight:800;font-size:20px;transform:rotate(-8deg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--amber) 28%,transparent)}
+.cfgconsole .seal.bad{border-color:var(--red);color:var(--red);transform:rotate(6deg)}
+.cfgconsole .lbl{flex:1;min-width:130px}
+.cfgconsole .lbl b{display:block;font-family:var(--cond);font-weight:800;text-transform:uppercase;color:var(--paper);font-size:15px}
+.cfgconsole .lbl span{font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--paper-dim)}
+.cfgslot{display:flex;align-items:center;gap:10px;margin-top:12px}
+.cfgslot .path{flex:1;min-width:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--paper);background:rgba(0,0,0,.24);border:1px solid var(--stroke);padding:9px 11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cfgchips{display:flex;flex-wrap:wrap;gap:8px}
+.cfgchip{display:flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid var(--stroke);background:var(--glass);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--paper)}
+.cfgchip .sw{width:11px;height:11px;flex:none}
+.cfgseg{display:inline-flex;border:1.5px solid var(--stroke);background:rgba(0,0,0,.18);padding:3px}
+.cfgseg b{font-family:var(--cond);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding:6px 14px;color:var(--paper-dim)}
+.cfgseg b.on{background:var(--red);color:var(--paper)}
+
+/* §11 stats — press stats + pixel heatmap */
+.stxnums{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:760px){.stxnums{grid-template-columns:repeat(2,1fr)}}
+.stxnum b{display:block;font-family:var(--cond);font-weight:800;font-size:52px;line-height:.8;color:var(--amber);text-shadow:4px 4px 0 var(--red-deep)}
+.stxnum span{font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim)}
+.stxgrid{position:relative;z-index:1;display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:start}
+@media(max-width:820px){.stxgrid{grid-template-columns:1fr}}
+.stxheat{display:grid;grid-template-columns:repeat(24,1fr);gap:3px}
+.stxcell{aspect-ratio:1;background:var(--red)}
+.stxlegend{display:flex;align-items:center;gap:6px;margin-top:11px;font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-dim)}
+.stxlegend i{width:13px;height:13px;background:var(--red)}
+.stxbars{display:flex;flex-direction:column;gap:10px}
+.stxbar{display:grid;grid-template-columns:74px 1fr auto;align-items:center;gap:9px}
+.stxbar .nm{font-family:var(--cond);font-weight:700;font-size:12px;text-transform:uppercase;color:var(--paper);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stxbar .track{height:15px;background:rgba(0,0,0,.25);border:1px solid var(--stroke);position:relative;overflow:hidden}
+.stxbar .track i{position:absolute;inset:0 auto 0 0;background:repeating-linear-gradient(90deg,var(--red) 0 7px,var(--red-deep) 7px 10px)}
+.stxbar .v{font-family:var(--cond);font-weight:800;font-size:13px;color:var(--amber)}
+
+/* §12 roster — printed dossier */
+.rsttoolbar{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.rstgrid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
+.rstcard{position:relative;overflow:hidden;padding:0}
+.rstport{position:relative;height:124px;background:linear-gradient(160deg,#2a3140,#10141c);display:grid;place-items:center;overflow:hidden}
+.rstport .sil{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 50% 34%,rgba(237,224,196,.55),rgba(237,224,196,.1) 70%,transparent)}
+.rstcard.dim .rstport{filter:grayscale(1) brightness(.66)}
+.rststamp{position:absolute;z-index:2;top:8px;right:8px;display:flex;align-items:center;gap:4px;background:var(--red);color:var(--paper);font-family:var(--cond);font-weight:800;font-size:11px;letter-spacing:.03em;padding:2px 7px;transform:rotate(-4deg);box-shadow:2px 2px 0 var(--red-deep)}
+.rststamp.zero{background:transparent;color:var(--paper-dim);border:1.5px solid var(--stroke);box-shadow:none}
+.rstplate .k{display:flex;justify-content:space-between;gap:6px;background:#171511;color:var(--amber);font-family:var(--cond);font-weight:700;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px}
+.rstplate .nm{font-family:var(--cond);font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:var(--paper);padding:6px 8px 8px;line-height:1.04}
+
+/* §13 profiles — loadout tickets */
+.protickets{position:relative;z-index:1;display:flex;flex-direction:column;gap:13px}
+.proticket{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:15px;align-items:center;overflow:hidden}
+.proticket::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:color-mix(in srgb,var(--red) 32%,transparent)}
+.proticket.on::before{background:var(--red)}
+.pronum{font-family:var(--cond);font-weight:800;font-size:36px;line-height:1;color:var(--amber);text-shadow:2px 2px 0 var(--red-deep);padding-left:6px}
+.promid .nm{font-family:var(--cond);font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.03em;color:var(--paper)}
+.promid .meta{font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim);margin-top:2px}
+.promid .mini{display:flex;gap:5px;margin-top:8px}
+.promini{width:36px;height:21px;border-radius:3px;background:linear-gradient(180deg,#7193C8,#4D73AA,#31598D);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.proact{display:flex;align-items:center;gap:8px;flex:none}
+
+/* §14 logs — press log */
+.lgtools{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;position:relative;z-index:1}
+.lgchips{display:flex;gap:8px}
+.lgchip{display:flex;align-items:center;gap:6px;font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim);border:1px solid var(--stroke);padding:4px 9px}
+.lgchip i{width:8px;height:8px;flex:none}
+.lgchip.ok i{background:#67c98a}.lgchip.warn i{background:var(--amber)}.lgchip.err i{background:var(--red)}
+.lgchip b{color:var(--paper);font-weight:800}
+.lgspace{flex:1}
+.lgconsole{position:relative;overflow:hidden;border:2px solid var(--paper);background:rgba(14,13,12,.55);-webkit-backdrop-filter:blur(8px) saturate(1.4);backdrop-filter:blur(8px) saturate(1.4);padding:10px 12px 12px 36px;min-height:230px}
+.lgconsole::before{content:"";position:absolute;left:0;top:0;bottom:0;width:26px;z-index:1;background:rgba(0,0,0,.32);border-right:1px solid var(--stroke);background-image:radial-gradient(circle at 13px 9px, rgba(0,0,0,.6) 0 2.6px, transparent 3.1px);background-size:26px 19px;background-repeat:repeat-y}
+.lgconsole::after{content:"";position:absolute;inset:0 0 0 26px;z-index:0;pointer-events:none;opacity:.5;background:repeating-linear-gradient(0deg, rgba(237,224,196,.045) 0 1px, transparent 1px 5px)}
+.lgrow{position:relative;z-index:2;display:grid;grid-template-columns:auto 62px 1fr;align-items:center;gap:10px;padding:4px 6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.55;color:var(--paper-dim);border-left:2px solid transparent}
+.lgmark{width:9px;height:9px;flex:none;background:color-mix(in srgb,var(--paper) 40%,transparent)}
+.lgtime{color:color-mix(in srgb,var(--paper) 42%,transparent);white-space:nowrap}
+.lgmsg{overflow-wrap:anywhere}
+.lgrow.ok .lgmark{background:#67c98a}
+.lgrow.warn{border-left-color:var(--amber)}.lgrow.warn .lgmark{background:var(--amber)}.lgrow.warn .lgmsg{color:var(--amber)}
+.lgrow.err{border-left-color:var(--red)}.lgrow.err .lgmark{background:var(--red)}.lgrow.err .lgmsg{color:#ff8b7a;font-weight:700}
+
+/* §15 preview — the press bench */
+.pvbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.pvbar .crumb{font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim)}
+.pvbar .crumb b{color:var(--amber)}
+.pvbar .sp{flex:1}
+.pvwrap{display:grid;grid-template-columns:250px minmax(0,1fr) 248px;gap:14px;align-items:stretch;min-height:438px}
+@media(max-width:900px){.pvwrap{grid-template-columns:1fr}}
+.pvfinder{display:grid;grid-template-columns:104px 1fr;border:1px solid var(--stroke);background:var(--glass);-webkit-backdrop-filter:blur(8px) saturate(1.3);backdrop-filter:blur(8px) saturate(1.3)}
+.pvcol{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--stroke)}
+.pvcol:last-child{border-right:0}
+.pvcolhd{font-family:var(--cond);font-weight:700;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);padding:8px 9px 6px;border-bottom:1px solid var(--stroke)}
+.pvcolhd .tc{font-family:var(--tc);color:var(--paper-dim);letter-spacing:.02em}
+.pvlist{padding:4px;overflow:auto}
+.pvitem{display:flex;align-items:center;gap:6px;padding:5px 7px;font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--paper-dim);border-left:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pvitem.mod{font-size:11px}
+.pvitem .ct{margin-left:auto;font-size:10px;color:var(--amber)}
+.pvitem .dot{width:7px;height:7px;flex:none;background:var(--amber)}
+.pvitem.on{background:linear-gradient(100deg,var(--red) 0 82%,transparent 82%);color:var(--paper);border-left-color:var(--amber)}
+.pvstageWrap{display:grid;gap:12px}
+.pvstageWrap.dual{grid-template-columns:1fr 1fr}
+.pvstage{position:relative;overflow:hidden;display:flex;flex-direction:column;border:2px solid var(--paper);background:radial-gradient(300px 220px at 50% -4%, #1b1812, #0b0a08)}
+.pvstage .field{position:relative;flex:1;min-height:236px;display:grid;place-items:center;overflow:hidden}
+.pvstage .field::before{content:"";position:absolute;inset:0;opacity:.05;background-image:radial-gradient(var(--red) 1px,transparent 1.5px);background-size:15px 15px}
+.pvtag{position:absolute;z-index:2;top:8px;left:8px;width:24px;height:24px;display:grid;place-items:center;background:var(--red);color:var(--paper);font-family:var(--cond);font-weight:800;font-size:14px;clip-path:polygon(0 0,100% 0,100% 100%,22% 100%)}
+.pvreg{position:absolute;z-index:1;width:16px;height:16px;border:1.5px solid rgba(237,224,196,.3);border-radius:50%}
+.pvreg::before,.pvreg::after{content:"";position:absolute;background:rgba(237,224,196,.3)}
+.pvreg::before{left:50%;top:-4px;bottom:-4px;width:1.5px;transform:translateX(-50%)}
+.pvreg::after{top:50%;left:-4px;right:-4px;height:1.5px;transform:translateY(-50%)}
+.pvspine{position:relative;width:120px;height:188px;z-index:1}
+.pvspine::before{content:"";position:absolute;left:50%;top:0;width:52px;height:52px;border-radius:50%;transform:translateX(-50%);background:radial-gradient(circle at 50% 38%, rgba(168,188,222,.72), rgba(49,89,141,.22))}
+.pvspine::after{content:"";position:absolute;left:50%;top:46px;width:96px;height:142px;transform:translateX(-50%);border-radius:46px 46px 16px 16px;background:linear-gradient(180deg, rgba(113,147,200,.58), rgba(34,70,116,.18))}
+.pvname{position:absolute;z-index:2;left:9px;bottom:9px;font-family:var(--cond);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--paper-dim)}
+.pvplay{display:flex;align-items:center;gap:8px;padding:7px 9px;border-top:1px solid var(--stroke);background:rgba(11,10,8,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.pvplay .tb{width:26px;height:26px;flex:none;border:1px solid var(--stroke);background:var(--glass);color:var(--paper);display:grid;place-items:center;font-size:11px}
+.pvplay .tb.play{background:var(--red);border-color:var(--red-deep)}
+.pvplay .sel{font-family:var(--cond);font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--paper);border:1px solid var(--stroke);padding:4px 7px;white-space:nowrap}
+.pvplay .sel .cv{color:var(--amber)}
+.pvscrub{flex:1;height:4px;min-width:20px;background:rgba(0,0,0,.45);position:relative}
+.pvscrub i{position:absolute;left:0;top:0;bottom:0;background:repeating-linear-gradient(90deg,var(--red) 0 6px,var(--red-deep) 6px 9px)}
+.pvinspect{display:flex;flex-direction:column;gap:13px;border:1px solid var(--stroke);background:var(--glass);-webkit-backdrop-filter:blur(8px) saturate(1.3);backdrop-filter:blur(8px) saturate(1.3);padding:12px}
+.pvsec .h{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:var(--cond);font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper)}
+.pvsec .h .num{color:var(--red)}
+.pvsec .h i{flex:1;height:1px;background:var(--stroke)}
+.pvsearch{display:flex;align-items:center;gap:6px;border:1px solid var(--stroke);background:rgba(0,0,0,.26);padding:5px 8px;margin-bottom:7px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--paper-dim)}
+.pvlayer{display:flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid var(--stroke);background:var(--glass);margin-bottom:5px;font-family:var(--cond);font-weight:700;font-size:11px;text-transform:uppercase;color:var(--paper)}
+.pvlayer .gr{color:var(--paper-dim);cursor:grab}
+.pvlayer .eye{margin-left:auto;color:var(--amber)}
+.pvpart{display:grid;grid-template-columns:1fr 64px auto;align-items:center;gap:8px;padding:4px 4px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--paper-dim)}
+.pvslider{position:relative;height:4px;background:rgba(0,0,0,.45)}
+.pvslider i{position:absolute;left:0;top:0;bottom:0;background:var(--amber)}
+.pvslider b{position:absolute;top:50%;width:9px;height:9px;background:var(--paper);transform:translate(-50%,-50%);box-shadow:0 0 0 1px var(--ink)}
+.pvpart .eye{color:var(--amber)}
+.pvpart.off{opacity:.5}.pvpart.off .eye{color:var(--paper-dim)}
+
+footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
+.reveal{opacity:0;transform:translateY(16px);transition:.6s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
+.secnum{font-family:var(--cond);font-weight:800;color:var(--red);font-size:14px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+
+<!-- liquid lens for the dock demos -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="lens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.01 0.014" numOctaves="2" seed="7" result="n"/>
+    <feGaussianBlur in="n" stdDeviation="2" result="s"/>
+    <feDisplacementMap in="SourceGraphic" in2="s" scale="40" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand"><span class="mark">B</span> BD-SpineX · 印刷局</div>
+    <nav>
+      <a href="#thesis">主張</a><a href="#schemes">配色</a><a href="#buttons">按鈕</a>
+      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a><a href="#sidebar">側欄</a><a href="#library">Library頁</a><a href="#settings">設定</a><a href="#stats">統計</a><a href="#roster">名冊</a><a href="#profiles">編組</a><a href="#logs">紀錄</a><a href="#preview">預覽</a><a href="#violet">紫配色</a>
+    </nav>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="wrap reveal">
+  <div class="hero">
+    <div class="band"></div><div class="grid"></div>
+    <div class="inner">
+      <div>
+        <div class="kicker">Soviet Print · Retro-Futurism Mod Manager</div>
+        <h1>印刷<span class="o">／</span>玻璃<br>並置主義</h1>
+        <p class="sub tc">把蘇聯宣傳海報的油墨、粗壓縮字體、斜切與巨數，套在「深色印刷台」之上——讓你既有的液態玻璃與卡帶照常發光，外框則整面換成印刷感。</p>
+        <div class="tags">
+          <span class="tag red">紅 · 主墨</span><span class="tag">琥珀 · 輔</span>
+          <span class="tag">奶油紙</span><span class="tag">暖近黑</span>
+        </div>
+      </div>
+      <div class="big">2<span style="color:var(--paper)">.</span>0</div>
+    </div>
+  </div>
+</header>
+
+<!-- THESIS -->
+<section id="thesis" class="wrap reveal">
+  <div class="secnum">01 — 設計主張</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">四個判斷</h2>
+  <p class="tc" style="max-width:62ch">在動手配色前，先講清楚「印刷感」和你現有資產（玻璃、卡帶）的真實取捨。</p>
+  <div class="grid4" style="margin-top:26px">
+    <div class="note"><span class="n">1</span><h3 class="tc">印刷感 ≠ 背景變米黃</h3><p class="tc">真正的海報感來自油墨、粗壓縮字體、全大寫字距、斜切紅帶、巨大數字、厚規線與半色調網點。顏色只是其一。</p></div>
+    <div class="note"><span class="n">2</span><h3 class="tc">玻璃需要深色</h3><p class="tc">液態玻璃靠深色高對比背景才折射出立體；疊在米黃紙上會變平變髒。你的灰塑膠卡帶在大片米黃上對比也會散掉。</p></div>
+    <div class="note"><span class="n">3</span><h3 class="tc">深色印刷台 + 紙張外框</h3><p class="tc">工作區（卡帶牆、dock）維持深色讓玻璃發揮；印刷感集中在側欄、標題、按鈕、空狀態、徽章等 chrome。</p></div>
+    <div class="note"><span class="n">4</span><h3 class="tc">暖色位移：CP 值最高</h3><p class="tc">把冷藍黑 <code>#06070d</code> 換成暖近黑、白字換奶油色、藍灰玻璃換暖調。幾乎不動結構，識別度立刻跳一階。</p></div>
+  </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- SCHEMES -->
+<section id="schemes" class="wrap reveal">
+  <div class="secnum">02 — 三套配色</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">配色方案（可直接比較）</h2>
+  <p class="tc" style="max-width:62ch">每套都套在同一個迷你介面上：側欄、斜切標題＋巨數、印刷按鈕、深色 tray 上的<strong>真實玻璃 dock</strong> 與「原樣」卡帶。</p>
+
+  <div class="schemes" style="margin-top:24px">
+    <!-- Night Press -->
+    <div class="scheme">
+      <div class="hd"><span class="id">A</span> Night Press <span class="rec">★ 首選</span></div>
+      <div class="mock" style="--bg:#0E0D0C;--surface:#17150F;--ink:#0E0D0C;--paper:#EDE0C4;--paper-dim:#a99e84;--red:#E2402A;--red-deep:#9E2317;--amber:#E8A22C;--tray:#0a0907;--glass:rgba(237,224,196,.08);--mstroke:rgba(237,224,196,.18)">
+        <div class="rail"><div class="b">BD</div><a class="on">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Library</h4><span class="big">31</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Now Loading<b>31 mounted</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Risograph Day -->
+    <div class="scheme">
+      <div class="hd" style="background:#C8372A"><span class="id">B</span> Risograph Day</div>
+      <div class="mock" style="--bg:#F0E3C6;--surface:#E4D3AC;--ink:#1B1714;--paper:#1B1714;--paper-dim:#6b5e49;--red:#C8372A;--red-deep:#8E1E15;--amber:#D9772A;--tray:#14120E;--glass:rgba(255,255,255,.10);--mstroke:rgba(27,23,20,.2)">
+        <div class="rail" style="background:#E4D3AC"><div class="b">BD</div><a class="on" style="color:#F0E3C6">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband" style="color:#F0E3C6"><h4 style="color:#F0E3C6">Library</h4><span class="big" style="color:#F0E3C6">31</span></div>
+          <div class="btns"><button class="pbtn primary sm" style="color:#F0E3C6">Apply</button><button class="pbtn paper sm" style="background:#F0E3C6">Refresh</button><button class="pbtn ghost sm" style="color:#1B1714;border-color:#1B1714">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock" style="border-color:rgba(255,255,255,.2)"><div class="disc"></div><div class="nl" style="color:#D9772A">Now Loading<b style="color:#F0E3C6">31 mounted</b></div><button class="pbtn primary sm apply" style="color:#F0E3C6">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Constructivist Mono -->
+    <div class="scheme">
+      <div class="hd" style="background:#C4382B"><span class="id">C</span> Constructivist Mono</div>
+      <div class="mock" style="--bg:#F2E7C9;--surface:#E8DBB6;--ink:#161616;--paper:#161616;--paper-dim:#5a533f;--red:#C4382B;--red-deep:#8D1E16;--amber:#E0AE2E;--tray:#1a1812;--glass:rgba(255,255,255,.08);--mstroke:rgba(22,22,22,.22)">
+        <div class="rail" style="background:#E8DBB6"><div class="b">BD</div><a class="on" style="color:#F2E7C9">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband" style="background:linear-gradient(100deg,#C4382B 0 64%,transparent 64%);color:#F2E7C9"><h4 style="color:#F2E7C9">Library</h4><span class="big" style="color:#F2E7C9">31</span></div>
+          <div class="btns"><button class="pbtn primary sm" style="color:#F2E7C9">Apply</button><button class="pbtn paper sm" style="background:#F2E7C9">Refresh</button><button class="pbtn ghost sm" style="color:#161616;border-color:#161616">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl" style="color:#E0AE2E">Now Loading<b style="color:#F2E7C9">31 mounted</b></div><button class="pbtn primary sm apply" style="color:#F2E7C9">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- palettes -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px">
+    <div><div class="tagline" style="color:var(--amber);margin-bottom:6px">A · NIGHT PRESS</div>
+      <div class="sw"><i style="background:#0E0D0C"><b>0E0D0C</b></i><i style="background:#EDE0C4"><b>EDE0C4</b></i><i style="background:#E2402A"><b>E2402A</b></i><i style="background:#9E2317"><b>9E2317</b></i><i style="background:#E8A22C"><b>E8A22C</b></i></div></div>
+    <div><div class="tagline" style="color:var(--amber);margin-bottom:6px">B · RISOGRAPH DAY</div>
+      <div class="sw"><i style="background:#F0E3C6"><b>F0E3C6</b></i><i style="background:#1B1714"><b>1B1714</b></i><i style="background:#C8372A"><b>C8372A</b></i><i style="background:#D9772A"><b>D9772A</b></i><i style="background:#14120E"><b>14120E</b></i></div></div>
+    <div><div class="tagline" style="color:var(--amber);margin-bottom:6px">C · CONSTRUCTIVIST MONO</div>
+      <div class="sw"><i style="background:#F2E7C9"><b>F2E7C9</b></i><i style="background:#161616"><b>161616</b></i><i style="background:#C4382B"><b>C4382B</b></i><i style="background:#8D1E16"><b>8D1E16</b></i><i style="background:#E0AE2E"><b>E0AE2E</b></i></div></div>
+  </div>
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">我的排序：</strong>A Night Press（預設）＞ B Risograph Day（當 light mode）＞ C Mono（啟動／關於頁）。方向與 ChatGPT 的 C/A3 一致，但我把<strong style="color:var(--amber)">暖色位移</strong>與<strong style="color:var(--amber)">深色 press-tray 承載玻璃</strong>當成必做——這是讓印刷感與玻璃／卡帶共存的關鍵。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- BUTTONS -->
+<section id="buttons" class="wrap reveal">
+  <div class="secnum">03 — 按鈕</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">平面印刷 × 液態玻璃</h2>
+  <p class="tc" style="max-width:62ch">靜止＝印刷（實色填充、1.5px 硬油墨描邊、方角、套色偏移陰影）；hover／active＝玻璃（backdrop 模糊＋透鏡）。把滑鼠移上去看它從印刷「翻成」玻璃。</p>
+  <div class="demo" style="margin-top:22px;display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+    <button class="pbtn primary">Apply Changes</button>
+    <button class="pbtn paper">Refresh Mods</button>
+    <button class="pbtn ghost">Reset</button>
+    <span class="tc" style="color:var(--paper-dim);font-size:13px">← 靜止是印刷；hover 變玻璃＋下沉 1px（像被按進紙裡）</span>
+  </div>
+  <p class="tc" style="margin-top:14px;font-size:13.5px"><code>box-shadow:3px 3px 0 var(--red-deep)</code> 是模仿印刷「套色沒對準」的硬偏移，取代柔光暈；hover 時加上 <code>backdrop-filter: blur() url(#lens)</code> 才出現玻璃。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- ELEMENTS -->
+<section id="elements" class="wrap reveal">
+  <div class="secnum">04 — 海報元件庫</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">非顏色的印刷槓桿</h2>
+  <div class="lib" style="margin-top:22px">
+    <div class="demo"><h4 class="tc">巨大數字（狀態＝海報）</h4><div class="giant">31<small>Cartridges Mounted</small></div></div>
+    <div class="demo"><h4 class="tc">壓縮字級階層</h4><div class="typescale" style="display:grid;gap:4px">
+      <div style="font-size:40px;font-weight:800">LIBRARY</div>
+      <div style="font-size:22px;font-weight:800;color:var(--red)">CARTRIDGES · 75</div>
+      <div style="font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--paper-dim)">CHARACTER PACK · RUNTIME MOUNTED</div>
+    </div></div>
+    <div class="demo"><h4 class="tc">斜切紅帶 + 星</h4>
+      <div style="position:relative;height:54px;background:linear-gradient(100deg,var(--red) 0 64%,transparent 64%);display:flex;align-items:center;padding:0 14px;color:var(--paper);font-family:var(--cond);font-weight:800;font-size:24px;text-transform:uppercase">LIBRARY <span class="star" style="margin-left:auto;font-size:22px"></span></div>
+    </div>
+    <div class="demo"><h4 class="tc">半色調網點 / 厚規線</h4><div class="halftone"></div><hr class="rule" style="margin-top:10px"><hr class="rule red" style="margin-top:6px"></div>
+  </div>
+  <p class="tc" style="margin-top:16px"><strong style="color:var(--paper)">字體：</strong>標題與標籤用你已加的 <code>BD Cond</code>（Barlow Condensed）全大寫＋字距；中文用 <code>BD TC</code>（Noto Sans TC）；內文維持 SF。<strong style="color:var(--paper)">克制：</strong>紅為主墨、琥珀為輔、黃極少量——紅橘黃等重一起上會糊。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- MAP -->
+<section id="map" class="wrap reveal">
+  <div class="secnum">05 — 保留 vs 改變</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">動哪裡、不動哪裡</h2>
+  <div class="map" style="margin-top:22px">
+    <div class="col keep change-keep"><div class="tagline">KEEP · 原樣保留</div><h4 class="tc">擬物 / 玻璃資產</h4>
+      <ul class="tc"><li>卡帶造型、角色封面、3D 厚度（完全不動）</li><li>dock 的液態玻璃（剛修好）</li><li>按鈕 hover 的玻璃態</li><li>卡帶牆／dock 維持深色 tray</li></ul></div>
+    <div class="col change"><div class="tagline">CHANGE · 換成印刷</div><h4 class="tc">Chrome / 外框</h4>
+      <ul class="tc"><li>暖色位移：冷黑→暖近黑、白→奶油</li><li>側欄、標題列、徽章 → 印刷紅／斜切</li><li>按鈕靜止態 → 平面印刷＋套色偏移</li><li>選取的綠勾 → 朱紅／琥珀「蓋章」勾或星</li><li>空狀態、分隔、計數 → 巨數＋厚規線＋網點</li></ul></div>
+  </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- BUILD -->
+<section id="build" class="wrap reveal">
+  <div class="secnum">06 — 落地</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">怎麼蓋</h2>
+  <p class="tc" style="max-width:62ch">三套配色全用 CSS 變數，掛在 <code>:root[data-theme]</code>，加一個切換就能即時換。卡帶／dock 的深色 tray 用獨立變數，不被主題的亮底影響。</p>
+  <div class="code" style="margin-top:18px">
+    <div class="bar">app/renderer/src/styles.css — theme tokens</div>
+<pre><span class="k">:root[data-theme="night"]</span> {
+  <span class="k">--ink</span>:<span class="v">#0E0D0C</span>; <span class="k">--paper</span>:<span class="v">#EDE0C4</span>;
+  <span class="k">--red</span>:<span class="v">#E2402A</span>; <span class="k">--red-deep</span>:<span class="v">#9E2317</span>; <span class="k">--amber</span>:<span class="v">#E8A22C</span>;
+  <span class="k">--tray</span>:<span class="v">#0a0907</span>;  <span class="k">--glass</span>:<span class="v">rgba(237,224,196,.08)</span>;
+}
+<span class="k">:root[data-theme="riso"]</span> {  <span class="k">--ink</span>:<span class="v">#1B1714</span>; <span class="k">--paper</span>:<span class="v">#F0E3C6</span>;
+  <span class="k">--red</span>:<span class="v">#C8372A</span>; <span class="k">--amber</span>:<span class="v">#D9772A</span>; <span class="k">--tray</span>:<span class="v">#14120E</span>; }
+
+<span class="k">.btn</span> { <span class="k">background</span>:<span class="v">var(--red)</span>; <span class="k">border</span>:<span class="v">1.5px solid var(--red-deep)</span>;
+       <span class="k">border-radius</span>:<span class="v">5px</span>; <span class="k">box-shadow</span>:<span class="v">3px 3px 0 var(--red-deep)</span>; }
+<span class="k">.btn:hover</span> { <span class="k">backdrop-filter</span>:<span class="v">blur(6px) url(#liquid-lens) saturate(1.5)</span>; }</pre>
+  </div>
+  <p class="tc" style="margin-top:16px">變動檔案：<code>styles.css</code>（token＋按鈕＋側欄／標題印刷化）、<code>App.tsx</code>（主題切換、巨數、把綠勾換成蓋章勾）。<strong style="color:var(--amber)">卡帶元件不動。</strong></p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- DESIGN PRINCIPLES SUMMARY (shipped) -->
+<section id="shipped" class="wrap reveal">
+  <div class="secnum">07 — 設計重點總結（已落地）</div>
+  <h2 style="font-size:34px;margin:6px 0 10px">十條原則 · 已實作</h2>
+  <p class="tc" style="max-width:64ch">A Night Press 已做成 app 可切換主題（Classic／Night Press／Risograph／Constructivist，設定頁切換、localStorage 記憶）。以下是貫穿這次落地的設計判斷，當作日後維護與擴充的準則。</p>
+  <div class="grid4" style="margin-top:24px">
+    <div class="note"><span class="n">1</span><h3 class="tc">深色印刷台優先</h3><p class="tc">工作區（卡帶牆、dock）維持深色，玻璃與卡帶才有對比；亮色主題（Riso/Mono）則「紙張側欄 + 深色 tray 主畫面」分區，用 <code>.appMain</code> 局部變數翻成深色。</p></div>
+    <div class="note"><span class="n">2</span><h3 class="tc">暖色位移</h3><p class="tc">冷藍黑 → 暖近黑 <code>#0E0D0C</code>、白字 → 奶油 <code>#EDE0C4</code>、藍灰玻璃 → 暖調。識別度最大、結構不動。</p></div>
+    <div class="note"><span class="n">3</span><h3 class="tc">單一主墨 + 一輔</h3><p class="tc">紅為主墨（rail active／標題底線／stamp／Apply），琥珀為輔（巨數／徽章／左側 tab），黃極少量。紅橘黃不等重並陳。</p></div>
+    <div class="note"><span class="n">4</span><h3 class="tc">壓縮字 + 全大寫</h3><p class="tc">標題／側欄／按鈕／徽章用 <code>BD Label Condensed</code> 全大寫加字距；中文 <code>BD Label TC</code>；內文維持 SF。</p></div>
+    <div class="note"><span class="n">5</span><h3 class="tc">巨數即海報</h3><p class="tc">把掛載計數做成琥珀巨數＋紅色套色偏移陰影，當標題列的視覺主角（僅海報主題顯示）。</p></div>
+    <div class="note"><span class="n">6</span><h3 class="tc">按鈕：印刷 ↔ 玻璃</h3><p class="tc">靜止＝平面印刷（實色填充、1.5px 硬描邊、方角、<code>3px 3px 0</code> 套色偏移）；hover＝下沉 1px＋液態玻璃。dock 與工具鈕維持原玻璃。</p></div>
+    <div class="note"><span class="n">7</span><h3 class="tc">斜切 / 紅帶 / 星</h3><p class="tc">標題底厚紅線、rail logo 斜切、區段紅規線；幾何與斜切是印刷感的骨架。</p></div>
+    <div class="note"><span class="n">8</span><h3 class="tc">綠勾 → 紅蓋章</h3><p class="tc">選取記號從綠勾改成紅色「蓋章」勾——只改顏色，<strong style="color:var(--amber)">卡帶造型與封面完全不動</strong>。</p></div>
+    <div class="note"><span class="n">9</span><h3 class="tc">zero-specificity 主題層</h3><p class="tc">用 <code>:where([data-theme=…])</code> 覆寫，不會誤蓋 <code>.dockBtn</code> 等高權重元件；Classic 為預設 <code>:root</code>，可無痕切回。</p></div>
+    <div class="note"><span class="n">10</span><h3 class="tc">卡帶神聖不可侵</h3><p class="tc">擬物卡帶（形狀、3D 厚度、角色封面、廠牌、接觸點）在所有主題完全一致；主題只動 chrome。</p></div>
+  </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- SIDEBAR REDESIGN -->
+<section id="sidebar" class="wrap reveal">
+  <div class="secnum">08 — 側欄重製 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷局側脊 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Spine</span></h2>
+  <p class="tc" style="max-width:66ch">把側欄從「套了印刷皮的垂直清單」升級成<strong style="color:var(--paper)">一份印刷品的書脊／刊頭</strong>：左緣是裝訂紅規，每個元件都變成海報傢俱——報頭、活版目錄、蓋章狀態、巨數印量、版次扉頁。兩個方向並陳，挑一個或混搭即可。最大膽的一刀：<strong style="color:var(--amber)">丟掉 emoji 圖示</strong>，改用編號＋幾何蓋章，才真的像印刷局而不是 app 範本。</p>
+
+  <div class="sbgrid" style="margin-top:26px">
+
+    <!-- Variant A · INDEX SPINE -->
+    <div>
+      <div class="sbcap">A · 印刷目錄 Index Spine <span class="pill amber">導航優先</span></div>
+      <div class="sbrail">
+        <div class="sbbrand">
+          <span class="sbmark">B</span>
+          <div>
+            <div class="sbname">BD-SPINEX</div>
+            <div class="sbsub">Runtime Mod Manager</div>
+            <div class="sbedition"><i></i>印刷局 · ED.2.0</div>
+          </div>
+        </div>
+
+        <div class="sbnav">
+          <div class="sbgroup"><span class="tc">收藏</span> Collection <i></i></div>
+          <div class="sbitem on"><span class="ix">01</span><span class="nm">Library</span><span class="cnt">3</span><span class="st">★</span></div>
+          <div class="sbitem"><span class="ix">02</span><span class="nm">Roster</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="ix">03</span><span class="nm">Profiles</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">工具</span> Tools <i></i></div>
+          <div class="sbitem"><span class="ix">04</span><span class="nm">Preview</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="ix">05</span><span class="nm">Stats</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="ix">06</span><span class="nm">Logs</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">系統</span> System <i></i></div>
+          <div class="sbitem"><span class="ix">07</span><span class="nm">Settings</span><span class="tick"></span></div>
+        </div>
+
+        <div class="sbfoot">
+          <div class="sbstamp">
+            <span class="seal">✓</span>
+            <div class="lbl"><b>Runtime Installed</b><span>Loader · Mac PlayCover</span></div>
+          </div>
+          <div class="sbcount"><b>31</b><span>Mounted<br>of 75</span></div>
+          <div class="sbgauge"><i></i></div>
+          <div class="sbcolo"><span class="sbreg"></span><span class="k">Edition</span><span class="v">v2.27.19</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variant B · GIANT MASTHEAD -->
+    <div>
+      <div class="sbcap">B · 巨數刊頭 Giant Masthead <span class="pill">海報優先</span></div>
+      <div class="sbrail masthead">
+        <div class="mast">
+          <span class="sbmark light">B</span>
+          <div class="mname">BD-SPINEX</div>
+          <div class="msub">Runtime Mod Manager</div>
+        </div>
+
+        <div class="sbcount big"><b>31</b><span>Cartridges<br>Mounted</span></div>
+        <div class="sbgauge"><i></i></div>
+        <div class="sbstamp"><span class="seal">✓</span><div class="lbl"><b>Runtime Installed</b><span>31 / 75 · Ready</span></div></div>
+
+        <div class="sbnav tight">
+          <div class="sbgroup"><span class="tc">收藏</span> Collection <i></i></div>
+          <div class="sbitem on"><span class="nm">Library</span><span class="cnt">3</span><span class="st">★</span></div>
+          <div class="sbitem"><span class="nm">Roster</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="nm">Profiles</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">工具</span> Tools <i></i></div>
+          <div class="sbitem"><span class="nm">Preview</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="nm">Stats</span><span class="tick"></span></div>
+          <div class="sbitem"><span class="nm">Logs</span><span class="tick"></span></div>
+          <div class="sbgroup"><span class="tc">系統</span> System <i></i></div>
+          <div class="sbitem"><span class="nm">Settings</span><span class="tick"></span></div>
+        </div>
+
+        <div class="sbfoot tight">
+          <div class="sbcolo"><span class="sbreg"></span><span class="k">Edition</span><span class="v">v2.27.19 [2.28.10]</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- annotations -->
+    <div>
+      <div class="sbanno">
+        <h4 class="tc">七個設計動作</h4>
+        <ol>
+          <li><b>書脊紅規</b> — 左緣 5px 紅油墨直線＋套色偏移，像裝訂線；整條 rail 被讀成一份印刷品。</li>
+          <li><b>報頭</b> — 斜切「B」＋<span class="tc">版次標 ED.2.0</span>，取代一般 app logo；B 案再把它鋪成斜切紅帶刊頭。</li>
+          <li><b>活版目錄</b> — <span class="tc">01–07 流水編號</span>＋全大寫壓縮字；分組改成髮絲線＋中英雙標籤。<b>丟掉 emoji。</b></li>
+          <li><b>紅帶選取</b> — active＝整條朱紅出血帶＋琥珀星＋琥珀計數章；hover＝琥珀左框＋套色偏移；rest＝斜切紅 tick。</li>
+          <li><b>蓋章狀態</b> — Runtime 狀態做成<span class="tc">旋轉圓形蓋章</span>（✓／✗），比小圓點更有印刷感。</li>
+          <li><b>巨數印量</b> — 掛載數＝琥珀巨數＋紅套色陰影＋油墨量計 bar；B 案把它放大成側欄主角。</li>
+          <li><b>版次扉頁</b> — 底部 colophon：奶油紙條＋紅左條＋<span class="tc">套准記號 ⊕</span>＋版本號，像書末版權頁。</li>
+        </ol>
+      </div>
+      <div class="sbanno">
+        <h4 class="tc">兩案怎麼選</h4>
+        <ol style="list-style:none;padding-left:0">
+          <li style="margin-bottom:7px"><b>A 導航優先</b> — <span class="tc">日常主力</span>。編號目錄好掃讀，巨數收在腳；穩中帶狠。</li>
+          <li><b>B 海報優先</b> — <span class="tc">最大膽</span>。刊頭斜切＋104px 巨數當門面，導航壓緊；開 app 像翻開海報。</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- component breakdown -->
+  <h3 class="tc" style="font-size:18px;color:var(--paper);margin:30px 0 4px">零件拆解</h3>
+  <p class="tc" style="max-width:60ch;margin-bottom:18px">把新側欄拆成可重用的印刷零件，方便逐一落地到 <code>styles.css</code> 的 <code>.railItem / .railStatus / .railVersion</code>。</p>
+  <div class="lib">
+    <div class="demo"><h4 class="tc">導航三態</h4>
+      <div class="sbnav" style="gap:6px">
+        <div class="sbitem"><span class="ix">02</span><span class="nm">Roster</span><span class="tick"></span></div>
+        <div class="sbitem hov"><span class="ix">05</span><span class="nm">Stats</span><span class="tick"></span></div>
+        <div class="sbitem on"><span class="ix">01</span><span class="nm">Library</span><span class="cnt">3</span><span class="st">★</span></div>
+      </div>
+      <p class="tc" style="margin:10px 0 0;font-size:12px">rest（斜切 tick）→ hover（琥珀左框＋偏移）→ active（紅出血帶＋星＋計數章）</p>
+    </div>
+    <div class="demo"><h4 class="tc">蓋章狀態</h4>
+      <div style="display:flex;gap:20px;align-items:center">
+        <div class="sbstamp"><span class="seal">✓</span><div class="lbl"><b>Installed</b><span>31 mounted</span></div></div>
+        <div class="sbstamp"><span class="seal bad">✗</span><div class="lbl"><b>Not installed</b><span>0 mounted</span></div></div>
+      </div>
+      <p class="tc" style="margin:12px 0 0;font-size:12px">旋轉印章取代小圓點：琥珀＝已安裝、朱紅＝未安裝。</p>
+    </div>
+    <div class="demo"><h4 class="tc">巨數印量 + 油墨量計</h4>
+      <div class="sbcount"><b>31</b><span>Mounted<br>of 75</span></div>
+      <div class="sbgauge" style="margin-top:10px"><i></i></div>
+      <p class="tc" style="margin:10px 0 0;font-size:12px">琥珀巨數＋紅套色陰影；量計用紅／深紅油墨條表示掛載比例。</p>
+    </div>
+    <div class="demo"><h4 class="tc">版次扉頁 + 套准記號</h4>
+      <div class="sbcolo"><span class="sbreg"></span><span class="k">Edition</span><span class="v">v2.27.19 [2.28.10]</span></div>
+      <p class="tc" style="margin:12px 0 0;font-size:12px">奶油紙條＋紅左條＋偏移陰影；⊕ 套准記號是印刷對位符號，鎖定版本時轉紅。</p>
+    </div>
+  </div>
+
+  <!-- keep / change -->
+  <div class="map" style="margin-top:22px">
+    <div class="col keep"><div class="tagline">KEEP · 沿用</div><h4 class="tc">既有骨架</h4>
+      <ul class="tc"><li>三分組 收藏／工具／系統、七個路由不變</li><li>整條 rail 維持深色＋玻璃模糊（液態折射照舊）</li><li>紅為主墨、琥珀為輔的克制用色</li><li>active 紅底、版次奶油紙條的既有方向</li></ul></div>
+    <div class="col change"><div class="tagline">CHANGE · 重做</div><h4 class="tc">側欄 chrome</h4>
+      <ul class="tc"><li>emoji 圖示 → 流水編號 01–07</li><li>小圓點狀態 → 旋轉圓形蓋章</li><li>分組標題 → 髮絲線＋中英雙標籤</li><li>新增：書脊紅規、巨數印量、油墨量計、⊕ 套准記號</li></ul></div>
+  </div>
+
+  <p class="tc" style="margin-top:20px"><strong style="color:var(--paper)">落地對應：</strong>主要改 <code>app/renderer/src/App.tsx</code> 的 <code>.appRail</code> 標記（加編號／蓋章／巨數）與 <code>styles.css</code> 的 <code>:where([data-theme="night"]) .rail*</code> 區塊。<strong style="color:var(--amber)">卡帶、dock、主畫面完全不動</strong>——這仍是 chrome 層的事。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- LIBRARY PAGE TUNING -->
+<section id="library" class="wrap reveal">
+  <div class="secnum">09 — LIBRARY 頁面調校 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷台面 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Bed</span></h2>
+  <p class="tc" style="max-width:66ch"><strong style="color:var(--amber)">卡帶本體神聖不動。</strong>這頁只動 chrome：卡帶下的標籤、頁面背景網底、dock 的零件。沿用你已經喜歡的——<strong style="color:var(--paper)">玻璃＋印刷紅分段按鈕</strong>、<strong style="color:var(--paper)">PENDING CHANGES</strong>、<strong style="color:var(--paper)">mod power 玻璃細邊框</strong>。dock 最在意的是<strong style="color:var(--amber)">卡帶隨頁面滾動、在玻璃下折射穿過的美感</strong>——所以 dock 與<strong style="color:var(--paper)">每一顆按鈕都維持玻璃</strong>（連 APPLY 也是紅染玻璃而非實色），並拿掉與側欄重複的進度條。</p>
+
+  <!-- background + nameplate -->
+  <div class="lbcols" style="margin-top:26px">
+    <div>
+      <div class="lbcap">背景 · 印刷台面網底 <span class="pill">可調強弱</span></div>
+      <div class="lbbed">
+        <span class="lbwm">BD</span>
+        <span class="lbreg" style="left:12px;top:12px"></span>
+        <span class="lbreg" style="right:12px;bottom:12px"></span>
+        <div class="lbslot">
+          <div class="lbcart"></div>
+          <div class="lbplate mounted"><span class="lbkind"><span>Dating Pack</span><i>✓</i></span><div class="lbttl">Sylvia Dating</div></div>
+        </div>
+        <div class="lbslot">
+          <div class="lbcart"></div>
+          <div class="lbplate"><span class="lbkind"><span>Cutscene Pack</span><i>·</i></span><div class="lbttl">Diana Innovator Skill</div></div>
+        </div>
+      </div>
+      <p class="tc" style="margin:11px 0 0;font-size:13px">近黑暖底 + <strong style="color:var(--paper)">雙色半色調網點</strong>（紅／琥珀，極低透明）+ <strong style="color:var(--paper)">藍圖排版格線</strong> + 角落 <strong style="color:var(--paper)">⊕ 套准記號</strong> + 巨大 <code>BD</code> 浮水印。卡帶從「浮在黑底上」變成「躺在印刷台上」。網點／格線濃度都能調，要更收斂可只留網點。</p>
+    </div>
+
+    <div>
+      <div class="lbcap">卡帶標籤 · 三態 <span class="pill">重設計</span></div>
+      <div class="demo" style="display:flex;align-items:flex-end;justify-content:center;min-height:178px;gap:18px">
+        <div class="lbplates" style="justify-content:center">
+          <div class="lbplate"><span class="lbkind"><span>NPC Pack</span><i>·</i></span><div class="lbttl">Girls Magic Illust</div></div>
+          <div class="lbplate staged"><span class="lbkind"><span>Character Pack</span><i>+</i></span><div class="lbttl">Eclipse Dream Bride</div></div>
+          <div class="lbplate mounted"><span class="lbkind"><span>Cutscene Pack</span><i>✓</i></span><div class="lbttl">Palette Miracle Violet</div></div>
+        </div>
+      </div>
+      <p class="tc" style="margin:11px 0 0;font-size:13px">塑膠奶油牌 → <strong style="color:var(--paper)">活版紙標</strong>：深墨類別條（琥珀類別字＋狀態方塊）＋壓縮字大寫標題＋套色偏移陰影。狀態靠<strong style="color:var(--paper)">左緣油墨條＋方塊章</strong>編碼：<span style="color:var(--paper-dim)">· 待命</span>、<span style="color:var(--amber)">＋ 暫存</span>、<span style="color:var(--red)">✓ 已掛載</span>（陰影也轉深紅）。</p>
+    </div>
+  </div>
+
+  <!-- dock -->
+  <div class="lbcap" style="margin:30px 0 9px">DOCK · 卡帶播放器列</div>
+  <div class="lbstage">
+    <div class="lbback">
+      <span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span><span class="lbmini"></span>
+    </div>
+    <div class="lbbar">
+      <div class="lbnowg">
+        <span class="lbcartIco"></span>
+        <div class="lbmeta">
+          <div class="eb">Now Loading</div>
+          <div class="ti">11 changes staged</div>
+        </div>
+      </div>
+      <button class="lbgbtn ic on" title="Mod Power">⏻</button>
+      <button class="lbgbtn ic" title="Restore all">↩</button>
+      <span class="lbdiv"></span>
+      <button class="lbgbtn apply">▶ Apply <span class="cnt">11</span></button>
+      <button class="lbgbtn launch">Launch ▸</button>
+    </div>
+  </div>
+  <div class="lib" style="margin-top:16px">
+    <div class="sbanno" style="margin:0">
+      <h4 class="tc">Dock 四個動作</h4>
+      <ol>
+        <li><b>全玻璃、自然折射</b>：dock 與<span class="tc">每一顆按鈕都是玻璃底</span>，頁面自然滾動時卡帶在底下折射穿過（上方示意：卡帶在所有按鈕下方透出）。這是你本來就要的美感，整條 dock 一致。</li>
+        <li><b>迷你卡帶標記</b>：彩虹唱片／⊕ 都拿掉，now-loading 用一顆<span class="tc">迷你卡帶</span>當標記，最貼合這個 app。</li>
+        <li><b>進度條拿掉</b>：側欄已有同款油墨量計，dock 不重複；空間留給玻璃。<span class="tc">（想在 dock 也看到數字，可留一行小字 31/75。）</span></li>
+        <li><b>APPLY＝紅液態玻璃</b>：紅邊＋紅染玻璃＋<span class="tc">3px 套色偏移</span>＋紅光暈——顯眼、最該按，但<span class="tc">仍透光、內容照樣折射穿過</span>（待套用時可更亮/脈動引導）。<b>啟動＝琥珀邊玻璃</b>，次級、與 APPLY 區隔。mod power（⏻ ↩）維持玻璃。</li>
+      </ol>
+    </div>
+    <div>
+      <div class="lbcap" style="margin-bottom:9px">PENDING CHANGES · 加網底 <span class="pill keep">保留結構</span></div>
+      <div class="lbpending">
+        <div class="lbpHead"><b>Pending Changes</b><em>11</em></div>
+        <div class="lbpRow"><i></i><span>Eclipse Dream Bride Standing</span></div>
+        <div class="lbpRow rm"><i></i><span>Palette Dating 帕萊特约会</span></div>
+        <div class="lbpRow"><i></i><span>Sylvia Dating Xray</span></div>
+      </div>
+      <p class="tc" style="margin:11px 0 0;font-size:13px">結構不動，加<strong style="color:var(--paper)">掃描線網底</strong>＋右上<strong style="color:var(--paper)">紅角切</strong>＋琥珀光暈，跟側欄狀態卡同一套印刷肌理。</p>
+    </div>
+  </div>
+
+  <!-- keep / change -->
+  <div class="map" style="margin-top:22px">
+    <div class="col keep"><div class="tagline">KEEP · 沿用</div><h4 class="tc">你已經喜歡的</h4>
+      <ul class="tc"><li>卡帶造型／封面／3D 厚度（完全不動）</li><li><strong style="color:var(--amber)">dock 全玻璃：卡帶隨頁面滾動在每顆按鈕下折射穿過（強化）</strong></li><li>玻璃＋印刷紅分段切換（Cartridges/List·Collector/Arcade）</li><li>PENDING CHANGES 結構與互動</li><li>mod power（⏻ ↩）玻璃＋細邊框</li></ul></div>
+    <div class="col change"><div class="tagline">CHANGE · 重做</div><h4 class="tc">這頁的 chrome</h4>
+      <ul class="tc"><li>卡帶標籤：塑膠牌 → 活版紙標（三態）</li><li>背景：純黑 → 印刷台面（網點＋格線＋⊕＋浮水印）</li><li>dock disc：彩虹唱片 → 迷你卡帶標記（dock 全玻璃）</li><li>dock 進度條：拿掉（側欄已有油墨量計）</li><li>APPLY → 紅液態玻璃（仍透光、內容折射）；啟動 → 琥珀邊玻璃</li><li>PENDING 加掃描線網底＋紅角切</li></ul></div>
+  </div>
+
+  <p class="tc" style="margin-top:20px"><strong style="color:var(--paper)">落地對應：</strong><code>App.tsx</code> 的 <code>.rcartNamePlate / .dock*</code> 標記，與 <code>styles.css</code> 的 <code>:where([data-theme="night"]) .dock* / .pendingDiff* / .rcartName*</code>＋ <code>.appMain</code> 背景。分段按鈕與 mod power 既有樣式幾乎不動。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- SETTINGS -->
+<section id="settings" class="wrap reveal">
+  <div class="secnum">10 — SETTINGS 設定 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷控制台 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Console</span></h2>
+  <p class="tc" style="max-width:66ch">現在五塊（注入／路徑／作者／主題／版本）平鋪、沒有層級。改成<strong style="color:var(--paper)">控制台</strong>：左側印刷索引（01–04 分組），右側每個設定都是一塊<strong style="color:var(--amber)">玻璃控制模組</strong>，被印刷標頭（編號＋紅規線）框住——這就是「印刷框 × 玻璃控件」的並置。重要操作（注入）做成醒目的玻璃控制台＋蓋章。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div class="cfg">
+      <nav class="cfgindex">
+        <a class="on"><span class="n">01</span>Runtime</a>
+        <a><span class="n">02</span>Library</a>
+        <a><span class="n">03</span>Appearance</a>
+        <a><span class="n">04</span>About</a>
+      </nav>
+      <div class="cfgbody">
+        <div>
+          <div class="pghd"><span class="num">01</span>Runtime <span class="tc">執行時</span><i></i></div>
+          <div class="glasscard">
+            <div class="cfgconsole">
+              <span class="seal">✓</span>
+              <div class="lbl"><b>Runtime Injection · BepInEx</b><span>Installed · re-signed · Mac PlayCover</span></div>
+              <button class="pbtn paper sm" disabled style="opacity:.5">Install</button>
+              <button class="pbtn ghost sm">Remove</button>
+            </div>
+            <div class="cfgslot">
+              <span class="path">/Users/…/Library/Containers/BrownDust II/Mods</span>
+              <button class="pbtn paper sm">Browse</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="pghd"><span class="num">02</span>Library <span class="tc">編目</span><i></i></div>
+          <div class="glasscard">
+            <div class="cfgchips">
+              <span class="cfgchip"><span class="sw" style="background:#E2402A"></span>YUK11SH1D4</span>
+              <span class="cfgchip"><span class="sw" style="background:#E8A22C"></span>茗猫</span>
+              <span class="cfgchip"><span class="sw" style="background:#67A7E2"></span>TAZMANYAKK</span>
+              <span class="cfgchip"><span class="sw" style="background:#9B7BFF"></span>Bruhnn</span>
+              <button class="pbtn ghost sm">+ Author</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="pghd"><span class="num">03</span>Appearance <span class="tc">外觀</span><i></i></div>
+          <div class="cfgseg"><b class="on">Night Press</b><b>Riso Day</b><b>Mono</b></div>
+        </div>
+        <div>
+          <div class="pghd"><span class="num">04</span>About <span class="tc">版本</span><i></i></div>
+          <div class="sbcolo" style="max-width:340px"><span class="sbreg"></span><span class="k">Edition</span><span class="v">v2.27.19 · BD2 2.28.10</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="lib" style="margin-top:18px">
+    <div class="sbanno" style="margin:0"><h4 class="tc">設計動作</h4>
+      <ol>
+        <li><b>左側印刷索引</b>：01–04 分組（Runtime／Library／Appearance／About），跟側欄同語彙，長設定頁也好跳。</li>
+        <li><b>玻璃控制模組</b>：每個設定是一塊 <span class="tc">glasscard</span>（霧面玻璃＋細邊＋內陰影），印刷標頭在外框——並置感最強。</li>
+        <li><b>注入＝控制台</b>：圓形蓋章（✓琥珀／✗紅）＋印刷按鈕，狀態一眼可讀。路徑做成<span class="tc">玻璃凹槽</span>＋Browse 紙鈕。</li>
+        <li><b>作者標籤＝玻璃晶片架</b>：油墨色塊＋名字，玻璃 chip；主題沿用你喜歡的玻璃＋紅分段。版本收進 ⊕ colophon。</li>
+      </ol>
+    </div>
+    <div class="sbanno" style="margin:0"><h4 class="tc">玻璃的角色</h4>
+      <p class="tc" style="margin:0;font-size:13.5px">這頁是全 app <strong style="color:var(--amber)">玻璃元件最密集</strong>的地方：控制台、凹槽、晶片、分段全是玻璃，靠印刷標頭與紅規線「壓住」秩序。玻璃負責「可操作的當下」，印刷負責「結構與標示」——正好演示並置主義。背後一樣鋪印刷台面網點。</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- STATS -->
+<section id="stats" class="wrap reveal">
+  <div class="secnum">11 — STATS 統計 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷統計 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">Press Stats · 像素熱力圖</span></h2>
+  <p class="tc" style="max-width:66ch">統計頁做成一張<strong style="color:var(--paper)">數據海報</strong>：頂部巨數，主角是<strong style="color:var(--amber)">像素熱力圖</strong>——用油墨濃淡（半色調）編碼數值。這裡示意「角色覆蓋熱力圖」：每格一個角色，紅墨越濃＝該角色模組越多，像一張印刷接觸印樣。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div class="stxnums">
+      <div class="stxnum"><b>75</b><span>Mods Scanned</span></div>
+      <div class="stxnum"><b>31</b><span>Mounted</span></div>
+      <div class="stxnum"><b>12</b><span>Authors</span></div>
+      <div class="stxnum"><b>41<small style="font-size:24px">%</small></b><span>Coverage</span></div>
+    </div>
+    <div class="stxgrid">
+      <div>
+        <div class="pghd"><span class="num">▦</span>Character Coverage <span class="tc">角色覆蓋熱力圖</span><i></i></div>
+        <div class="stxheat" id="stxheat"></div>
+        <div class="stxlegend">Less <i style="opacity:.12"></i><i style="opacity:.32"></i><i style="opacity:.55"></i><i style="opacity:.8"></i><i></i> More · 每格＝一名角色</div>
+      </div>
+      <div>
+        <div class="pghd"><span class="num">▮</span>Top Authors<i></i></div>
+        <div class="stxbars">
+          <div class="stxbar"><span class="nm">YUK11SH1D4</span><span class="track"><i style="width:92%"></i></span><span class="v">23</span></div>
+          <div class="stxbar"><span class="nm">茗猫</span><span class="track"><i style="width:64%"></i></span><span class="v">16</span></div>
+          <div class="stxbar"><span class="nm">TAZMANYAKK</span><span class="track"><i style="width:48%"></i></span><span class="v">12</span></div>
+          <div class="stxbar"><span class="nm">Others</span><span class="track"><i style="width:96%"></i></span><span class="v">24</span></div>
+        </div>
+        <div class="pghd" style="margin-top:18px"><span class="num">◷</span>By Category<i></i></div>
+        <div class="stxbars">
+          <div class="stxbar"><span class="nm">Character</span><span class="track"><i style="width:78%"></i></span><span class="v">34</span></div>
+          <div class="stxbar"><span class="nm">Cutscene</span><span class="track"><i style="width:52%"></i></span><span class="v">21</span></div>
+          <div class="stxbar"><span class="nm">Dating</span><span class="track"><i style="width:34%"></i></span><span class="v">14</span></div>
+          <div class="stxbar"><span class="nm">NPC</span><span class="track"><i style="width:16%"></i></span><span class="v">6</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="tc" style="margin-top:16px"><strong style="color:var(--paper)">像素熱力圖</strong>：紅墨格＝資料密度，天生就是半色調語言，跟印刷風完全合。可切換口徑：<strong style="color:var(--amber)">角色覆蓋</strong>（示意中）、<strong style="color:var(--amber)">日曆活動</strong>（週×日，掛載/新增隨時間）、<strong style="color:var(--amber)">類別×作者矩陣</strong>。長條圖用油墨條（跟側欄量計同款）。資料都是現成的：模組、作者、角色封面我們都有。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- ROSTER -->
+<section id="roster" class="wrap reveal">
+  <div class="secnum">12 — ROSTER 名冊 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">角色名冊 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Roster · 印刷檔案</span></h2>
+  <p class="tc" style="max-width:66ch">參考 repo 的 Characters 頁：瀏覽角色、看誰有模組。做成<strong style="color:var(--paper)">印刷檔案接觸印樣</strong>：每名角色一張<strong style="color:var(--amber)">玻璃檔案卡</strong>＋印刷名牌＋紅色「N MODS」蓋章；沒有模組的角色降為半色調灰調。角色頭像我們 repo 既有（characters/heads）。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div class="rsttoolbar">
+      <span class="path" style="flex:1;min-width:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--paper-dim);background:rgba(0,0,0,.24);border:1px solid var(--stroke);padding:9px 11px">Search character, costume…</span>
+      <div class="cfgseg"><b class="on">Most Mods</b><b>A–Z</b><b>Modded</b></div>
+    </div>
+    <div class="rstgrid">
+      <div class="glasscard rstcard"><span class="rststamp">3 Mods</span><div class="rstport"><span class="sil"></span></div><div class="rstplate"><div class="k"><span>Roster · 0142</span><span>★</span></div><div class="nm">Celia</div></div></div>
+      <div class="glasscard rstcard"><span class="rststamp">5 Mods</span><div class="rstport"><span class="sil"></span></div><div class="rstplate"><div class="k"><span>Roster · 0087</span><span>★</span></div><div class="nm">Helena</div></div></div>
+      <div class="glasscard rstcard"><span class="rststamp">2 Mods</span><div class="rstport"><span class="sil"></span></div><div class="rstplate"><div class="k"><span>Roster · 0203</span><span>★</span></div><div class="nm">Diana</div></div></div>
+      <div class="glasscard rstcard"><span class="rststamp">7 Mods</span><div class="rstport"><span class="sil"></span></div><div class="rstplate"><div class="k"><span>Roster · 0019</span><span>★</span></div><div class="nm">Justia</div></div></div>
+      <div class="glasscard rstcard dim"><span class="rststamp zero">0</span><div class="rstport"><span class="sil"></span></div><div class="rstplate"><div class="k"><span>Roster · 0311</span><span>—</span></div><div class="nm">Liatris</div></div></div>
+      <div class="glasscard rstcard"><span class="rststamp">4 Mods</span><div class="rstport"><span class="sil"></span></div><div class="rstplate"><div class="k"><span>Roster · 0256</span><span>★</span></div><div class="nm">Sylvia</div></div></div>
+    </div>
+  </div>
+  <p class="tc" style="margin-top:16px"><strong style="color:var(--paper)">玻璃檔案卡</strong>＝頭像玻璃框＋印刷名牌（油墨類別條＋角色名）＋紅蓋章模組數；點開看該角色所有模組（連到 Library 篩選）。<strong style="color:var(--amber)">沒模組</strong>＝灰調＋空心 0 章，一眼看出覆蓋缺口（呼應 Stats 熱力圖）。工具列沿用玻璃搜尋＋紅分段排序。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- PROFILES -->
+<section id="profiles" class="wrap reveal">
+  <div class="secnum">13 — PROFILES 編組 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">模組編組 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">Loadouts · 印刷編組單</span></h2>
+  <p class="tc" style="max-width:66ch">參考 repo 的 Profiles：存下不同的啟用組合、<strong style="color:var(--paper)">一鍵切換</strong>（自動掛/卸到符合該組）。做成<strong style="color:var(--amber)">印刷編組單／印製工單</strong>：每組一張玻璃票，含編號、名稱、模組數、迷你卡帶縮圖、紅色「LOAD」蓋章鈕；當前生效組亮紅邊＋ACTIVE 章。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div style="position:relative;z-index:1;display:flex;justify-content:flex-end;margin-bottom:14px">
+      <button class="pbtn paper sm">＋ Save current as Loadout</button>
+    </div>
+    <div class="protickets">
+      <div class="glasscard proticket on">
+        <span class="pronum">01</span>
+        <div class="promid"><div class="nm">Daily Driver <span class="star" style="font-size:14px;vertical-align:0"></span></div><div class="meta">12 mods · character-heavy · <span style="color:var(--amber)">ACTIVE</span></div><div class="mini"><span class="promini"></span><span class="promini"></span><span class="promini"></span><span class="promini"></span><span class="promini"></span></div></div>
+        <div class="proact"><button class="pbtn ghost sm">Edit</button><button class="pbtn primary sm">Loaded</button></div>
+      </div>
+      <div class="glasscard proticket">
+        <span class="pronum">02</span>
+        <div class="promid"><div class="nm">Cutscene Night</div><div class="meta">8 mods · cutscene-heavy</div><div class="mini"><span class="promini"></span><span class="promini"></span><span class="promini"></span></div></div>
+        <div class="proact"><button class="pbtn ghost sm">Edit</button><button class="pbtn primary sm">▶ Load</button></div>
+      </div>
+      <div class="glasscard proticket">
+        <span class="pronum">03</span>
+        <div class="promid"><div class="nm">Clean / Vanilla</div><div class="meta">0 mods · unmount all</div><div class="mini"></div></div>
+        <div class="proact"><button class="pbtn ghost sm">Edit</button><button class="pbtn primary sm">▶ Load</button></div>
+      </div>
+    </div>
+  </div>
+  <p class="tc" style="margin-top:16px"><strong style="color:var(--paper)">編組票</strong>＝巨數編號＋名稱＋迷你卡帶縮圖＋LOAD 蓋章鈕（印刷主鈕，套用＝把掛載狀態調成該組）。當前組亮紅左邊＋ACTIVE。「Clean / Vanilla」是內建空組＝一鍵全卸。和 Library 的 PENDING／APPLY 是同一套套用流程。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- LOGS -->
+<section id="logs" class="wrap reveal">
+  <div class="secnum">14 — LOGS 紀錄 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印字紀錄 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Log · 連續報表紙</span></h2>
+  <p class="tc" style="max-width:66ch">把純文字 log 變成<strong style="color:var(--paper)">玻璃下的連續報表紙</strong>：左緣是點陣印表機的<strong style="color:var(--amber)">送紙孔</strong>，每一行像印出來的紀錄——等寬字、油墨色 tone（紅＝錯誤、琥珀＝警告、綠＝正常）＋方塊蓋章。整捲紙裝在毛玻璃機殼裡，頂部是印刷標頭＋計數章＋篩選。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div class="lgtools">
+      <div class="lgchips">
+        <span class="lgchip ok"><i></i><b>18</b> OK</span>
+        <span class="lgchip warn"><i></i><b>1</b> Warn</span>
+        <span class="lgchip err"><i></i><b>2</b> Err</span>
+      </div>
+      <span class="lgspace"></span>
+      <div class="cfgseg"><b class="on">All</b><b>OK</b><b>Warn</b><b>Err</b></div>
+      <button class="pbtn paper sm">Copy</button>
+      <button class="pbtn ghost sm">Clear</button>
+    </div>
+    <div class="lgconsole">
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:14:07</span><span class="lgmsg">Runtime ready · 31 cartridges mounted</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:14:05</span><span class="lgmsg">Applied: 4 mounted, 1 unmounted. Restart the game to apply changes.</span></div>
+      <div class="lgrow warn"><span class="lgmark"></span><span class="lgtime">22:13:58</span><span class="lgmsg">BrownDust II is running — close the game before changing injection.</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:13:40</span><span class="lgmsg">Staged JUSTIA WHITE REAPER for mount.</span></div>
+      <div class="lgrow err"><span class="lgmark"></span><span class="lgtime">22:13:22</span><span class="lgmsg">Loader not found · install Runtime Injection in Settings.</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:13:01</span><span class="lgmsg">Scanned Mods Folder · 75 cartridges.</span></div>
+      <div class="lgrow err"><span class="lgmark"></span><span class="lgtime">22:12:54</span><span class="lgmsg">Same-key conflict: char000202 staged twice.</span></div>
+      <div class="lgrow ok"><span class="lgmark"></span><span class="lgtime">22:12:40</span><span class="lgmsg">Ready.</span></div>
+    </div>
+  </div>
+
+  <div class="lib" style="margin-top:18px">
+    <div class="sbanno" style="margin:0"><h4 class="tc">設計動作</h4>
+      <ol>
+        <li><b>連續報表紙</b>：左緣<span class="tc">送紙孔</span>（點陣印表機）＋掃描線網底，整體裝在毛玻璃機殼，是「印刷紙 × 玻璃」的並置。</li>
+        <li><b>油墨 tone</b>：每行一個方塊蓋章＋左緣油墨條——<span style="color:#67c98a">綠＝OK</span>、<span style="color:var(--amber)">琥珀＝警告</span>、<span style="color:#ff8b7a">紅＝錯誤</span>；等寬字維持「印出來」的質感。</li>
+        <li><b>印刷標頭</b>：tone 計數章（OK／Warn／Err）一眼掌握狀態；篩選用你喜歡的玻璃＋紅分段（All／OK／Warn／Err）。</li>
+        <li><b>動作</b>：Copy（複製全部）紙鈕、Clear（清空）ghost 鈕。最新在上、上限 200 行（沿用現況）。</li>
+      </ol>
+    </div>
+    <div class="sbanno" style="margin:0"><h4 class="tc">玻璃 × 印刷</h4>
+      <p class="tc" style="margin:0;font-size:13.5px">機殼＝<strong style="color:var(--paper)">毛玻璃</strong>（Tauri 一律毛玻璃），讓背後角色 backdrop 柔和透出；紙紋、送紙孔、油墨 tone、計數章＝<strong style="color:var(--amber)">印刷</strong>。玻璃負責「機器的當下」，印刷負責「印出的紀錄」。資料沿用現有 <code>logs</code>（time／message／tone），不動邏輯，只重塑外觀＋加篩選/複製/清除。</p>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">落地對應：</strong>改 <code>App.tsx</code> 的 <code>logView</code>（標頭＋送紙孔列＋tone 行＋篩選/Copy/Clear）與 <code>styles.css</code> 的 <code>:where([data-theme="night"]) .log*</code>。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- PREVIEW -->
+<section id="preview" class="wrap reveal">
+  <div class="secnum">15 — PREVIEW 預覽 · 草圖</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">印刷預覽台 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">The Press Bench · Spine 試映</span></h2>
+  <p class="tc" style="max-width:68ch">套用前先<strong style="color:var(--paper)">試映</strong>：用 Pixi + pixi-spine 把 mod 的 spine 渲染在台面上（參考本機 Spine-Viewer）。三區工作台——左<strong style="color:var(--amber)">資料夾雙欄</strong>（角色→該角色的 mod，橫向 miller column）、中<strong style="color:var(--amber)">試映台</strong>（spine＋播放）、右<strong style="color:var(--amber)">檢視器</strong>（圖層／部件透明度／搜尋／皮膚動畫）。最多<strong style="color:var(--paper)">雙開比較</strong>。其他頁面點卡帶／mod 可直接跳來開啟。</p>
+
+  <div class="pgbed" style="margin-top:26px">
+    <div class="pvbar">
+      <span class="crumb">▶ 從 <b>Library</b> 載入 · Justia White Reaper</span>
+      <span class="sp"></span>
+      <div class="cfgseg"><b class="on">單開</b><b>雙開比較</b></div>
+    </div>
+    <div class="pvwrap">
+      <!-- finder: characters -> mods -->
+      <div class="pvfinder">
+        <div class="pvcol">
+          <div class="pvcolhd"><span class="tc">角色</span> Chars</div>
+          <div class="pvlist">
+            <div class="pvitem on">Justia<span class="ct">3</span></div>
+            <div class="pvitem">Helena<span class="ct">5</span></div>
+            <div class="pvitem">Diana<span class="ct">2</span></div>
+            <div class="pvitem">Sylvia<span class="ct">4</span></div>
+            <div class="pvitem">Eclipse<span class="ct">1</span></div>
+            <div class="pvitem">Liatris<span class="ct">2</span></div>
+          </div>
+        </div>
+        <div class="pvcol">
+          <div class="pvcolhd"><span class="tc">模組</span> Mods · Justia</div>
+          <div class="pvlist">
+            <div class="pvitem mod on"><span class="dot"></span>White Reaper</div>
+            <div class="pvitem mod"><span class="dot"></span>Blood Glutton</div>
+            <div class="pvitem mod"><span class="dot"></span>Skillcut Edit</div>
+          </div>
+        </div>
+      </div>
+      <!-- stage -->
+      <div class="pvstageWrap">
+        <div class="pvstage">
+          <span class="pvtag">A</span>
+          <div class="field">
+            <span class="pvreg" style="left:10px;top:10px"></span>
+            <span class="pvreg" style="right:10px;bottom:34px"></span>
+            <span class="pvspine"></span>
+            <span class="pvname">Justia · White Reaper · idle</span>
+          </div>
+          <div class="pvplay">
+            <button class="tb play">▶</button>
+            <span class="sel">Anim <span class="cv">idle</span> ▾</span>
+            <span class="sel">Skin <span class="cv">default</span> ▾</span>
+            <span class="pvscrub"><i style="width:62%"></i></span>
+            <span class="sel">1.0×</span>
+          </div>
+        </div>
+      </div>
+      <!-- inspector -->
+      <div class="pvinspect">
+        <div class="pvsec">
+          <div class="h"><span class="num">▤</span>Layers <span class="tc" style="color:var(--paper-dim);font-weight:700">圖層</span><i></i></div>
+          <div class="pvlayer"><span class="gr">⠿</span>White Reaper<span class="eye">●</span></div>
+          <div class="pvlayer"><span class="gr">⠿</span>FX Overlay<span class="eye">●</span></div>
+          <button class="pbtn ghost sm" style="width:100%;margin-top:2px">＋ 疊圖層</button>
+        </div>
+        <div class="pvsec">
+          <div class="h"><span class="num">◳</span>Parts <span class="tc" style="color:var(--paper-dim);font-weight:700">部件</span><i></i></div>
+          <div class="pvsearch">⌕ search slot…</div>
+          <div class="pvpart"><span>body</span><span class="pvslider"><i style="width:100%"></i><b style="left:100%"></b></span><span class="eye">●</span></div>
+          <div class="pvpart"><span>hair_front</span><span class="pvslider"><i style="width:70%"></i><b style="left:70%"></b></span><span class="eye">●</span></div>
+          <div class="pvpart off"><span>cape</span><span class="pvslider"><i style="width:0%"></i><b style="left:0%"></b></span><span class="eye">○</span></div>
+          <div class="pvpart"><span>weapon_l</span><span class="pvslider"><i style="width:85%"></i><b style="left:85%"></b></span><span class="eye">●</span></div>
+          <div class="pvpart"><span>fx_glow</span><span class="pvslider"><i style="width:45%"></i><b style="left:45%"></b></span><span class="eye">●</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- dual compare -->
+  <h3 class="tc" style="font-size:18px;color:var(--paper);margin:28px 0 4px">雙開比較 <span style="color:var(--paper-dim);font-size:14px">Dual · 並排同動畫</span></h3>
+  <p class="tc" style="max-width:60ch;margin-bottom:16px">最多兩個 mod 並排（A 紅／B 琥珀），可同步動畫與鏡頭，逐格對比。檢視器跟著目前聚焦的台（A/B）。</p>
+  <div class="pgbed">
+    <div class="pvstageWrap dual">
+      <div class="pvstage">
+        <span class="pvtag">A</span>
+        <div class="field"><span class="pvspine"></span><span class="pvname">White Reaper</span></div>
+        <div class="pvplay"><button class="tb play">▶</button><span class="sel">idle</span><span class="pvscrub"><i style="width:54%"></i></span></div>
+      </div>
+      <div class="pvstage">
+        <span class="pvtag" style="background:var(--amber);color:var(--ink)">B</span>
+        <div class="field"><span class="pvspine"></span><span class="pvname">Blood Glutton</span></div>
+        <div class="pvplay"><button class="tb play">▶</button><span class="sel">idle</span><span class="pvscrub"><i style="width:54%"></i></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- annotations -->
+  <div class="lib" style="margin-top:22px">
+    <div class="sbanno" style="margin:0"><h4 class="tc">三區工作台</h4>
+      <ol>
+        <li><b>資料夾雙欄（Finder）</b>：橫向 miller column——<span class="tc">角色欄</span>（搜尋＋每名 mod 數）→ <span class="tc">模組欄</span>（該角色的 mod）。點 mod 載入試映台，找模組超快。</li>
+        <li><b>試映台</b>：spine 渲染在印刷台面（⊕ 套准記號＋網點）＋A/B 斜切標；底部玻璃播放條＝播放/暫停、<span class="tc">動畫</span>（多軌）、<span class="tc">皮膚</span>、進度、<span class="tc">速度</span>（沿用 Spine-Viewer 的 zoom/speed/mix）。</li>
+        <li><b>檢視器</b>：<span class="tc">圖層</span>（疊多個 spine、可拖曳排序/顯隱）＋<span class="tc">部件</span>（slots：搜尋＋逐一透明度滑桿＋眼睛顯隱）＋皮膚/動畫選單。</li>
+      </ol>
+    </div>
+    <div class="sbanno" style="margin:0"><h4 class="tc">互動 & 落地</h4>
+      <ol>
+        <li><b>跨頁跳轉</b>：Library 卡帶、Roster 角色卡、Profiles 都加「▶ Preview」——直接帶 mod 跳來開台。</li>
+        <li><b>雙開比較</b>：上限 2，A/B 並排；可同步動畫/鏡頭。</li>
+        <li><b>玻璃 × 印刷</b>：台面＝印刷（網點/⊕/斜切），Finder・檢視器・播放條＝<strong style="color:var(--amber)">毛玻璃</strong>（Tauri 毛玻璃）。</li>
+        <li><b>技術</b>：Pixi.js + pixi-spine 讀 <code>.json/.skel</code>＋atlas（參考 Spine-Viewer）；概念對齊 BD2ModManager 的 Mod Preview。</li>
+      </ol>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">落地對應：</strong>新 <code>previewView</code>（Finder／stage／inspector）＋ Pixi 渲染容器；<code>styles.css</code> 的 <code>.pv*</code>。其他頁加「▶ Preview」動作把 mod 丟進 preview 並 <code>setView("preview")</code>。</p>
+
+  <div class="map" style="margin-top:18px">
+    <div class="col keep"><div class="tagline" style="color:#8fe0ad">✅ DONE · 已實作 (v1)</div><h4 class="tc">版面 + 基礎功能</h4>
+      <ul class="tc"><li>版面定案＝<strong style="color:var(--paper)">上兩區（Finder＋試映台）／下一區（檢視器橫排）</strong>——因 app 吃緊，比三欄橫排更寬鬆，試映台更大</li><li>Finder 雙欄：角色搜尋 → 角色 → 該角色的 mod，點選載入試映台</li><li>試映台：載入<strong style="color:var(--paper)">角色立繪當佔位</strong>＋A/B 斜切標＋玻璃播放條 UI＋清除</li><li>單開／雙開比較（A 紅／B 琥珀），檢視器跟著聚焦的台</li><li>跨頁：Roster 展開「▶ Preview」直接帶角色跳來開台</li><li>毛玻璃面板（Tauri 一律毛玻璃）＋不透明試映台，立繪/spine 讀得乾淨</li></ul></div>
+    <div class="col change"><div class="tagline">⏳ NEXT · 待接 Pixi</div><h4 class="tc">接上 pixi-spine</h4>
+      <ul class="tc"><li>用 Pixi + pixi-spine 真正渲染 spine（取代立繪佔位）＋播放/暫停/速度/動畫軌</li><li>部件（slots）：搜尋＋逐一<strong style="color:var(--paper)">透明度滑桿</strong>＋顯隱（目前 UI pending）</li><li>圖層：疊多個 spine、拖曳排序</li><li>皮膚／動畫實際切換、alpha 模式</li><li>Library 卡帶也加「▶ Preview」入口</li></ul></div>
+  </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- VIOLET PALETTE -->
+<section id="violet" class="wrap reveal">
+  <div class="secnum">16 — 第二配色 · 紫虹印刷</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">紫虹印刷 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">Violet Press · 呼應虹彩 icon</span></h2>
+  <p class="tc" style="max-width:66ch">給用戶<strong style="color:var(--paper)">第二個選擇</strong>：同一套印刷皮（油墨、斜切、壓縮字、送紙孔全不動），<strong style="color:var(--amber)">只覆蓋顏色 token</strong>——主墨紅→<strong style="color:#7C5CFF">紫</strong>、輔色琥珀→<strong style="color:#46D6E8">青</strong>、奶油紙→珠光紫白、暖近黑→深紫黑，呼應 app 那張全息貼紙 icon 的紫／青虹彩。實作走 <code>:root[data-theme="night"][data-accent="violet"]</code>，切換放在 <strong style="color:var(--paper)">Settings → Theme</strong>。下面兩組可選，<strong style="color:#8fe0ad">A 已實作</strong>。</p>
+
+  <div class="schemes" style="grid-template-columns:repeat(2,1fr);margin-top:24px">
+    <div class="scheme">
+      <div class="hd" style="background:#7C5CFF"><span class="id">A</span> Violet Press <span class="rec">★ 已實作</span></div>
+      <div class="mock" style="--bg:#0C0A14;--surface:#15111F;--ink:#0C0A14;--paper:#EAE6F6;--paper-dim:#9c93bd;--red:#7C5CFF;--red-deep:#5733C9;--amber:#46D6E8;--tray:#08060f;--glass:rgba(228,224,246,.08);--mstroke:rgba(228,224,246,.18)">
+        <div class="rail"><div class="b">BD</div><a class="on">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Library</h4><span class="big">31</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Now Loading<b>31 mounted</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="scheme">
+      <div class="hd" style="background:#A85CF0"><span class="id">B</span> Orchid Press <span class="rec">★ 已實作</span></div>
+      <div class="mock" style="--bg:#100A16;--surface:#1A1022;--ink:#100A16;--paper:#F2E6F4;--paper-dim:#b495bd;--red:#A85CF0;--red-deep:#6E2FB8;--amber:#FF74C8;--tray:#0b0610;--glass:rgba(242,230,244,.08);--mstroke:rgba(242,230,244,.2)">
+        <div class="rail"><div class="b">BD</div><a class="on">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Library</h4><span class="big">31</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Now Loading<b>31 mounted</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:18px">
+    <div><div class="tagline" style="color:#7C5CFF;margin-bottom:6px">A · VIOLET PRESS（已實作）</div>
+      <div class="sw"><i style="background:#0C0A14"><b>0C0A14</b></i><i style="background:#EAE6F6"><b>EAE6F6</b></i><i style="background:#7C5CFF"><b>7C5CFF</b></i><i style="background:#5733C9"><b>5733C9</b></i><i style="background:#46D6E8"><b>46D6E8</b></i></div></div>
+    <div><div class="tagline" style="color:#A85CF0;margin-bottom:6px">B · ORCHID PRESS（已實作）</div>
+      <div class="sw"><i style="background:#100A16"><b>100A16</b></i><i style="background:#F2E6F4"><b>F2E6F4</b></i><i style="background:#A85CF0"><b>A85CF0</b></i><i style="background:#6E2FB8"><b>6E2FB8</b></i><i style="background:#FF74C8"><b>FF74C8</b></i></div></div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">A Violet Press</strong>＝紫主墨＋<strong style="color:#46D6E8">青</strong>輔（冷冽全息，最貼 icon 的藍青），<strong style="color:#8fe0ad">已接上 Settings → Theme 切換</strong>。<strong style="color:var(--paper)">B Orchid Press</strong>＝紫主墨＋<strong style="color:#FF74C8">桃紅</strong>輔（偏暖的虹彩）。<strong style="color:#8fe0ad">三組都已上 Settings → Theme 切換</strong>（Night／Violet／Orchid，localStorage 記憶）。所有 chrome 的暖色 tint 已 token 化（<code>color-mix</code> 綁 <code>--paper／--ink</code>），換色 100% 乾淨；卡帶／立繪維持原樣（主題只動 chrome）。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- BLUEPRINT PALETTE -->
+<section id="blueprint" class="wrap reveal">
+  <div class="secnum">17 — 候選配色 · 藍曬印刷</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">Blueprint Press <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">藍曬印刷 · Cyanotype poster ink</span></h2>
+  <p class="tc" style="max-width:70ch">候選第四組：方向刻意避開既有<strong style="color:var(--paper)">暖紅</strong>、<strong style="color:#46D6E8">紫＋青</strong>、<strong style="color:#FF74C8">紫＋桃紅</strong>，改用字面上的印刷製程——建築藍曬／氰版印刷。主畫面是<strong style="color:#DCEEFF">冷藍珠光紙</strong>壓在<strong style="color:#2FA7FF">azure 主墨</strong>上，底色使用深普魯士藍，輔色只用少量<strong style="color:#F2B84B">暖琥珀</strong>做警示、焦點與海報張力。</p>
+
+  <div class="schemes" style="grid-template-columns:minmax(0,1fr);margin-top:24px">
+    <div class="scheme">
+      <div class="hd" style="background:#2FA7FF;color:#061427"><span class="id">D</span> Blueprint Press <span class="rec" style="border-color:#061427">候選</span></div>
+      <div class="mock" style="--bg:#061427;--surface:#0B2038;--ink:#061427;--paper:#DCEEFF;--paper-dim:#8FB4D5;--red:#2FA7FF;--red-deep:#0B5FA8;--amber:#F2B84B;--tray:#04101F;--glass:rgba(216,236,255,.08);--mstroke:rgba(216,236,255,.2)">
+        <div class="rail"><div class="b">BDⅡ</div><a class="on">Library</a><a>Roster</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Blueprint</h4><span class="big">II</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Cold Pearl Paper<b>azure ink / amber mark</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:18px">
+    <div>
+      <div class="tagline" style="color:#2FA7FF;margin-bottom:6px">BLUEPRINT PRESS · 色票</div>
+      <div class="sw"><i style="background:#061427"><b>061427</b></i><i style="background:#0B2038"><b>0B2038</b></i><i style="background:#DCEEFF"><b>DCEEFF</b></i><i style="background:#2FA7FF"><b>2FA7FF</b></i><i style="background:#0B5FA8"><b>0B5FA8</b></i><i style="background:#F2B84B"><b>F2B84B</b></i></div>
+    </div>
+    <div class="code" style="border-color:#DCEEFF;background:#04101F">
+      <div class="bar">Token proposal · candidate only</div>
+<pre>:root[data-theme="night"][data-accent="blueprint"] {
+  <span class="k">--bg-0</span>: <span class="v">#061427</span>;   /* deep Prussian blue */
+  <span class="k">--bg-1</span>: <span class="v">#0B2038</span>;   /* cyanotype surface */
+  <span class="k">--paper</span>: <span class="v">#DCEEFF</span>;  /* cold blue pearl paper */
+  <span class="k">--paper-dim</span>: <span class="v">#8FB4D5</span>;
+  <span class="k">--red</span>: <span class="v">#2FA7FF</span>;    /* azure main ink */
+  <span class="k">--red-deep</span>: <span class="v">#0B5FA8</span>;
+  <span class="k">--amber</span>: <span class="v">#F2B84B</span>;  /* warm registration mark */
+  <span class="k">--glass</span>: <span class="v">rgba(216,236,255,.08)</span>;
+  <span class="k">--stroke</span>: <span class="v">rgba(216,236,255,.20)</span>;
+}</pre>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:#2FA7FF">Blueprint Press</strong> 的角色是「最像印刷製程」的識別款：深藍底承接藍曬圖紙，azure 做主墨與互動亮面，<strong style="color:#F2B84B">琥珀</strong>只在確認、警示、焦點與套准記號上出現，讓藍×琥珀的互補張力留在少量高價值位置。此段目前只作配色候選，尚未納入 app 主題切換。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- VERDIGRIS PALETTE -->
+<section id="verdigris" class="wrap reveal">
+  <div class="secnum">18 — 候選配色 · 銅綠凹印</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">Verdigris Plate <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">銅版蝕刻 · Oxidized intaglio ink</span></h2>
+  <p class="tc" style="max-width:70ch">自由候選：把主題從「海報油墨」推向<strong style="color:var(--paper)">金屬印版</strong>。靈感是銅版凹印、蝕刻線、氧化銅綠與潮濕的珠光紙；底色不走紅紫藍，而是深氧化銅綠黑，主墨用<strong style="color:#2AC486">孔雀石綠</strong>，輔色用少量<strong style="color:#D99B4A">老銅金</strong>。視覺會比 Blueprint 更沉、更工藝，也更有「印版被壓過」的質感。</p>
+
+  <div class="schemes" style="grid-template-columns:minmax(0,1fr);margin-top:24px">
+    <div class="scheme">
+      <div class="hd" style="background:#2AC486;color:#06130F"><span class="id">E</span> Verdigris Plate <span class="rec" style="border-color:#06130F">候選</span></div>
+      <div class="mock" style="--bg:#06130F;--surface:#0E211A;--ink:#06130F;--paper:#E2F2DF;--paper-dim:#94B59D;--red:#2AC486;--red-deep:#0E6C4B;--amber:#D99B4A;--tray:#030B09;--glass:rgba(226,242,223,.08);--mstroke:rgba(226,242,223,.2)">
+        <div class="rail"><div class="b">BDⅡ</div><a class="on">Library</a><a>Roster</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Intaglio</h4><span class="big">18</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Etched Metal Plate<b>verdigris ink / copper mark</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:18px">
+    <div>
+      <div class="tagline" style="color:#2AC486;margin-bottom:6px">VERDIGRIS PLATE · 色票</div>
+      <div class="sw"><i style="background:#06130F"><b>06130F</b></i><i style="background:#0E211A"><b>0E211A</b></i><i style="background:#E2F2DF"><b>E2F2DF</b></i><i style="background:#2AC486"><b>2AC486</b></i><i style="background:#0E6C4B"><b>0E6C4B</b></i><i style="background:#D99B4A"><b>D99B4A</b></i></div>
+    </div>
+    <div class="code" style="border-color:#E2F2DF;background:#030B09">
+      <div class="bar">Token proposal · candidate only</div>
+<pre>:root[data-theme="night"][data-accent="verdigris"] {
+  <span class="k">--bg-0</span>: <span class="v">#06130F</span>;   /* oxidized copper black */
+  <span class="k">--bg-1</span>: <span class="v">#0E211A</span>;   /* etched plate surface */
+  <span class="k">--paper</span>: <span class="v">#E2F2DF</span>;  /* cold celadon pearl paper */
+  <span class="k">--paper-dim</span>: <span class="v">#94B59D</span>;
+  <span class="k">--red</span>: <span class="v">#2AC486</span>;    /* verdigris main ink */
+  <span class="k">--red-deep</span>: <span class="v">#0E6C4B</span>;
+  <span class="k">--amber</span>: <span class="v">#D99B4A</span>;  /* aged copper registration */
+  <span class="k">--glass</span>: <span class="v">rgba(226,242,223,.08)</span>;
+  <span class="k">--stroke</span>: <span class="v">rgba(226,242,223,.20)</span>;
+}</pre>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:#2AC486">Verdigris Plate</strong> 適合作為比較低調但很有質地的第四／第五主題：它不像藍曬那麼直接明亮，而是把 app 變成一塊被蝕刻、上墨、擦版後壓印的銅版。<strong style="color:#D99B4A">老銅金</strong>只用於套准、狀態與高價值操作，避免整體變成暖棕；主體仍保持冷、深、工藝感。此段目前只作配色候選，尚未納入 app 主題切換。</p>
+</section>
+
+<footer class="wrap">
+  <hr class="thinrule" style="margin-bottom:18px">
+  <div class="tc">BD-SpineX 印刷海報風格設計書 · 蘇聯宣傳印刷 × 液態玻璃並置主義。配色／元件為原創設計，僅取建構主義「風格」（幾何、油墨、斜切），未複製任何特定海報作品。</div>
+</footer>
+
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.06});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+// §11 pixel heatmap — ink density = character mod count
+(function(){var h=document.getElementById('stxheat');if(!h)return;var COLS=24,ROWS=7,C=[[5,2,1],[12,4,.92],[19,1,.85],[9,5,.7],[21,5,.6]];for(var r=0;r<ROWS;r++){for(var c=0;c<COLS;c++){var v=0.06;for(var i=0;i<C.length;i++){var dx=c-C[i][0],dy=(r-C[i][1])*1.7,d=dx*dx+dy*dy;v=Math.max(v,C[i][2]*Math.exp(-d/9));}v=Math.min(1,v+((c*7+r*13)%5)/40);var s=document.createElement('span');s.className='stxcell';s.style.opacity=v.toFixed(2);h.appendChild(s);}}})();
+</script>
+</body>
+</html>

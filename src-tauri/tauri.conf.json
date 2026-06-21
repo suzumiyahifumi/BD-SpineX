@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BD-SpineX",
+  "version": "2.28.10",
+  "identifier": "com.bdspinex.manager",
+  "build": {
+    "beforeDevCommand": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "devUrl": "http://127.0.0.1:5174",
+    "beforeBuildCommand": "npm run build:loader && npm run build",
+    "frontendDist": "../dist/renderer"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "BD-SpineX - PlayCover Mod Manager",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 640,
+        "theme": "Dark",
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "trafficLightPosition": {
+          "x": 18,
+          "y": 18
+        },
+        "hiddenTitle": true,
+        "backgroundColor": "#0e0d0c"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "dmg"
+    ],
+    "category": "Utility",
+    "icon": [
+      "../build/icon.icns",
+      "../build/icon.png"
+    ],
+    "resources": [
+      "../manager-data/tools/SpineSkeletonDataConverter",
+      "../dist-native/bd2loader/libbd2loader.dylib"
+    ],
+    "macOS": {
+      "signingIdentity": null
+    }
+  }
+}

@@ -5,7 +5,7 @@
 <h1 align="center">BD-SpineX</h1>
 
 <p align="center">
-  Runtime Spine mod manager for the PlayCover version of BrownDust II on macOS.
+  BrownDust II PlayCover mod manager for macOS.
 </p>
 
 [![GitHub Release](https://img.shields.io/github/v/release/suzumiyahifumi/BD-SpineX?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
@@ -13,21 +13,48 @@
 [![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)](#requirements)
 [![License](https://img.shields.io/badge/source-GPLv3-blue?style=flat-square)](LICENSE)
 
-> Manage BrownDust II Spine mods on macOS without manually editing game bundles.
+> Easily manage, preview, and switch BrownDust II Spine mods for the PlayCover version on Mac.
 >
 > Download the latest version: [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases)
 
-BD-SpineX is made for the PlayCover version of BrownDust II. Current builds use Runtime Injection: mods are mounted into the game container and loaded at runtime, while the original `__data` files can stay clean.
+BD-SpineX is made for players who want a cleaner way to use BrownDust II mods on macOS. Keep your mods in one folder, preview them before installing, stage changes safely, and apply everything from a single app.
+
+If you run into problems or have ideas, feel free to open an issue.
+
+> [!WARNING]
+> Use the BD-SpineX release that matches your BrownDust II game version. Close BrownDust II before installing or removing Runtime Injection, applying changes, or restoring all mods.
+
+---
+
+## ✨ Features
+
+- **Cartridge Library**: Browse your mods as visual cartridges, filter them quickly, and see which ones are mounted, staged, or conflicting.
+
+- **Pending Changes**: Review everything before applying. Click a pending item to jump back to the matching cartridge.
+
+- **Spine Preview**: Preview supported Spine mods before installing. Compare up to two mods, switch animations, stack animation tracks, and adjust visible parts.
+
+- **Roster View**: Find mods by character instead of digging through folders.
+
+- **One-click Apply**: Stage the mods you want, then apply the whole set when you are ready.
+
+- **Restore All**: Remove all mounted mods in one go while keeping your source mod folder untouched.
+
+- **Mod Power**: Temporarily turn mounted mods off or back on without deleting them.
+
+- **Author Labels**: Add or adjust author stickers so your library stays easy to recognize.
+
+- **PlayCover-first Workflow**: Designed around the macOS PlayCover version of BrownDust II.
 
 ---
 
 ## Requirements
 
-- 🍎 macOS on Apple Silicon
-- 🎮 PlayCover version of BrownDust II
-- 🔐 A BD-SpineX release matching your BrownDust II game version
+- macOS on Apple Silicon
+- PlayCover version of BrownDust II
+- A BD-SpineX release matching your BrownDust II game version
 
-The app is currently unsigned. On first launch, macOS may require manual approval in System Settings.
+The app may be unsigned. On first launch, macOS might ask you to approve it in System Settings.
 
 ---
 
@@ -35,38 +62,37 @@ The app is currently unsigned. On first launch, macOS may require manual approva
 
 1. Download the DMG from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
 2. Open BD-SpineX.
-3. Select the folder where you keep your mods.
-4. Click `Install Runtime Injection`.
-5. Click `Refresh Mods`.
-6. Select the mods you want.
-7. Click `Apply Changes`.
-8. Launch or restart the game.
+3. Choose your Mods Folder.
+4. Click **Install Runtime Injection**.
+5. Click **Refresh Mods**.
+6. Select the mods you want to use.
+7. Click **Apply Changes**.
+8. Launch or restart BrownDust II.
 
-After a BrownDust II game update, install the matching BD-SpineX release and run `Install Runtime Injection` again.
+After a BrownDust II update, download the matching BD-SpineX release and install Runtime Injection again.
 
 ---
 
 ## 📁 Mods Folder
 
-Nested folders are supported, so you can organize mods by source, author, pack, or character.
+You can organize mods however you like. Nested folders are supported.
 
 ```text
 Mods/
-  Discord/
-    AuthorName/
-      CostumePack/
-        char123456.skel
-        char123456.atlas
-        char123456.png
-  Nexus/
-    CollectionName/
-      AnotherMod/
-        illust_dating11.json
-        illust_dating11.atlas
-        illust_dating11.png
+  AuthorName/
+    Character Costume/
+      char123456.skel
+      char123456.atlas
+      char123456.png
+
+  CollectionName/
+    Cutscene Pack/
+      illust_dating11.json
+      illust_dating11.atlas
+      illust_dating11.png
 ```
 
-Each mod folder should include:
+Each mod folder usually includes:
 
 - `.atlas`
 - `.png`
@@ -74,58 +100,56 @@ Each mod folder should include:
 
 ---
 
-## 🧩 Runtime Injection
+## 🖼️ Screenshots
 
-Runtime Injection installs `libbd2loader.dylib` into the PlayCover BrownDust II app and adds it to the game executable. BD-SpineX keeps a clean executable backup so injection can be removed later.
+### Library
 
-- ✅ `Apply Changes` mounts or unmounts selected mods.
-- 🧹 `Restore All` removes all mounted runtime mods, but keeps injection installed.
-- 💡 `Mod Power` turns all mounted mods off or back on without moving folders.
-- 🚀 `Launch Game` opens the PlayCover app bundle through macOS.
+![BD-SpineX Library](docs/images/readme/library.png)
 
-Close BrownDust II before installing or removing injection.
+### Roster
 
----
+![BD-SpineX Roster](docs/images/readme/roster.png)
 
-## 🔄 Upgrading From Older Patch Builds
+### Preview
 
-Older BD-SpineX builds patched `__data` directly. If BD-SpineX detects old patch records, it lets you choose:
-
-- `Do Nothing`: keep files as-is and continue using the app.
-- `Unpatch Only`: restore clean `__data` from old backups and remove old patch records.
-- `Migrate`: restore clean `__data`, install Runtime Injection, and mount matching mods from your Mods Folder.
-
-If you choose `Do Nothing` and later want a clean `__data`, reinstall BrownDust II in PlayCover.
-
----
-
-## ⚠️ Notes
-
-- BD-SpineX is macOS-only.
-- Use the release that matches your BrownDust II version. Suffixes such as `-ex1` are BD-SpineX experiment/hotfix builds for the same game version.
-- Runtime mods may load the first time a matching asset appears in-game, so very large mods can cause a brief first-load stutter.
-- Release builds include the required backend tools; users do not need .NET, Rust, Python, or UABEA installed.
-- Keep your own backup before experimenting with mods, especially after game updates.
+![BD-SpineX Preview](docs/images/readme/preview.png)
 
 ---
 
 ## ❓ FAQ
 
-### Why are mods locked?
+### Where do I download BD-SpineX?
 
-BD-SpineX locks mod actions when the game app is missing, Runtime Injection is not installed, the Mods Folder is not set, the game version does not match, or a task is already running.
+Download the latest release from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
 
-### Do I need to scan PlayCover Shared?
+### Why are some buttons locked?
 
-No for runtime mods. The current runtime workflow loads mounted Spine files directly instead of patching `__data`.
+BD-SpineX locks actions when the game is running, the game version does not match, Runtime Injection is missing, the Mods Folder is not set, or another task is already running.
 
-### Why do I need to reinject after a game update?
+### Do I need to close the game before changing mods?
 
-Game updates can replace the BrownDust II app bundle and executable. Reinstall Runtime Injection after updating the game.
+Yes. Close BrownDust II before installing or removing Runtime Injection, applying changes, using Mod Power, or restoring all mods.
+
+### Will Restore All delete my downloaded mods?
+
+No. Restore All removes mounted mods from the game side only. Your source Mods Folder is kept as-is.
 
 ### Can I use this with the Windows version?
 
-No. This project is for macOS and PlayCover.
+No. BD-SpineX is built for macOS and the PlayCover version of BrownDust II.
+
+---
+
+## ❤️ Support & Feedback
+
+If BD-SpineX helps you, starring the repo is always appreciated. For bugs, suggestions, or questions, please open an issue on GitHub.
+
+---
+
+## 🙏 Credits & Thanks
+
+- Thanks to the BrownDust II modding community for testing, feedback, and workflows.
+- Thanks to the projects and tools that make Spine modding possible.
 
 ---
 
@@ -133,11 +157,4 @@ No. This project is for macOS and PlayCover.
 
 BD-SpineX source code is licensed under **GPLv3**. See [LICENSE](LICENSE).
 
-Packaged release builds include `SpineSkeletonDataConverter`, which is licensed separately under **PolyForm Noncommercial License 1.0.0**. Treat downloadable release bundles as noncommercial because that converter is bundled. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.
-
----
-
-## 🙏 Credits
-
-- Thanks to the BrownDust II modding community for testing, workflows, and feedback.
-- Thanks to the projects and tools that make Spine and runtime modding possible.
+Packaged release builds include third-party tools with separate licenses. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.

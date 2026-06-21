@@ -6,9 +6,10 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { detectGameVersion } from "./game-version.js";
 import { addLoadDylib, hasLoadDylib } from "./macho-inject.js";
 import { checkLegacyRuntimeMigration, cleanupLegacyRuntimeMigrationRecords, legacyOriginalBackupPath, readLegacyActivePatchEntries } from "./patch-runner.js";
-import { isPackagedRuntime, resourcePath } from "./runtime-paths.js";
+import { isPackagedRuntime, resourcePath, supportedGameVersion } from "./runtime-paths.js";
 import type { LegacyRuntimeMigrationCheck, LegacyRuntimeMigrationResult } from "./types.js";
 
 const exec = promisify(execFile);
@@ -38,6 +39,22 @@ export interface RuntimeStatus {
   mountedMods: RuntimeMod[];
 }
 
+export interface PreviewSpineImage {
+  name: string;
+  mime: string;
+  data: string;
+}
+
+export interface PreviewSpineBundle {
+  key: string;
+  skeletonName: string;
+  skeletonType: "json" | "skel";
+  skeletonData: string;
+  atlasName: string;
+  atlasText: string;
+  images: PreviewSpineImage[];
+}
+
 function home() {
   return os.homedir();
 }
@@ -62,6 +79,25 @@ function disabledMarkerPath() {
 }
 function entitlementsCachePath() {
   return path.join(appBundlePath(), "..", `${BUNDLE_ID}.app.BAK-mainbin`, "bd2.entitlements.plist");
+}
+
+function normalizeVersionForCompare(version?: string) {
+  return version?.trim().replace(/^v/i, "").split(/[+-]/)[0];
+}
+
+function injectionVersionMismatchMessage(detectedVersion: string, supportedVersion: string) {
+  return `Runtime Injection is locked: this BD-SpineX app supports BrownDust II ${supportedVersion}, but the detected game version is ${detectedVersion}. Update BD-SpineX to the matching app version.`;
+}
+
+async function validateRuntimeInjectionGameVersion() {
+  const supported = supportedGameVersion();
+  const detected = (await detectGameVersion(appBundlePath())).version;
+  const detectedComparable = normalizeVersionForCompare(detected);
+  const supportedComparable = normalizeVersionForCompare(supported);
+  if (detected && detectedComparable && supportedComparable && detectedComparable !== supportedComparable) {
+    return { ok: false as const, message: injectionVersionMismatchMessage(detected, supported) };
+  }
+  return { ok: true as const };
 }
 
 /** loader dylib 來源：packaged → resources/backend；dev → 編譯輸出。 */
@@ -179,6 +215,101 @@ export async function getStatus(): Promise<RuntimeStatus> {
 
 export async function listLibraryMods(dir: string): Promise<RuntimeMod[]> {
   return scanModDir(dir);
+}
+
+function validatePreviewKey(key: string) {
+  return key.length > 0 && !key.includes("/") && !key.includes("\\") && key !== "." && key !== ".." && !key.includes("..");
+}
+
+function resolvePreviewAsset(root: string, assetName: string) {
+  const normalized = path.normalize(assetName);
+  if (!normalized || normalized.startsWith("..") || path.isAbsolute(normalized)) {
+    return null;
+  }
+  return path.join(root, normalized);
+}
+
+function previewImageMime(name: string) {
+  const ext = path.extname(name).toLowerCase();
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".webp") return "image/webp";
+  return "image/png";
+}
+
+function atlasPageNames(atlasText: string) {
+  const pages: string[] = [];
+  for (const rawLine of atlasText.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    const lower = line.toLowerCase();
+    if (!line || line.startsWith("#")) continue;
+    if (!/\.(png|jpe?g|webp)$/i.test(lower)) continue;
+    if (!pages.includes(line)) pages.push(line);
+  }
+  return pages;
+}
+
+export async function previewSpineBundle(srcDir: string, key: string): Promise<PreviewSpineBundle> {
+  if (!validatePreviewKey(key)) {
+    throw new Error("Invalid Spine preview key.");
+  }
+  const root = path.resolve(srcDir);
+  const stat = await fsp.stat(root).catch(() => null);
+  if (!stat?.isDirectory()) {
+    throw new Error("Preview source folder does not exist.");
+  }
+
+  const atlasName = `${key}.atlas`;
+  const atlasPath = path.join(root, atlasName);
+  const atlasText = await fsp.readFile(atlasPath, "utf8").catch((error: unknown) => {
+    throw new Error(`Preview atlas not found: ${atlasName} (${String(error)})`);
+  });
+
+  const jsonPath = path.join(root, `${key}.json`);
+  const skelPath = path.join(root, `${key}.skel`);
+  const hasJson = fs.existsSync(jsonPath);
+  const hasSkel = fs.existsSync(skelPath);
+  if (!hasJson && !hasSkel) {
+    throw new Error(`Preview skeleton not found: ${key}.json / ${key}.skel`);
+  }
+  const skeletonType: PreviewSpineBundle["skeletonType"] = hasJson ? "json" : "skel";
+  const skeletonName = `${key}.${skeletonType}`;
+  const skeletonPath = skeletonType === "json" ? jsonPath : skelPath;
+
+  let pageNames = atlasPageNames(atlasText);
+  if (pageNames.length === 0) {
+    const files = await fsp.readdir(root).catch(() => []);
+    pageNames = files.filter((name) => /\.(png|jpe?g|webp)$/i.test(name) && !name.startsWith("._")).sort((a, b) => a.localeCompare(b));
+  }
+
+  const images: PreviewSpineImage[] = [];
+  const used = new Set<string>();
+  for (const pageName of pageNames) {
+    const resolved = resolvePreviewAsset(root, pageName) ?? path.join(root, path.basename(pageName));
+    const imagePath = fs.existsSync(resolved) ? resolved : path.join(root, path.basename(pageName));
+    if (used.has(pageName) || !fs.existsSync(imagePath)) continue;
+    used.add(pageName);
+    const data = await fsp.readFile(imagePath);
+    images.push({
+      name: pageName,
+      mime: previewImageMime(pageName),
+      data: data.toString("base64")
+    });
+  }
+
+  if (images.length === 0) {
+    throw new Error("Preview atlas did not resolve any texture pages.");
+  }
+
+  const skeletonData = await fsp.readFile(skeletonPath);
+  return {
+    key,
+    skeletonName,
+    skeletonType,
+    skeletonData: skeletonData.toString("base64"),
+    atlasName,
+    atlasText,
+    images
+  };
 }
 
 export async function checkRuntimeMigration(): Promise<LegacyRuntimeMigrationCheck> {
@@ -327,6 +458,8 @@ export async function setRuntimeModsEnabled(enabled: boolean): Promise<{ ok: boo
 export async function installLoader(): Promise<{ ok: boolean; message: string }> {
   const bin = mainBinaryPath();
   if (!fs.existsSync(bin)) return { ok: false, message: "Could not find BrownDustII. Is the PlayCover app installed?" };
+  const versionCheck = await validateRuntimeInjectionGameVersion();
+  if (!versionCheck.ok) return versionCheck;
   if (await isGameRunning()) return { ok: false, message: "Close BrownDust II before installing Runtime Injection." };
   const src = loaderSourcePath();
   if (!fs.existsSync(src)) return { ok: false, message: `Runtime loader dylib was not found: ${src}` };
