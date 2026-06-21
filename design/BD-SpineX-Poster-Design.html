@@ -1236,7 +1236,14 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
     </div>
   </div>
 
-  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">落地對應：</strong>新 <code>previewView</code>（Finder／stage／inspector）＋ Pixi 渲染容器；<code>styles.css</code> 的 <code>.pv*</code>。其他頁加「▶ Preview」動作把 mod 丟進 preview 並 <code>setView("preview")</code>。<strong style="color:var(--amber)">本輪只做設計</strong>。</p>
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">落地對應：</strong>新 <code>previewView</code>（Finder／stage／inspector）＋ Pixi 渲染容器；<code>styles.css</code> 的 <code>.pv*</code>。其他頁加「▶ Preview」動作把 mod 丟進 preview 並 <code>setView("preview")</code>。</p>
+
+  <div class="map" style="margin-top:18px">
+    <div class="col keep"><div class="tagline" style="color:#8fe0ad">✅ DONE · 已實作 (v1)</div><h4 class="tc">版面 + 基礎功能</h4>
+      <ul class="tc"><li>版面定案＝<strong style="color:var(--paper)">上兩區（Finder＋試映台）／下一區（檢視器橫排）</strong>——因 app 吃緊，比三欄橫排更寬鬆，試映台更大</li><li>Finder 雙欄：角色搜尋 → 角色 → 該角色的 mod，點選載入試映台</li><li>試映台：載入<strong style="color:var(--paper)">角色立繪當佔位</strong>＋A/B 斜切標＋玻璃播放條 UI＋清除</li><li>單開／雙開比較（A 紅／B 琥珀），檢視器跟著聚焦的台</li><li>跨頁：Roster 展開「▶ Preview」直接帶角色跳來開台</li><li>毛玻璃面板（Tauri 一律毛玻璃）＋不透明試映台，立繪/spine 讀得乾淨</li></ul></div>
+    <div class="col change"><div class="tagline">⏳ NEXT · 待接 Pixi</div><h4 class="tc">接上 pixi-spine</h4>
+      <ul class="tc"><li>用 Pixi + pixi-spine 真正渲染 spine（取代立繪佔位）＋播放/暫停/速度/動畫軌</li><li>部件（slots）：搜尋＋逐一<strong style="color:var(--paper)">透明度滑桿</strong>＋顯隱（目前 UI pending）</li><li>圖層：疊多個 spine、拖曳排序</li><li>皮膚／動畫實際切換、alpha 模式</li><li>Library 卡帶也加「▶ Preview」入口</li></ul></div>
+  </div>
 </section>
 
 <footer class="wrap">

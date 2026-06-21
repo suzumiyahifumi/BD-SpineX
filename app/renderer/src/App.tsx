@@ -1,7 +1,11 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type MouseEvent, type ReactNode, type SetStateAction } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type MouseEvent, type MutableRefObject, type ReactNode, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
-import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
+import type { PreviewSpineBundle, RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
+import * as PIXI from "pixi.js";
+import { TextureAtlas } from "@pixi-spine/base";
+import { AtlasAttachmentLoader, SkeletonBinary, SkeletonJson } from "@pixi-spine/runtime-4.1";
+import { Spine } from "pixi-spine";
 import characterAssetsJson from "./data/bd2-characters.json";
 import {
   LIBRARY_BACKDROP_CHARACTER_EVENT,
@@ -41,6 +45,35 @@ type DetectedCharacter = {
   imageId: string;
   character: string;
   costume: string;
+};
+
+type PreviewSlotKey = "a" | "b";
+type PreviewRuntimeStatus = "empty" | "loading" | "ready" | "error";
+type PreviewAnimationInfo = { name: string; duration: number };
+type PreviewSkinInfo = { name: string };
+type PreviewPartInfo = { name: string; alpha: number };
+type PreviewAnimLayer = { id: string; trackIndex: number; animation: string; alpha: number };
+type PreviewRuntimeInfo = {
+  status: PreviewRuntimeStatus;
+  error?: string;
+  animations: PreviewAnimationInfo[];
+  skins: PreviewSkinInfo[];
+  parts: PreviewPartInfo[];
+  selectedAnimation: string;
+  selectedSkin: string;
+  playing: boolean;
+  speed: number;
+  progress: number;
+};
+type PreviewStageControls = {
+  togglePlayback: () => void;
+  setAnimation: (name: string) => void;
+  setSkin: (name: string) => void;
+  setSpeed: (speed: number) => void;
+  setPartAlpha: (name: string, alpha: number) => void;
+  setAnimationLayer: (layerId: string, animation: string) => void;
+  setAnimationLayerAlpha: (layerId: string, alpha: number) => void;
+  resetView: () => void;
 };
 
 type ViewKey = "library" | "roster" | "profiles" | "preview" | "stats" | "logs" | "settings";
@@ -180,6 +213,497 @@ function chunkRows<T>(items: T[], columns: number) {
   return rows;
 }
 
+function emptyPreviewRuntimeInfo(): PreviewRuntimeInfo {
+  return {
+    status: "empty",
+    animations: [],
+    skins: [],
+    parts: [],
+    selectedAnimation: "",
+    selectedSkin: "",
+    playing: false,
+    speed: 1,
+    progress: 0
+  };
+}
+
+function createPreviewAnimLayer(animation: string, trackIndex: number): PreviewAnimLayer {
+  return {
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    trackIndex,
+    animation,
+    alpha: 1
+  };
+}
+
+function baseName(pathLike: string) {
+  return pathLike.split(/[\\/]/).pop() ?? pathLike;
+}
+
+function base64ToBytes(data: string) {
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function base64ToText(data: string) {
+  return new TextDecoder().decode(base64ToBytes(data));
+}
+
+function waitForBaseTexture(texture: PIXI.Texture) {
+  const baseTexture = texture.baseTexture;
+  if (baseTexture.valid) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      baseTexture.off("loaded", handleLoaded);
+      baseTexture.off("error", handleError);
+    };
+    const handleLoaded = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = (error: unknown) => {
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error)));
+    };
+    baseTexture.once("loaded", handleLoaded);
+    baseTexture.once("error", handleError);
+    const resource = baseTexture.resource as { load?: () => Promise<unknown> | unknown } | undefined;
+    try {
+      const loaded = resource?.load?.();
+      if (loaded instanceof Promise) loaded.catch(handleError);
+    } catch (error) {
+      handleError(error);
+    }
+  });
+}
+
+async function createPreviewTextures(bundle: PreviewSpineBundle) {
+  const textures = new Map<string, PIXI.Texture>();
+  const owned: PIXI.Texture[] = [];
+  for (const image of bundle.images) {
+    const texture = PIXI.Texture.from(`data:${image.mime};base64,${image.data}`);
+    await waitForBaseTexture(texture);
+    textures.set(image.name, texture);
+    textures.set(baseName(image.name), texture);
+    owned.push(texture);
+  }
+  return { textures, owned };
+}
+
+function createPreviewAtlas(bundle: PreviewSpineBundle, textures: Map<string, PIXI.Texture>) {
+  return new Promise<TextureAtlas>((resolve, reject) => {
+    new TextureAtlas(bundle.atlasText, (pageName, done) => {
+      const texture = textures.get(pageName) ?? textures.get(baseName(pageName));
+      if (!texture) {
+        reject(new Error(`Texture page not found: ${pageName}`));
+        return;
+      }
+      done(texture.baseTexture);
+    }, (readyAtlas) => resolve(readyAtlas));
+  });
+}
+
+function parsePreviewSkeleton(bundle: PreviewSpineBundle, atlas: TextureAtlas) {
+  const attachmentLoader = new AtlasAttachmentLoader(atlas);
+  if (bundle.skeletonType === "json") {
+    const parser = new SkeletonJson(attachmentLoader);
+    return parser.readSkeletonData(JSON.parse(base64ToText(bundle.skeletonData)));
+  }
+  const parser = new SkeletonBinary(attachmentLoader);
+  return parser.readSkeletonData(base64ToBytes(bundle.skeletonData));
+}
+
+function collectPreviewInfo(spine: Spine, patch: Partial<PreviewRuntimeInfo> = {}): PreviewRuntimeInfo {
+  const animations = spine.spineData.animations.map((animation) => ({
+    name: animation.name,
+    duration: Number.isFinite(animation.duration) ? animation.duration : 0
+  }));
+  const skins = spine.spineData.skins.map((skin) => ({ name: skin.name }));
+  const parts = spine.skeleton.slots.map((slot) => ({
+    name: slot.data.name,
+    alpha: Math.max(0, Math.min(1, Number(slot.color.a) || 0))
+  }));
+  return {
+    status: "ready",
+    animations,
+    skins,
+    parts,
+    selectedAnimation: patch.selectedAnimation ?? animations[0]?.name ?? "",
+    selectedSkin: patch.selectedSkin ?? skins[0]?.name ?? "default",
+    playing: patch.playing ?? animations.length > 0,
+    speed: patch.speed ?? 1,
+    progress: patch.progress ?? 0
+  };
+}
+
+function defaultPreviewAnimation(animations: PreviewAnimationInfo[]) {
+  return animations.find((animation) => /idle|wait|loop/i.test(animation.name))?.name ?? animations[0]?.name ?? "";
+}
+
+function previewTrackProgress(spine: Spine) {
+  const current = (spine.state as unknown as {
+    getCurrent: (trackIndex: number) => { animation?: { duration?: number }; trackTime: number } | null;
+  }).getCurrent(0);
+  const duration = current?.animation?.duration ?? 0;
+  if (!current || duration <= 0) return 0;
+  return ((current.trackTime % duration) / duration) * 100;
+}
+
+function previewSpineTransform(spine: Spine, host: HTMLElement, zoom: number, panX: number, panY: number) {
+  const width = Math.max(1, host.clientWidth);
+  const height = Math.max(1, host.clientHeight);
+  let bounds = spine.getLocalBounds();
+  const spineMetrics = spine.spineData as typeof spine.spineData & { x?: number; y?: number; width?: number; height?: number };
+  if (!Number.isFinite(bounds.width) || bounds.width < 2 || !Number.isFinite(bounds.height) || bounds.height < 2) {
+    bounds = new PIXI.Rectangle(
+      spineMetrics.x || -160,
+      spineMetrics.y || -320,
+      spineMetrics.width || 320,
+      spineMetrics.height || 480
+    );
+  }
+  const baseScale = Math.min(width / bounds.width * 0.74, height / bounds.height * 0.86);
+  const scale = Math.max(0.01, baseScale * zoom);
+  return {
+    scale,
+    x: width / 2 - (bounds.x + bounds.width / 2) * scale + panX,
+    y: height * 0.88 - (bounds.y + bounds.height) * scale + panY
+  };
+}
+
+function fitPreviewSpine(spine: Spine, host: HTMLElement, zoom: number, panX: number, panY: number) {
+  const transform = previewSpineTransform(spine, host, zoom, panX, panY);
+  spine.scale.set(transform.scale);
+  spine.position.set(transform.x, transform.y);
+}
+
+function applyPreviewAnimationLayers(spine: Spine, layers: PreviewAnimLayer[], fallbackAnimation: string, playing: boolean, speed: number) {
+  spine.state.clearTracks();
+  const available = new Set(spine.spineData.animations.map((animation) => animation.name));
+  const usableLayers = layers
+    .filter((layer) => available.has(layer.animation))
+    .sort((a, b) => a.trackIndex - b.trackIndex);
+  const appliedLayers = usableLayers.length > 0
+    ? usableLayers
+    : fallbackAnimation
+      ? [{ id: "default", trackIndex: 0, animation: fallbackAnimation, alpha: 1 }]
+      : [];
+
+  for (const layer of appliedLayers) {
+    const entry = spine.state.setAnimation(layer.trackIndex, layer.animation, true);
+    (entry as typeof entry & { alpha?: number }).alpha = Math.max(0, Math.min(1, layer.alpha));
+  }
+  spine.state.timeScale = playing ? speed : 0;
+}
+
+function PreviewSpineRenderer({
+  mod,
+  animationLayers,
+  layoutKey,
+  slot,
+  controlsRef,
+  onStateChange,
+  onDefaultAnimation
+}: {
+  mod: RuntimeMod | null;
+  animationLayers: PreviewAnimLayer[];
+  layoutKey: string;
+  slot: PreviewSlotKey;
+  controlsRef: MutableRefObject<Record<PreviewSlotKey, PreviewStageControls | null>>;
+  onStateChange: (slot: PreviewSlotKey, info: PreviewRuntimeInfo) => void;
+  onDefaultAnimation: (slot: PreviewSlotKey, animation: string) => void;
+}) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const spineRef = useRef<Spine | null>(null);
+  const animationLayersRef = useRef(animationLayers);
+  const fitRef = useRef<(() => void) | null>(null);
+  const emitRef = useRef<(() => void) | null>(null);
+  const runtimeRef = useRef({
+    defaultAnimation: "",
+    playing: true,
+    selectedAnimation: "",
+    selectedSkin: "",
+    speed: 1
+  });
+
+  useEffect(() => {
+    animationLayersRef.current = animationLayers;
+    const spine = spineRef.current;
+    if (spine) {
+      const runtime = runtimeRef.current;
+      runtime.selectedAnimation = animationLayers.find((layer) => layer.trackIndex === 0)?.animation ?? runtime.defaultAnimation;
+      applyPreviewAnimationLayers(spine, animationLayers, runtime.defaultAnimation, runtime.playing, runtime.speed);
+    }
+    emitRef.current?.();
+  }, [animationLayers]);
+
+  useEffect(() => {
+    let secondFrame = 0;
+    const frame = window.requestAnimationFrame(() => {
+      fitRef.current?.();
+      secondFrame = window.requestAnimationFrame(() => fitRef.current?.());
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [layoutKey]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host || !mod) {
+      controlsRef.current[slot] = null;
+      spineRef.current = null;
+      onStateChange(slot, emptyPreviewRuntimeInfo());
+      return;
+    }
+
+    let disposed = false;
+    let spine: Spine | null = null;
+    let textures: PIXI.Texture[] = [];
+    let zoom = 1;
+    let panX = 0;
+    let panY = 0;
+    let lastProgressAt = 0;
+    const app = new PIXI.Application<HTMLCanvasElement>({
+      resizeTo: host,
+      backgroundAlpha: 0,
+      antialias: true,
+      autoDensity: true,
+      resolution: Math.min(window.devicePixelRatio || 1, 2)
+    });
+    app.view.className = "pvCanvas";
+    host.replaceChildren(app.view);
+
+    const emit = (patch: Partial<PreviewRuntimeInfo> = {}) => {
+      if (!spine || disposed) return;
+      const runtime = runtimeRef.current;
+      onStateChange(slot, collectPreviewInfo(spine, {
+        selectedAnimation: runtime.selectedAnimation,
+        selectedSkin: runtime.selectedSkin,
+        playing: runtime.playing,
+        speed: runtime.speed,
+        progress: previewTrackProgress(spine),
+        ...patch
+      }));
+    };
+    emitRef.current = emit;
+
+    const applyFit = () => {
+      const width = Math.max(1, host.clientWidth);
+      const height = Math.max(1, host.clientHeight);
+      app.renderer.resize(width, height);
+      app.view.style.width = "100%";
+      app.view.style.height = "100%";
+      if (spine) fitPreviewSpine(spine, host, zoom, panX, panY);
+    };
+    fitRef.current = applyFit;
+
+    const resizeObserver = new ResizeObserver(applyFit);
+    resizeObserver.observe(host);
+
+    let dragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let startPanX = 0;
+    let startPanY = 0;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!spine || event.button !== 0) return;
+      dragging = true;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      startPanX = panX;
+      startPanY = panY;
+      host.setPointerCapture(event.pointerId);
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!dragging) return;
+      panX = startPanX + event.clientX - dragStartX;
+      panY = startPanY + event.clientY - dragStartY;
+      applyFit();
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      dragging = false;
+      if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (!spine) return;
+      event.preventDefault();
+      const rect = host.getBoundingClientRect();
+      const pointerX = event.clientX - rect.left;
+      const pointerY = event.clientY - rect.top;
+      const previousZoom = zoom;
+      const before = previewSpineTransform(spine, host, zoom, panX, panY);
+      const nextZoom = Math.max(0.1, Math.min(48, zoom * (event.deltaY < 0 ? 1.14 : 0.88)));
+      const factor = nextZoom / previousZoom;
+      const desiredX = before.x - (pointerX - before.x) * (factor - 1);
+      const desiredY = before.y - (pointerY - before.y) * (factor - 1);
+      const after = previewSpineTransform(spine, host, nextZoom, panX, panY);
+      panX += desiredX - after.x;
+      panY += desiredY - after.y;
+      zoom = nextZoom;
+      applyFit();
+    };
+    host.addEventListener("pointerdown", onPointerDown);
+    host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerup", onPointerUp);
+    host.addEventListener("pointercancel", onPointerUp);
+    host.addEventListener("wheel", onWheel, { passive: false });
+
+    onStateChange(slot, { ...emptyPreviewRuntimeInfo(), status: "loading" });
+
+    (async () => {
+      try {
+        const bundle = await window.bd2.runtimePreviewSpine(mod.path, mod.key);
+        if (disposed) return;
+        const createdTextures = await createPreviewTextures(bundle);
+        if (disposed) {
+          createdTextures.owned.forEach((texture) => texture.destroy(true));
+          return;
+        }
+        textures = createdTextures.owned;
+        const atlas = await createPreviewAtlas(bundle, createdTextures.textures);
+        if (disposed) return;
+        const skeletonData = parsePreviewSkeleton(bundle, atlas);
+        spine = new Spine(skeletonData as unknown as ConstructorParameters<typeof Spine>[0]);
+        spineRef.current = spine;
+        spine.autoUpdate = false;
+        spine.stateData.defaultMix = 0.16;
+        app.stage.addChild(spine);
+
+        const initialInfo = collectPreviewInfo(spine);
+        const defaultAnimation = defaultPreviewAnimation(initialInfo.animations);
+        const selectedSkin = initialInfo.skins.find((skin) => skin.name === "default")?.name ?? initialInfo.skins[0]?.name ?? "";
+        runtimeRef.current = {
+          defaultAnimation,
+          playing: Boolean(defaultAnimation),
+          selectedAnimation: animationLayersRef.current.find((layer) => layer.trackIndex === 0)?.animation ?? defaultAnimation,
+          selectedSkin,
+          speed: 1
+        };
+        if (selectedSkin) {
+          spine.skeleton.setSkinByName(selectedSkin);
+          spine.skeleton.setSlotsToSetupPose();
+        }
+        if (defaultAnimation && animationLayersRef.current.length === 0) {
+          onDefaultAnimation(slot, defaultAnimation);
+        }
+        applyPreviewAnimationLayers(spine, animationLayersRef.current, defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
+        spine.update(0);
+        applyFit();
+
+        controlsRef.current[slot] = {
+          togglePlayback: () => {
+            if (!spine) return;
+            const runtime = runtimeRef.current;
+            runtime.playing = !runtime.playing;
+            spine.state.timeScale = runtime.playing ? runtime.speed : 0;
+            emit();
+          },
+          setAnimation: (name: string) => {
+            if (!spine || !name) return;
+            runtimeRef.current.selectedAnimation = name;
+            const nextLayers = animationLayersRef.current.length > 0
+              ? animationLayersRef.current.map((layer) => layer.trackIndex === 0 ? { ...layer, animation: name } : layer)
+              : [createPreviewAnimLayer(name, 0)];
+            animationLayersRef.current = nextLayers;
+            applyPreviewAnimationLayers(spine, nextLayers, runtimeRef.current.defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
+            emit({ progress: 0 });
+          },
+          setSkin: (name: string) => {
+            if (!spine || !name) return;
+            runtimeRef.current.selectedSkin = name;
+            spine.skeleton.setSkinByName(name);
+            spine.skeleton.setSlotsToSetupPose();
+            spine.update(0);
+            emit();
+          },
+          setSpeed: (nextSpeed: number) => {
+            if (!spine) return;
+            const runtime = runtimeRef.current;
+            runtime.speed = Math.max(0.1, Math.min(2.5, nextSpeed));
+            spine.state.timeScale = runtime.playing ? runtime.speed : 0;
+            emit();
+          },
+          setPartAlpha: (name: string, alpha: number) => {
+            if (!spine) return;
+            const part = spine.skeleton.findSlot(name);
+            if (!part) return;
+            part.color.a = Math.max(0, Math.min(1, alpha));
+            emit();
+          },
+          setAnimationLayer: (layerId: string, animation: string) => {
+            if (!spine) return;
+            const nextLayers = animationLayersRef.current.map((layer) => layer.id === layerId ? { ...layer, animation } : layer);
+            animationLayersRef.current = nextLayers;
+            runtimeRef.current.selectedAnimation = nextLayers.find((layer) => layer.trackIndex === 0)?.animation ?? runtimeRef.current.defaultAnimation;
+            applyPreviewAnimationLayers(spine, nextLayers, runtimeRef.current.defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
+            emit();
+          },
+          setAnimationLayerAlpha: (layerId: string, alpha: number) => {
+            if (!spine) return;
+            const nextLayers = animationLayersRef.current.map((layer) => layer.id === layerId ? { ...layer, alpha } : layer);
+            animationLayersRef.current = nextLayers;
+            applyPreviewAnimationLayers(spine, nextLayers, runtimeRef.current.defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
+            emit();
+          },
+          resetView: () => {
+            zoom = 1;
+            panX = 0;
+            panY = 0;
+            applyFit();
+          }
+        };
+        emit();
+      } catch (error) {
+        if (disposed) return;
+        controlsRef.current[slot] = null;
+        onStateChange(slot, {
+          ...emptyPreviewRuntimeInfo(),
+          status: "error",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    })();
+
+    const tick = () => {
+      if (!spine) return;
+      spine.update(app.ticker.deltaMS / 1000);
+      const now = performance.now();
+      if (now - lastProgressAt > 100) {
+        lastProgressAt = now;
+        emit();
+      }
+    };
+    app.ticker.add(tick);
+
+    return () => {
+      disposed = true;
+      controlsRef.current[slot] = null;
+      resizeObserver.disconnect();
+      host.removeEventListener("pointerdown", onPointerDown);
+      host.removeEventListener("pointermove", onPointerMove);
+      host.removeEventListener("pointerup", onPointerUp);
+      host.removeEventListener("pointercancel", onPointerUp);
+      host.removeEventListener("wheel", onWheel);
+      app.ticker.remove(tick);
+      app.stage.removeChildren();
+      if (spine) spine.destroy({ children: true });
+      textures.forEach((texture) => texture.destroy(true));
+      if (spineRef.current === spine) spineRef.current = null;
+      if (fitRef.current === applyFit) fitRef.current = null;
+      app.destroy(true);
+      if (host.firstChild === app.view) host.replaceChildren();
+    };
+  }, [controlsRef, mod?.key, mod?.path, onDefaultAnimation, onStateChange, slot]);
+
+  return <div ref={hostRef} className="pvCanvasHost" />;
+}
+
 export function App() {
   useTauriCustomScrollbars();
   const htmlAltTooltip = useHtmlAltTooltip();
@@ -192,6 +716,20 @@ export function App() {
   const [openRosterChar, setOpenRosterChar] = useState<string | null>(null);
   const [rosterColumns, setRosterColumns] = useState(1);
   const [logFilter, setLogFilter] = useState<"all" | "ok" | "warn" | "err">("all");
+  const [pvMode, setPvMode] = useState<"single" | "dual">("single");
+  const [pvChar, setPvChar] = useState<string | null>(null);
+  const [pvCharSearch, setPvCharSearch] = useState("");
+  const [pvSlotA, setPvSlotA] = useState<RuntimeMod | null>(null);
+  const [pvSlotB, setPvSlotB] = useState<RuntimeMod | null>(null);
+  const [pvFocus, setPvFocus] = useState<"a" | "b">("a");
+  const [pvPartSearch, setPvPartSearch] = useState("");
+  const [pvAnimLayers, setPvAnimLayers] = useState<Record<PreviewSlotKey, PreviewAnimLayer[]>>({ a: [], b: [] });
+  const [pvActiveAnimLayerId, setPvActiveAnimLayerId] = useState<Record<PreviewSlotKey, string | null>>({ a: null, b: null });
+  const [pvRuntime, setPvRuntime] = useState<Record<PreviewSlotKey, PreviewRuntimeInfo>>(() => ({
+    a: emptyPreviewRuntimeInfo(),
+    b: emptyPreviewRuntimeInfo()
+  }));
+  const pvControlsRef = useRef<Record<PreviewSlotKey, PreviewStageControls | null>>({ a: null, b: null });
   const [modsDir, setModsDir] = useState<string>("");
   const [library, setLibrary] = useState<RuntimeMod[]>([]);
   const [status, setStatus] = useState<RuntimeStatus | null>(null);
@@ -1027,6 +1565,426 @@ export function App() {
 
   const rosterRows = useMemo(() => chunkRows(rosterList, rosterColumns), [rosterList, rosterColumns]);
 
+  const pvChars = useMemo(() => roster.filter((c) => c.count > 0), [roster]);
+  const pvFilteredChars = useMemo(() => {
+    const q = pvCharSearch.trim().toLowerCase();
+    return q ? pvChars.filter((c) => c.name.toLowerCase().includes(q)) : pvChars;
+  }, [pvChars, pvCharSearch]);
+  const pvCurrentChar = useMemo(() => pvChars.find((c) => c.name === pvChar) ?? null, [pvChars, pvChar]);
+  const pvFocusedSlot: PreviewSlotKey = pvMode === "dual" && pvFocus === "b" ? "b" : "a";
+  const pvFocusedMod = pvFocusedSlot === "b" ? pvSlotB : pvSlotA;
+  const pvFocusedAnimLayers = pvAnimLayers[pvFocusedSlot];
+  const pvFocusedInfo = pvRuntime[pvFocusedSlot];
+  const pvFilteredParts = useMemo(() => {
+    const q = pvPartSearch.trim().toLowerCase();
+    return q ? pvFocusedInfo.parts.filter((part) => part.name.toLowerCase().includes(q)) : pvFocusedInfo.parts;
+  }, [pvFocusedInfo.parts, pvPartSearch]);
+  const handlePvRuntimeChange = useCallback((slot: PreviewSlotKey, info: PreviewRuntimeInfo) => {
+    setPvRuntime((current) => ({ ...current, [slot]: info }));
+  }, []);
+  const setPreviewPartAlpha = useCallback((slot: PreviewSlotKey, name: string, alpha: number) => {
+    pvControlsRef.current[slot]?.setPartAlpha(name, alpha);
+    setPvRuntime((current) => ({
+      ...current,
+      [slot]: {
+        ...current[slot],
+        parts: current[slot].parts.map((part) => part.name === name ? { ...part, alpha } : part)
+      }
+    }));
+  }, []);
+  const replacePreviewMod = useCallback((slot: PreviewSlotKey, mod: RuntimeMod | null) => {
+    if (slot === "b") setPvSlotB(mod);
+    else setPvSlotA(mod);
+    setPvAnimLayers((current) => ({ ...current, [slot]: [] }));
+    setPvActiveAnimLayerId((current) => ({ ...current, [slot]: null }));
+    if (!mod) {
+      pvControlsRef.current[slot] = null;
+      setPvRuntime((current) => ({ ...current, [slot]: emptyPreviewRuntimeInfo() }));
+    }
+  }, []);
+  const setDefaultPreviewAnimation = useCallback((slot: PreviewSlotKey, animation: string) => {
+    const layer = createPreviewAnimLayer(animation, 0);
+    setPvAnimLayers((current) => current[slot].length > 0 ? current : {
+      ...current,
+      [slot]: [layer]
+    });
+    setPvActiveAnimLayerId((current) => current[slot] ? current : {
+      ...current,
+      [slot]: layer.id
+    });
+  }, []);
+  const selectPreviewAnimLayer = useCallback((slot: PreviewSlotKey, layerId: string) => {
+    setPvActiveAnimLayerId((current) => ({ ...current, [slot]: layerId }));
+  }, []);
+  const addPreviewAnimLayer = useCallback((slot: PreviewSlotKey) => {
+    const info = pvRuntime[slot];
+    if (info.status !== "ready" || info.animations.length === 0) return;
+    const existing = pvAnimLayers[slot];
+    const used = new Set(existing.map((layer) => layer.animation));
+    const animation = info.animations.find((item) => !used.has(item.name))?.name ?? info.animations[0].name;
+    const nextTrack = existing.reduce((max, layer) => Math.max(max, layer.trackIndex), -1) + 1;
+    const layer = createPreviewAnimLayer(animation, nextTrack);
+    setPvAnimLayers((current) => {
+      return { ...current, [slot]: [...existing, layer] };
+    });
+    setPvActiveAnimLayerId((active) => ({ ...active, [slot]: layer.id }));
+  }, [pvAnimLayers, pvRuntime]);
+  const removePreviewAnimLayer = useCallback((slot: PreviewSlotKey, layerId: string) => {
+    const nextActiveLayer = pvAnimLayers[slot]
+      .filter((layer) => layer.id !== layerId || layer.trackIndex === 0)
+      .map((layer, index) => ({ ...layer, trackIndex: index }))[0]?.id ?? null;
+    setPvAnimLayers((current) => {
+      const nextLayers = current[slot]
+        .filter((layer) => layer.id !== layerId || layer.trackIndex === 0)
+        .map((layer, index) => ({ ...layer, trackIndex: index }));
+      return { ...current, [slot]: nextLayers };
+    });
+    setPvActiveAnimLayerId((active) => active[slot] === layerId ? { ...active, [slot]: nextActiveLayer } : active);
+  }, [pvAnimLayers]);
+  const setPreviewAnimLayerAnimation = useCallback((slot: PreviewSlotKey, layerId: string, animation: string) => {
+    pvControlsRef.current[slot]?.setAnimationLayer(layerId, animation);
+    setPvAnimLayers((current) => ({
+      ...current,
+      [slot]: current[slot].map((layer) => layer.id === layerId ? { ...layer, animation } : layer)
+    }));
+  }, []);
+  const setPreviewAnimLayerAlpha = useCallback((slot: PreviewSlotKey, layerId: string, alpha: number) => {
+    const clamped = Math.max(0, Math.min(1, alpha));
+    pvControlsRef.current[slot]?.setAnimationLayerAlpha(layerId, clamped);
+    setPvAnimLayers((current) => ({
+      ...current,
+      [slot]: current[slot].map((layer) => layer.id === layerId ? { ...layer, alpha: clamped } : layer)
+    }));
+  }, []);
+  const getPreviewModMountLockReason = useCallback((mod: RuntimeMod) => {
+    const wouldStageMount = !isDesired(mod.folder);
+    const alreadyMounted = mountedFolders.has(mod.folder);
+    if (wouldStageMount && !alreadyMounted && mod.skeleton === "unknown") {
+      return "Missing .json or .skel skeleton file";
+    }
+    return "";
+  }, [isDesired, mountedFolders]);
+  function stagePreviewModSelection(mod: RuntimeMod) {
+    if (modsLocked) {
+      log(modsLockReason || "Mod selection is locked.", "warn");
+      return;
+    }
+    const mountLockReason = getPreviewModMountLockReason(mod);
+    if (mountLockReason) {
+      log(`${formatFolderName(mod.folder)} cannot be mounted: ${mountLockReason}.`, "warn");
+      return;
+    }
+    const enabled = !isDesired(mod.folder);
+    updateDesired(mod.folder, enabled);
+    setHoveredPendingFolder(mod.folder);
+    setPendingScrollTarget(mod.folder);
+    spotlightPendingFolder(mod.folder);
+    if (!visibleMods.some((visibleMod) => visibleMod.folder === mod.folder) && library.some((libraryMod) => libraryMod.folder === mod.folder)) {
+      setModFilter("");
+    }
+    log(`${enabled ? "Staged" : "Cleared"} ${formatFolderName(mod.folder)} from Preview.`, enabled ? "ok" : undefined);
+  }
+  const loadPreviewMod = (mod: RuntimeMod) => {
+    replacePreviewMod(pvFocusedSlot, mod);
+  };
+  const switchPreviewMode = (mode: "single" | "dual") => {
+    setPvMode(mode);
+    if (mode === "single") {
+      setPvFocus("a");
+      replacePreviewMod("b", null);
+    }
+  };
+  const openInPreview = (name: string, mod?: RuntimeMod) => {
+    const target = mod ?? roster.find((c) => c.name === name)?.mods[0] ?? null;
+    setPvChar(name);
+    replacePreviewMod("a", target);
+    replacePreviewMod("b", null);
+    setPvMode("single");
+    setPvFocus("a");
+    setView("preview");
+  };
+  const renderPvStage = (slot: PreviewSlotKey) => {
+    const mod = slot === "b" ? pvSlotB : pvSlotA;
+    const ch = mod ? detectModCharacter(mod) : null;
+    const info = pvRuntime[slot];
+    const ready = info.status === "ready";
+    const layers = pvAnimLayers[slot];
+    const activeLayer = layers.find((layer) => layer.id === pvActiveAnimLayerId[slot]) ?? layers[0] ?? null;
+    return (
+      <div className={`pvStage ${pvFocus === slot ? "focus" : ""}`} onClick={() => setPvFocus(slot)}>
+        <span className={`pvTag ${slot}`}>{slot.toUpperCase()}</span>
+        <div className="pvField">
+          <span className="pvReg" style={{ left: 10, top: 10 }} />
+          <PreviewSpineRenderer mod={mod} animationLayers={pvAnimLayers[slot]} layoutKey={pvMode} slot={slot} controlsRef={pvControlsRef} onStateChange={handlePvRuntimeChange} onDefaultAnimation={setDefaultPreviewAnimation} />
+          {!mod && (
+            <div className="pvEmpty2">Select a mod</div>
+          )}
+          {mod && info.status === "loading" && <div className="pvLoad">Loading Spine…</div>}
+          {mod && info.status === "error" && <div className="pvErr"><b>Preview failed</b><span>{info.error}</span></div>}
+          {mod && <span className="pvName">{ch?.character ?? "Mod"} · {formatFolderName(mod.folder)}</span>}
+          {mod && (
+            <button type="button" className="pvClear" onClick={(e) => { e.stopPropagation(); replacePreviewMod(slot, null); }} aria-label="Clear stage">×</button>
+          )}
+        </div>
+        <div className="pvPlay" onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            className="pvTb play"
+            disabled={!ready}
+            title="Play / pause"
+            onClick={() => pvControlsRef.current[slot]?.togglePlayback()}
+          >
+            {info.playing ? "Ⅱ" : "▶"}
+          </button>
+          <label className="pvSel pvTrackWrap">
+            <span>Track</span>
+            <select
+              className="pvSelect"
+              disabled={!ready || layers.length === 0}
+              value={activeLayer?.id ?? ""}
+              onChange={(event) => selectPreviewAnimLayer(slot, event.target.value)}
+              aria-label={`Preview ${slot.toUpperCase()} animation track`}
+            >
+              {layers.length === 0 ? <option value="">T0</option> : layers.map((layer) => (
+                <option key={layer.id} value={layer.id}>T{layer.trackIndex}</option>
+              ))}
+            </select>
+          </label>
+          <label className="pvSel pvSelectWrap">
+            <span>Anim</span>
+            <select
+              className="pvSelect"
+              disabled={!ready || info.animations.length === 0 || !activeLayer}
+              value={activeLayer?.animation ?? ""}
+              onChange={(event) => {
+                const animation = event.target.value;
+                if (!activeLayer) return;
+                setPreviewAnimLayerAnimation(slot, activeLayer.id, animation);
+              }}
+              aria-label={`Preview ${slot.toUpperCase()} animation`}
+            >
+              {info.animations.length === 0 ? <option value="">none</option> : info.animations.map((animation) => (
+                <option key={animation.name} value={animation.name}>{animation.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="pvSel pvSelectWrap">
+            <span>Skin</span>
+            <select
+              className="pvSelect"
+              disabled={!ready || info.skins.length === 0}
+              value={info.selectedSkin}
+              onChange={(event) => pvControlsRef.current[slot]?.setSkin(event.target.value)}
+              aria-label={`Preview ${slot.toUpperCase()} skin`}
+            >
+              {info.skins.length === 0 ? <option value="">default</option> : info.skins.map((skin) => (
+                <option key={skin.name} value={skin.name}>{skin.name}</option>
+              ))}
+            </select>
+          </label>
+          <span className="pvScrub"><i style={{ width: `${Math.max(0, Math.min(100, info.progress))}%` }} /></span>
+          <label className="pvSel pvSpeed">
+            <span>{info.speed.toFixed(1)}×</span>
+            <input
+              type="range"
+              min="0.1"
+              max="2.5"
+              step="0.1"
+              disabled={!ready}
+              value={info.speed}
+              onChange={(event) => pvControlsRef.current[slot]?.setSpeed(Number(event.target.value))}
+              aria-label={`Preview ${slot.toUpperCase()} speed`}
+            />
+          </label>
+          <button type="button" className="pvTb" disabled={!ready} title="Reset view" onClick={() => pvControlsRef.current[slot]?.resetView()}>⌖</button>
+        </div>
+      </div>
+    );
+  };
+
+  const previewView = (
+    <div className="pvView">
+      <div className="pvBar">
+        <span className="pvTitle">Preview</span>
+        <span className="pvCrumb">{pvFocusedMod ? <>▶ Previewing <b>{detectModCharacter(pvFocusedMod)?.character ?? formatFolderName(pvFocusedMod.folder)}</b></> : "Pick a character, then a mod"}</span>
+        <span className="pvSp" />
+        <div className="segmentedControl pvModeSeg" role="tablist" aria-label="Preview mode">
+          <button type="button" className={pvMode === "single" ? "active" : ""} onClick={() => switchPreviewMode("single")} aria-pressed={pvMode === "single"}><span>Single</span></button>
+          <button type="button" className={pvMode === "dual" ? "active" : ""} onClick={() => switchPreviewMode("dual")} aria-pressed={pvMode === "dual"}><span>Dual · 比較</span></button>
+        </div>
+      </div>
+      <div className="pvTop">
+        <div className="pvFinder">
+          <div className="pvSearchRow pvFinderSearch"><input value={pvCharSearch} onChange={(e) => setPvCharSearch(e.target.value)} placeholder="Search characters…" spellCheck={false} aria-label="Search character" /></div>
+          <div className="pvCol pvCharCol">
+            <div className="pvColHd"><span className="tc">角色</span> Chars</div>
+            <div className="pvList">
+              {pvFilteredChars.length === 0 ? (
+                <div className="pvHint">{library.length === 0 ? "Load a Mods Folder" : "No modded characters"}</div>
+              ) : pvFilteredChars.map((c) => (
+                <button key={c.name} type="button" className={`pvItem char ${pvChar === c.name ? "on" : ""}`} onClick={() => setPvChar(c.name)} title={`${c.name} · ${c.count} mod${c.count === 1 ? "" : "s"}`} aria-label={`${c.name}, ${c.count} mods`}>
+                  <span className="pvAvatar" aria-hidden="true">
+                    <img
+                      src={publicAssetPath(`characters/heads/${c.imageId ?? "050001"}.png`)}
+                      alt=""
+                      loading="lazy"
+                      draggable={false}
+                      onError={(event) => {
+                        if (event.currentTarget.dataset.fallback === "1") return;
+                        event.currentTarget.dataset.fallback = "1";
+                        event.currentTarget.src = publicAssetPath("characters/heads/050001.png");
+                      }}
+                    />
+                  </span>
+                  <span className="ct">{c.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="pvCol pvModCol">
+            <div className="pvColHd"><span className="tc">模組</span> {pvCurrentChar ? pvCurrentChar.name : "Mods"}</div>
+            <div className="pvList">
+              {!pvCurrentChar ? (
+                <div className="pvHint">Select a character</div>
+              ) : pvCurrentChar.mods.map((mod) => {
+                const active = pvSlotA?.path === mod.path || pvSlotB?.path === mod.path;
+                const desiredMod = isDesired(mod.folder);
+                const mountLockReason = getPreviewModMountLockReason(mod);
+                const selectionLocked = modsLocked || Boolean(mountLockReason);
+                const selectionLockReason = modsLocked ? modsLockReason : mountLockReason;
+                const pendingTone = tones[mod.folder];
+                return (
+                  <div key={mod.path} className={`pvModRow ${active ? "on" : ""} ${desiredMod ? "is-selected" : ""} ${selectionLocked ? "is-locked" : ""} ${pendingTone ? formatPendingToneClass(pendingTone) : ""}`}>
+                    <button type="button" className={`pvItem mod ${active ? "on" : ""}`} onClick={() => loadPreviewMod(mod)} title="Load into stage">
+                      <span className="dot" aria-hidden="true" /><span className="nm">{formatFolderName(mod.folder)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`pvModSelect ${desiredMod ? "is-selected" : ""} ${selectionLocked ? "is-locked" : ""}`}
+                      disabled={selectionLocked}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        stagePreviewModSelection(mod);
+                      }}
+                      title={selectionLockReason || (desiredMod ? "Stage removal / clear add" : "Stage mount / clear removal")}
+                      aria-pressed={desiredMod}
+                      aria-label={`${selectionLockReason ? "Locked" : desiredMod ? "Clear or remove" : "Select"} ${mod.folder}`}
+                    >
+                      {desiredMod ? "−" : "+"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="pvWork">
+          <div className={`pvStageWrap ${pvMode === "dual" ? "dual" : ""}`}>
+            {renderPvStage("a")}
+            {pvMode === "dual" && renderPvStage("b")}
+          </div>
+          <div className="pvInspect">
+            <div className="pvSec pvLayerSec">
+              <div className="h"><span className="num">▤</span>Layers · 圖層<i aria-hidden="true" /></div>
+              {pvFocusedInfo.status === "ready" && pvFocusedAnimLayers.length > 0 ? (
+                <>
+                  <div className="pvLayerList">
+                    {pvFocusedAnimLayers.map((layer) => (
+                      <div
+                        key={layer.id}
+                        className={`pvLayer ${layer.trackIndex === 0 ? "on" : ""} ${pvActiveAnimLayerId[pvFocusedSlot] === layer.id ? "is-selected" : ""}`}
+                        onPointerDownCapture={() => selectPreviewAnimLayer(pvFocusedSlot, layer.id)}
+                      >
+                        <span className="gr" aria-hidden="true">T{layer.trackIndex}</span>
+                        <select
+                          className="pvLayerAnim"
+                          value={layer.animation}
+                          onChange={(event) => setPreviewAnimLayerAnimation(pvFocusedSlot, layer.id, event.target.value)}
+                          aria-label={`Track ${layer.trackIndex} animation`}
+                        >
+                          {pvFocusedInfo.animations.map((animation) => (
+                            <option key={animation.name} value={animation.name}>{animation.name}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={layer.alpha}
+                          onChange={(event) => setPreviewAnimLayerAlpha(pvFocusedSlot, layer.id, Number(event.target.value))}
+                          aria-label={`Track ${layer.trackIndex} alpha`}
+                        />
+                        <span className="op">{Math.round(layer.alpha * 100)}%</span>
+                        <button type="button" className="pvLayerRemove" disabled={layer.trackIndex === 0} onClick={() => removePreviewAnimLayer(pvFocusedSlot, layer.id)} aria-label="Remove animation layer">×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="pvAddLayer"
+                    disabled={pvFocusedInfo.animations.length === 0}
+                    onClick={() => addPreviewAnimLayer(pvFocusedSlot)}
+                  >
+                    ＋ Stack animation track
+                  </button>
+                </>
+              ) : (
+                <div className="pvHint">{pvFocusedInfo.status === "loading" ? "Loading anim tracks" : "Load a spine mod"}</div>
+              )}
+            </div>
+            <div className="pvSec">
+              <div className="h"><span className="num">◳</span>Parts · 部件<i aria-hidden="true" /></div>
+              <div className="pvSearchRow"><input value={pvPartSearch} onChange={(event) => setPvPartSearch(event.target.value)} placeholder="Search slot…" disabled={pvFocusedInfo.status !== "ready"} aria-label="Search slot" /></div>
+              {pvFocusedInfo.status === "ready" ? (
+                <div className="pvPartList">
+                  {pvFilteredParts.length === 0 ? (
+                    <div className="pvHint">No matching parts</div>
+                  ) : pvFilteredParts.map((part) => (
+                    <div key={part.name} className="pvPart">
+                      <button
+                        type="button"
+                        className="pvEye"
+                        title={part.alpha <= 0.01 ? "Show part" : "Hide part"}
+                        onClick={() => setPreviewPartAlpha(pvFocusedSlot, part.name, part.alpha <= 0.01 ? 1 : 0)}
+                      >
+                        {part.alpha <= 0.01 ? "○" : "●"}
+                      </button>
+                      <span className="nm" title={part.name}>{part.name}</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={part.alpha}
+                        onChange={(event) => setPreviewPartAlpha(pvFocusedSlot, part.name, Number(event.target.value))}
+                        aria-label={`${part.name} opacity`}
+                      />
+                      <span className="op">{Math.round(part.alpha * 100)}%</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="pvPending">
+                  {pvFocusedInfo.status === "loading" ? "Loading Spine slots…" : pvFocusedInfo.status === "error" ? (pvFocusedInfo.error ?? "Preview failed") : "Load a mod to inspect Spine parts."}
+                </div>
+              )}
+            </div>
+            <div className="pvSec pvRenderSec">
+              <div className="h"><span className="num">◷</span>Render<i aria-hidden="true" /></div>
+              <div className="pvRow"><span className="k">Stage</span><span className="v">{pvFocusedSlot.toUpperCase()}</span></div>
+              <div className="pvRow"><span className="k">Tracks</span><span className="v">{pvFocusedAnimLayers.length}</span></div>
+              <div className="pvRow"><span className="k">Skin</span><span className="v">{pvFocusedInfo.selectedSkin || "default"}</span></div>
+              <div className="pvRow"><span className="k">Anim</span><span className="v">{pvFocusedInfo.selectedAnimation || "none"}</span></div>
+              <div className="pvRow"><span className="k">Speed</span><span className="v">{pvFocusedInfo.speed.toFixed(1)}×</span></div>
+              <div className="pvRow"><span className="k">Parts</span><span className="v">{pvFocusedInfo.parts.length}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const statsView = (
     <div className="stxView">
       <div className="stxNums">
@@ -1139,6 +2097,7 @@ export function App() {
                       <div className="rstExpandHead">
                         <span className="t">{expanded.name}</span>
                         <span className="c">{expanded.count} cartridge{expanded.count > 1 ? "s" : ""}</span>
+                        <button type="button" className="rstPreview" onClick={() => openInPreview(expanded.name)} title="Open this character in Preview">▶ Preview</button>
                         <button type="button" className="rstClose" onClick={() => setOpenRosterChar(null)} aria-label="Close">×</button>
                       </div>
                       <div className={`cartShelf cartShelf--collector ${useCanvasCartridges ? "cartShelf--canvas" : ""}`}>
@@ -1468,21 +2427,23 @@ export function App() {
 
       <main className={`appMain view-${view}`}>
         <LibraryHalftoneBackdrop />
-        <div className="viewHead">
-          <div>
-            <h1>{activeNav.label}</h1>
-            <div className="viewSub">BrownDust II Runtime Mod Loader · Mac PlayCover</div>
-          </div>
-          <div className="spacer" />
-          <div className={`backdropMeta ${backdropSlotRolling ? "is-rolling" : ""}`} title={backgroundCharacterTitle}>
-            <div className="viewCount">
-              <b>{backgroundCharacterCode}</b><span>Backdrop<br />ID</span>
+        {view !== "preview" && (
+          <div className="viewHead">
+            <div>
+              <h1>{activeNav.label}</h1>
+              <div className="viewSub">BrownDust II Runtime Mod Loader · Mac PlayCover</div>
             </div>
-            <div className="backdropMetaName">
-              {backgroundCharacterName}
+            <div className="spacer" />
+            <div className={`backdropMeta ${backdropSlotRolling ? "is-rolling" : ""}`} title={backgroundCharacterTitle}>
+              <div className="viewCount">
+                <b>{backgroundCharacterCode}</b><span>Backdrop<br />ID</span>
+              </div>
+              <div className="backdropMetaName">
+                {backgroundCharacterName}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {globalBanners}
 
@@ -1491,7 +2452,8 @@ export function App() {
         {view === "settings" && settingsView}
         {view === "stats" && statsView}
         {view === "roster" && rosterView}
-        {view !== "library" && view !== "logs" && view !== "settings" && view !== "stats" && view !== "roster" && placeholderView(view)}
+        {view === "preview" && previewView}
+        {view !== "library" && view !== "logs" && view !== "settings" && view !== "stats" && view !== "roster" && view !== "preview" && placeholderView(view)}
 
         {playerDock}
         {pendingDiffDock}
@@ -1538,6 +2500,7 @@ type CustomScrollbarEntry = {
 };
 
 const TAURI_SCROLL_CONTAIN_SELECTOR = ".pendingDiffList, .modsPanel table, .sharedPanel table, .historyTableFrame, .logStream";
+const TAURI_SCROLLBAR_SKIP_SELECTOR = ".pvCharCol .pvList";
 
 function installTauriCustomScrollbars() {
   const layer = document.createElement("div");
@@ -1619,6 +2582,7 @@ function installTauriCustomScrollbars() {
 
   const isScrollable = (element: HTMLElement) => {
     if (element === layer || layer.contains(element)) return false;
+    if (element.matches(TAURI_SCROLLBAR_SKIP_SELECTOR)) return false;
     if (element.clientHeight <= 0 || element.scrollHeight <= element.clientHeight + 2) return false;
     const style = window.getComputedStyle(element);
     if (style.display === "none" || style.visibility === "hidden") return false;

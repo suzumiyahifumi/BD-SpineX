@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, GameVersionInfo, LegacyRuntimeMigrationCheck, LegacyRuntimeMigrationResult, ModsIndex, PatchDataCheckResult, PatchHistory, PatchPlanEntry, PatchPlanIndex, PatchProgress, PatchStateChange, PreviousPatchedMods, SharedIndex, SharedScanOptions, SharedScanProgress } from "../../core/types.js";
-import type { RuntimeMod, RuntimeStatus } from "../../core/runtime-loader.js";
+import type { PreviewSpineBundle, RuntimeMod, RuntimeStatus } from "../../core/runtime-loader.js";
 
 const api = {
   getDefaultPaths: () => ipcRenderer.invoke("app:default-paths") as Promise<{ modsDir: string; sharedDir: string; dotnetPath: string }>,
@@ -57,6 +57,7 @@ const api = {
   runtimeUninstall: () => ipcRenderer.invoke("runtime:uninstall") as Promise<{ ok: boolean; message: string }>,
   runtimeSetEnabled: (enabled: boolean) => ipcRenderer.invoke("runtime:set-enabled", enabled) as Promise<{ ok: boolean; message: string }>,
   runtimeListLibrary: (dir: string) => ipcRenderer.invoke("runtime:list-library", dir) as Promise<RuntimeMod[]>,
+  runtimePreviewSpine: (srcDir: string, key: string) => ipcRenderer.invoke("runtime:preview-spine", { srcDir, key }) as Promise<PreviewSpineBundle>,
   runtimeMount: (srcDir: string, folder?: string) => ipcRenderer.invoke("runtime:mount", { srcDir, folder }) as Promise<{ ok: boolean; message: string }>,
   runtimeUnmount: (folder: string) => ipcRenderer.invoke("runtime:unmount", folder) as Promise<{ ok: boolean; message: string }>,
   runtimeLaunch: () => ipcRenderer.invoke("runtime:launch") as Promise<{ ok: boolean; message: string }>

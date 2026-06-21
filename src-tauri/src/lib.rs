@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use base64::{engine::general_purpose, Engine as _};
 use chrono::Utc;
 use serde::Serialize;
 use std::{
@@ -61,6 +62,26 @@ struct RuntimeStatus {
     mount_dir: String,
     mods_enabled: bool,
     mounted_mods: Vec<RuntimeMod>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PreviewSpineImage {
+    name: String,
+    mime: String,
+    data: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PreviewSpineBundle {
+    key: String,
+    skeleton_name: String,
+    skeleton_type: String,
+    skeleton_data: String,
+    atlas_name: String,
+    atlas_text: String,
+    images: Vec<PreviewSpineImage>,
 }
 
 #[derive(Serialize)]
@@ -370,6 +391,126 @@ fn runtime_list_library(dir: String) -> Vec<RuntimeMod> {
     scan_mod_dir(Path::new(&dir))
 }
 
+fn validate_preview_key(key: &str) -> bool {
+    !key.is_empty() && key != "." && key != ".." && !key.contains('/') && !key.contains('\\') && !key.contains("..")
+}
+
+fn preview_image_mime(name: &str) -> &'static str {
+    match Path::new(name).extension().and_then(OsStr::to_str).unwrap_or("").to_ascii_lowercase().as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        _ => "image/png",
+    }
+}
+
+fn atlas_page_names(atlas_text: &str) -> Vec<String> {
+    let mut pages = Vec::new();
+    for raw_line in atlas_text.lines() {
+        let line = raw_line.trim();
+        let lower = line.to_ascii_lowercase();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if !(lower.ends_with(".png") || lower.ends_with(".jpg") || lower.ends_with(".jpeg") || lower.ends_with(".webp")) {
+            continue;
+        }
+        if !pages.iter().any(|page| page == line) {
+            pages.push(line.to_string());
+        }
+    }
+    pages
+}
+
+fn resolve_preview_asset(root: &Path, asset_name: &str) -> Option<PathBuf> {
+    let normalized = asset_name.replace('\\', "/");
+    if normalized.split('/').any(|part| part == "..") || Path::new(&normalized).is_absolute() {
+        return None;
+    }
+    Some(root.join(normalized))
+}
+
+#[tauri::command]
+fn runtime_preview_spine(src_dir: String, key: String) -> Result<PreviewSpineBundle, String> {
+    if !validate_preview_key(&key) {
+        return Err("Invalid Spine preview key.".to_string());
+    }
+
+    let root = PathBuf::from(&src_dir);
+    if !root.is_dir() {
+        return Err("Preview source folder does not exist.".to_string());
+    }
+
+    let atlas_name = format!("{key}.atlas");
+    let atlas_path = root.join(&atlas_name);
+    let atlas_text = fs::read_to_string(&atlas_path).map_err(|err| format!("Preview atlas not found: {atlas_name} ({err})"))?;
+
+    let json_path = root.join(format!("{key}.json"));
+    let skel_path = root.join(format!("{key}.skel"));
+    let (skeleton_type, skeleton_path) = if json_path.exists() {
+        ("json".to_string(), json_path)
+    } else if skel_path.exists() {
+        ("skel".to_string(), skel_path)
+    } else {
+        return Err(format!("Preview skeleton not found: {key}.json / {key}.skel"));
+    };
+
+    let mut page_names = atlas_page_names(&atlas_text);
+    if page_names.is_empty() {
+        let mut files = fs::read_dir(&root)
+            .map_err(|err| err.to_string())?
+            .filter_map(Result::ok)
+            .filter_map(|entry| {
+                let name = entry.file_name().to_string_lossy().to_string();
+                let lower = name.to_ascii_lowercase();
+                (entry.file_type().map(|ty| ty.is_file()).unwrap_or(false)
+                    && !name.starts_with("._")
+                    && (lower.ends_with(".png") || lower.ends_with(".jpg") || lower.ends_with(".jpeg") || lower.ends_with(".webp")))
+                    .then_some(name)
+            })
+            .collect::<Vec<_>>();
+        files.sort_by(|a, b| a.cmp(b));
+        page_names = files;
+    }
+
+    let mut images = Vec::new();
+    let mut used = HashSet::new();
+    for page_name in page_names {
+        if !used.insert(page_name.clone()) {
+            continue;
+        }
+        let resolved = resolve_preview_asset(&root, &page_name).unwrap_or_else(|| root.join(Path::new(&page_name).file_name().unwrap_or_else(|| OsStr::new(&page_name))));
+        let image_path = if resolved.exists() {
+            resolved
+        } else {
+            root.join(Path::new(&page_name).file_name().unwrap_or_else(|| OsStr::new(&page_name)))
+        };
+        if !image_path.exists() {
+            continue;
+        }
+        let bytes = fs::read(&image_path).map_err(|err| err.to_string())?;
+        images.push(PreviewSpineImage {
+            name: page_name.clone(),
+            mime: preview_image_mime(&page_name).to_string(),
+            data: general_purpose::STANDARD.encode(bytes),
+        });
+    }
+
+    if images.is_empty() {
+        return Err("Preview atlas did not resolve any texture pages.".to_string());
+    }
+
+    let skeleton_data = fs::read(&skeleton_path).map_err(|err| err.to_string())?;
+    Ok(PreviewSpineBundle {
+        key,
+        skeleton_name: skeleton_path.file_name().and_then(OsStr::to_str).unwrap_or("").to_string(),
+        skeleton_type,
+        skeleton_data: general_purpose::STANDARD.encode(skeleton_data),
+        atlas_name,
+        atlas_text,
+        images,
+    })
+}
+
 #[tauri::command]
 fn runtime_set_enabled(enabled: bool) -> Result<ActionResult, String> {
     fs::create_dir_all(mount_dir()?).map_err(|e| e.to_string())?;
@@ -656,6 +797,7 @@ pub fn run() {
             runtime_status,
             runtime_migration_check,
             runtime_list_library,
+            runtime_preview_spine,
             runtime_set_enabled,
             runtime_install,
             runtime_uninstall,

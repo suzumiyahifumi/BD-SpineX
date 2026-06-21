@@ -109,7 +109,12 @@
       "identity": "-"
     }
   },
-  "dependencies": {},
+  "dependencies": {
+    "@pixi-spine/base": "^4.0.6",
+    "@pixi-spine/runtime-4.1": "^4.0.6",
+    "pixi-spine": "^4.0.6",
+    "pixi.js": "^7.4.3"
+  },
   "devDependencies": {
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/cli": "^2.11.2",

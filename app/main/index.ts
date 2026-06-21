@@ -9,7 +9,7 @@ import { applyPatchStateChanges, applyReadyPatches, checkPatchDataForMods, copyP
 import { readSharedIndex, scanShared } from "../../core/shared-indexer.js";
 import { detectGameVersion } from "../../core/game-version.js";
 import { isPackagedRuntime, managerDataDir, managerDataRootDir, resourcePath, supportedGameVersion } from "../../core/runtime-paths.js";
-import { checkRuntimeMigration, getStatus as runtimeGetStatus, installLoader as runtimeInstallLoader, launchGame as runtimeLaunchGame, listLibraryMods as runtimeListLibraryMods, migrateLegacyRuntimeMods, mountMod as runtimeMountMod, setRuntimeModsEnabled, uninstallLoader as runtimeUninstallLoader, unmountMod as runtimeUnmountMod, unpatchLegacyRuntimeMods } from "../../core/runtime-loader.js";
+import { checkRuntimeMigration, getStatus as runtimeGetStatus, installLoader as runtimeInstallLoader, launchGame as runtimeLaunchGame, listLibraryMods as runtimeListLibraryMods, migrateLegacyRuntimeMods, mountMod as runtimeMountMod, previewSpineBundle as runtimePreviewSpineBundle, setRuntimeModsEnabled, uninstallLoader as runtimeUninstallLoader, unmountMod as runtimeUnmountMod, unpatchLegacyRuntimeMods } from "../../core/runtime-loader.js";
 import type { AppInfo, ApplyPatchOptions, ApplyPatchResult, ModsIndex, PatchPlanEntry, PatchStateChange, SharedScanOptions } from "../../core/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -159,6 +159,7 @@ ipcMain.handle("runtime:install", async () => runtimeInstallLoader());
 ipcMain.handle("runtime:uninstall", async () => runtimeUninstallLoader());
 ipcMain.handle("runtime:set-enabled", async (_event, enabled: boolean) => setRuntimeModsEnabled(enabled));
 ipcMain.handle("runtime:list-library", async (_event, dir: string) => runtimeListLibraryMods(dir));
+ipcMain.handle("runtime:preview-spine", async (_event, args: { srcDir: string; key: string }) => runtimePreviewSpineBundle(args.srcDir, args.key));
 ipcMain.handle("runtime:mount", async (_event, args: { srcDir: string; folder?: string } | string) =>
   typeof args === "string" ? runtimeMountMod(args) : runtimeMountMod(args.srcDir, args.folder)
 );

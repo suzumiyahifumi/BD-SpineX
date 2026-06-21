@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { AppInfo, GameVersionInfo, LegacyRuntimeMigrationCheck } from "../../../core/types";
-import type { RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
+import type { PreviewSpineBundle, RuntimeMod, RuntimeStatus } from "../../../core/runtime-loader";
 
 type ActionResult = { ok: boolean; message: string };
 
@@ -59,6 +59,7 @@ export const bd2Api = {
   runtimeUninstall: () => invoke<ActionResult>("runtime_uninstall"),
   runtimeSetEnabled: (enabled: boolean) => invoke<ActionResult>("runtime_set_enabled", { enabled }),
   runtimeListLibrary: (dir: string) => invoke<RuntimeMod[]>("runtime_list_library", { dir }),
+  runtimePreviewSpine: (srcDir: string, key: string) => invoke<PreviewSpineBundle>("runtime_preview_spine", { srcDir, key }),
   runtimeMount: (srcDir: string, folder?: string) => invoke<ActionResult>("runtime_mount", { srcDir, folder }),
   runtimeUnmount: (folder: string) => invoke<ActionResult>("runtime_unmount", { folder }),
   runtimeLaunch: () => invoke<ActionResult>("runtime_launch"),
