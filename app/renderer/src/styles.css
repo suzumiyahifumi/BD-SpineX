@@ -4337,52 +4337,40 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   transform: translateX(calc(-50% - 2.5px)) translateY(5px) rotate(1.2deg);
 }
 
+/* embedded INTO the nameplate's kind bar (child of .rcartNameKind) */
 .rcartPreviewButton {
   position: absolute;
-  top: calc(100% + 17px);
-  right: 28px;
-  z-index: 9;
-  width: 52px;
-  height: 14px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid rgba(246, 198, 107, 0.92);
+  top: 1px;
+  bottom: 1px;
+  right: 24px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border: 1px solid var(--amber);
   border-radius: 0;
-  background: rgba(14, 13, 12, 0.86);
-  box-shadow:
-    inset 0 1px 0 rgba(237, 224, 196, 0.14),
-    2px 2px 0 rgba(0, 0, 0, 0.36);
+  background: rgba(232, 162, 44, 0.12);
   color: var(--amber);
   font-family: var(--cond);
   font-size: 8px;
-  font-weight: 850;
-  letter-spacing: 0.12em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
-  transform: none;
   transition:
     color var(--motion-duration-control) var(--motion-ease-snappy),
     border-color var(--motion-duration-control) var(--motion-ease-snappy),
-    background var(--motion-duration-control) var(--motion-ease-snappy),
-    transform var(--motion-duration-card) var(--motion-ease-smooth);
-}
-
-.rcartWrap:hover .rcartPreviewButton,
-.rcartWrap:focus-within .rcartPreviewButton {
-  transform: translateX(-2.5px) translateY(5px) rotate(1.2deg);
+    background var(--motion-duration-control) var(--motion-ease-snappy);
 }
 
 .rcartPreviewButton:hover,
 .rcartPreviewButton:focus-visible {
   outline: 0;
-  border-color: var(--red);
-  background: var(--red);
-  color: var(--paper);
-  box-shadow:
-    inset 0 1px 0 rgba(237, 224, 196, 0.18),
-    2px 2px 0 rgba(0, 0, 0, 0.44);
+  border-color: var(--amber);
+  background: var(--amber);
+  color: var(--ink);
 }
 
 .rcart.cat-dating {
@@ -4778,11 +4766,6 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     font-size: 13px;
   }
 
-  .rcartPreviewButton {
-    top: calc(100% + 15px);
-    right: 24px;
-    width: 48px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3232,24 +3232,26 @@ function CartridgeRealistic(props: {
         </span>
         <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
         <span className="rcartNamePlate" aria-hidden="true">
-          <span className="rcartNameKind">{pack}</span>
+          <span className="rcartNameKind">
+            {pack}
+            {onPreview ? (
+              <span
+                className="rcartPreviewButton"
+                role="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPreview();
+                }}
+                title={`Preview ${folderName}`}
+                aria-label={`Preview ${folderName}`}
+              >
+                ▶ Preview
+              </span>
+            ) : null}
+          </span>
           <strong>{displayTitle}</strong>
         </span>
       </button>
-      {onPreview ? (
-        <button
-          type="button"
-          className="rcartPreviewButton"
-          onClick={(event) => {
-            event.stopPropagation();
-            onPreview();
-          }}
-          title={`Preview ${folderName}`}
-          aria-label={`Preview ${folderName}`}
-        >
-          <span aria-hidden="true">PREV</span>
-        </button>
-      ) : null}
     </span>
   );
 }
@@ -3419,24 +3421,26 @@ function CanvasCartridge(props: {
         </span>
         <span className={`rcartPod is-${podTone} ${selected ? "on" : ""}`} aria-hidden="true"><span className="rcartPodMark">{podMark}</span></span>
         <span className="rcartNamePlate" aria-hidden="true">
-          <span className="rcartNameKind">{pack}</span>
+          <span className="rcartNameKind">
+            {pack}
+            {onPreview ? (
+              <span
+                className="rcartPreviewButton"
+                role="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPreview();
+                }}
+                title={`Preview ${folderName}`}
+                aria-label={`Preview ${folderName}`}
+              >
+                ▶ Preview
+              </span>
+            ) : null}
+          </span>
           <strong>{displayTitle}</strong>
         </span>
       </button>
-      {onPreview ? (
-        <button
-          type="button"
-          className="rcartPreviewButton"
-          onClick={(event) => {
-            event.stopPropagation();
-            onPreview();
-          }}
-          title={`Preview ${folderName}`}
-          aria-label={`Preview ${folderName}`}
-        >
-          <span aria-hidden="true">PREV</span>
-        </button>
-      ) : null}
     </span>
   );
 }
