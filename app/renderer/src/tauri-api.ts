@@ -12,6 +12,7 @@ export const bd2Api = {
   writeSettings: async (_settings: unknown) => true,
   openDetectedSharedFolder: async () => null as string | null,
   openRecordsFolder: async () => "",
+  openExternal: (url: string) => invoke<boolean>("open_external", { url }),
   getAppInfo: () => invoke<AppInfo>("get_app_info"),
   detectGameVersion: (_sharedDir?: string) => invoke<GameVersionInfo>("detect_game_version"),
   selectDirectory: () => invoke<string | null>("select_directory"),

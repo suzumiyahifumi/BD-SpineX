@@ -17,7 +17,7 @@ import {
 
 // Runtime-based BD-SpineX. The interaction model follows the original offline patch UI.
 // Stage 3 of the liquid-glass redesign: the top toolbar is replaced by a left glass
-// rail with routed views (Library / Roster / Profiles / Preview / Stats / Settings).
+// rail with routed views (Library / Roster / Preview / Stats / Logs / Settings).
 // All runtime logic and window.bd2 calls are unchanged.
 
 type LogEntry = { id: string; time: string; message: string; tone?: "ok" | "warn" | "err" };
@@ -53,6 +53,22 @@ type PreviewAnimationInfo = { name: string; duration: number };
 type PreviewSkinInfo = { name: string };
 type PreviewPartInfo = { name: string; alpha: number };
 type PreviewAnimLayer = { id: string; trackIndex: number; animation: string; alpha: number };
+type ConfirmTone = "info" | "warn" | "danger";
+type ConfirmDialogOptions = {
+  title: string;
+  body: ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  hideCancel?: boolean;
+  tone?: ConfirmTone;
+};
+type ConfirmDialogState = ConfirmDialogOptions & {
+  id: number;
+  closing?: boolean;
+  resolve: (confirmed: boolean) => void;
+};
+type ViewMotionPhase = "idle" | "leaving" | "entering";
+type ViewMotionDirection = "forward" | "back";
 type PreviewRuntimeInfo = {
   status: PreviewRuntimeStatus;
   error?: string;
@@ -79,24 +95,29 @@ type PreviewStageControls = {
 const PREVIEW_SPEED_OPTIONS = [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
 type ViewKey = "library" | "roster" | "profiles" | "preview" | "stats" | "logs" | "settings";
-type NavItem = { key: ViewKey; label: string; icon: string; group: "collection" | "tools" | "system" };
+type NavItem = { key: ViewKey; label: string; subtitle: string; icon: string; group: "collection" | "tools" | "system" };
 
 const NAV_ITEMS: NavItem[] = [
-  { key: "library", label: "Library", icon: "📚", group: "collection" },
-  { key: "roster", label: "Roster", icon: "🎭", group: "collection" },
-  { key: "profiles", label: "Profiles", icon: "💼", group: "collection" },
-  { key: "preview", label: "Preview", icon: "👁️", group: "tools" },
-  { key: "stats", label: "Stats", icon: "📊", group: "tools" },
-  { key: "logs", label: "Logs", icon: "🧾", group: "tools" },
-  { key: "settings", label: "Settings", icon: "⚙️", group: "system" }
+  { key: "library", label: "Library", subtitle: "Curate cartridges. Apply cleanly.", icon: "📚", group: "collection" },
+  { key: "roster", label: "Roster", subtitle: "Find mods by character.", icon: "🎭", group: "collection" },
+  { key: "profiles", label: "Profiles", subtitle: "Save loadouts for later.", icon: "💼", group: "collection" },
+  { key: "preview", label: "Preview", subtitle: "Inspect Spine before install.", icon: "👁️", group: "tools" },
+  { key: "stats", label: "Stats", subtitle: "Read coverage at a glance.", icon: "📊", group: "tools" },
+  { key: "logs", label: "Logs", subtitle: "Trace runtime events.", icon: "🧾", group: "tools" },
+  { key: "settings", label: "Settings", subtitle: "Tune paths, labels, and effects.", icon: "⚙️", group: "system" }
 ];
+const HIDDEN_NAV_KEYS = new Set<ViewKey>(["profiles"]);
+const VISIBLE_NAV_ITEMS = NAV_ITEMS.filter((item) => !HIDDEN_NAV_KEYS.has(item.key));
+const VIEW_MOTION_EXIT_MS = 110;
+const VIEW_MOTION_ENTER_MS = 320;
+const CONFIRM_EXIT_MS = 120;
 const NAV_GROUPS: { id: NavItem["group"]; label: string; en: string }[] = [
   { id: "collection", label: "收藏", en: "Collection" },
   { id: "tools", label: "工具", en: "Tools" },
   { id: "system", label: "系統", en: "System" }
 ];
 
-const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "Runtime Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0", development: false };
+const defaultAppInfo: AppInfo = { name: "BD-SpineX", subtitle: "PlayCover Mod Manager", version: "0.1.0", supportedGameVersion: "0.1.0", development: false };
 const MODSDIR_KEY = "bd-spinex:runtime-modsdir";
 const MIGRATION_DISMISSED_KEY = "bd-spinex:legacy-runtime-migration-dismissed";
 const MODVIEW_KEY = "bd-spinex:mod-view";
@@ -104,12 +125,32 @@ const AUTHOR_RULES_KEY = "bd-spinex:author-rules";
 const THEME_KEY = "bd-spinex:theme";
 const TAURI_CANVAS_CARTRIDGE_KEY = "bd-spinex:tauri-canvas-cartridge";
 const TAURI_CSS_CARTRIDGE_KEY = "bd-spinex:tauri-css-cartridge";
+const BD_SPINEX_RELEASES_URL = "https://github.com/suzumiyahifumi/BD-SpineX/releases";
 type ModView = "grid" | "list";
 type Theme = "night";
 const ACTIVE_THEME: Theme = "night";
 const THEMES: { key: Theme; label: string }[] = [
   { key: ACTIVE_THEME, label: "Night Press" }
 ];
+
+// Color palettes — the print "skin" (data-theme=night) stays; only the color
+// tokens are swapped via data-accent. Add a palette by overriding tokens under
+// :root[data-theme="night"][data-accent="<key>"] in styles.css.
+type Accent = "press" | "violet" | "orchid";
+const ACCENT_KEY = "bd-spinex:accent";
+const PALETTES: { key: Accent; label: string }[] = [
+  { key: "press", label: "Night Press" },
+  { key: "violet", label: "Violet Press" },
+  { key: "orchid", label: "Orchid Press" }
+];
+function readAccent(): Accent {
+  try {
+    const v = localStorage.getItem(ACCENT_KEY);
+    return v === "violet" || v === "orchid" ? v : "press";
+  } catch {
+    return "press";
+  }
+}
 
 const AUTHOR_COLORS = [
   "#3f5365",
@@ -402,6 +443,26 @@ function applyPreviewAnimationLayers(spine: Spine, layers: PreviewAnimLayer[], f
   spine.state.timeScale = playing ? speed : 0;
 }
 
+function applyPreviewPartAlphaOverrides(spine: Spine, overrides: Map<string, number>) {
+  if (overrides.size === 0) return;
+  for (const [name, alpha] of overrides) {
+    const slot = spine.skeleton.findSlot(name);
+    if (!slot) continue;
+    const nextAlpha = Math.max(0, Math.min(1, alpha));
+    slot.color.a = nextAlpha;
+    const slotContainer = spine.slotContainers[slot.data.index];
+    if (slotContainer) slotContainer.alpha = nextAlpha;
+  }
+}
+
+function updatePreviewSpinePose(spine: Spine, dt: number, partAlphaOverrides: Map<string, number>) {
+  // Pixi Spine does not reset setup pose before applying state; without this,
+  // switching partial animations can leave stale slot attachments/colors behind.
+  spine.skeleton.setToSetupPose();
+  spine.update(dt);
+  applyPreviewPartAlphaOverrides(spine, partAlphaOverrides);
+}
+
 function PreviewSpineRenderer({
   mod,
   animationLayers,
@@ -422,6 +483,7 @@ function PreviewSpineRenderer({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const spineRef = useRef<Spine | null>(null);
   const animationLayersRef = useRef(animationLayers);
+  const partAlphaOverridesRef = useRef(new Map<string, number>());
   const fitRef = useRef<(() => void) | null>(null);
   const emitRef = useRef<(() => void) | null>(null);
   const runtimeRef = useRef({
@@ -439,6 +501,7 @@ function PreviewSpineRenderer({
       const runtime = runtimeRef.current;
       runtime.selectedAnimation = animationLayers.find((layer) => layer.trackIndex === 0)?.animation ?? runtime.defaultAnimation;
       applyPreviewAnimationLayers(spine, animationLayers, runtime.defaultAnimation, runtime.playing, runtime.speed);
+      updatePreviewSpinePose(spine, 0, partAlphaOverridesRef.current);
     }
     emitRef.current?.();
   }, [animationLayers]);
@@ -460,6 +523,7 @@ function PreviewSpineRenderer({
     if (!host || !mod) {
       controlsRef.current[slot] = null;
       spineRef.current = null;
+      partAlphaOverridesRef.current.clear();
       onStateChange(slot, emptyPreviewRuntimeInfo());
       return;
     }
@@ -471,6 +535,7 @@ function PreviewSpineRenderer({
     let panX = 0;
     let panY = 0;
     let lastProgressAt = 0;
+    partAlphaOverridesRef.current.clear();
     const app = new PIXI.Application<HTMLCanvasElement>({
       resizeTo: host,
       backgroundAlpha: 0,
@@ -595,7 +660,7 @@ function PreviewSpineRenderer({
           onDefaultAnimation(slot, defaultAnimation);
         }
         applyPreviewAnimationLayers(spine, animationLayersRef.current, defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
-        spine.update(0);
+        updatePreviewSpinePose(spine, 0, partAlphaOverridesRef.current);
         applyFit();
 
         controlsRef.current[slot] = {
@@ -614,14 +679,14 @@ function PreviewSpineRenderer({
               : [createPreviewAnimLayer(name, 0)];
             animationLayersRef.current = nextLayers;
             applyPreviewAnimationLayers(spine, nextLayers, runtimeRef.current.defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
+            updatePreviewSpinePose(spine, 0, partAlphaOverridesRef.current);
             emit({ progress: 0 });
           },
           setSkin: (name: string) => {
             if (!spine || !name) return;
             runtimeRef.current.selectedSkin = name;
             spine.skeleton.setSkinByName(name);
-            spine.skeleton.setSlotsToSetupPose();
-            spine.update(0);
+            updatePreviewSpinePose(spine, 0, partAlphaOverridesRef.current);
             emit();
           },
           setSpeed: (nextSpeed: number) => {
@@ -635,7 +700,8 @@ function PreviewSpineRenderer({
             if (!spine) return;
             const part = spine.skeleton.findSlot(name);
             if (!part) return;
-            part.color.a = Math.max(0, Math.min(1, alpha));
+            partAlphaOverridesRef.current.set(name, Math.max(0, Math.min(1, alpha)));
+            applyPreviewPartAlphaOverrides(spine, partAlphaOverridesRef.current);
             emit();
           },
           setAnimationLayer: (layerId: string, animation: string) => {
@@ -644,6 +710,7 @@ function PreviewSpineRenderer({
             animationLayersRef.current = nextLayers;
             runtimeRef.current.selectedAnimation = nextLayers.find((layer) => layer.trackIndex === 0)?.animation ?? runtimeRef.current.defaultAnimation;
             applyPreviewAnimationLayers(spine, nextLayers, runtimeRef.current.defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
+            updatePreviewSpinePose(spine, 0, partAlphaOverridesRef.current);
             emit();
           },
           setAnimationLayerAlpha: (layerId: string, alpha: number) => {
@@ -651,6 +718,7 @@ function PreviewSpineRenderer({
             const nextLayers = animationLayersRef.current.map((layer) => layer.id === layerId ? { ...layer, alpha } : layer);
             animationLayersRef.current = nextLayers;
             applyPreviewAnimationLayers(spine, nextLayers, runtimeRef.current.defaultAnimation, runtimeRef.current.playing, runtimeRef.current.speed);
+            updatePreviewSpinePose(spine, 0, partAlphaOverridesRef.current);
             emit();
           },
           resetView: () => {
@@ -674,7 +742,7 @@ function PreviewSpineRenderer({
 
     const tick = () => {
       if (!spine) return;
-      spine.update(app.ticker.deltaMS / 1000);
+      updatePreviewSpinePose(spine, app.ticker.deltaMS / 1000, partAlphaOverridesRef.current);
       const now = performance.now();
       if (now - lastProgressAt > 100) {
         lastProgressAt = now;
@@ -712,7 +780,15 @@ export function App() {
 
   const [appInfo, setAppInfo] = useState<AppInfo>(defaultAppInfo);
   const [gameVersionInfo, setGameVersionInfo] = useState<GameVersionInfo | null>(null);
-  const [view, setView] = useState<ViewKey>("library");
+  const [view, setActiveView] = useState<ViewKey>("library");
+  const [viewMotion, setViewMotion] = useState<{ phase: ViewMotionPhase; direction: ViewMotionDirection }>({
+    phase: "idle",
+    direction: "forward"
+  });
+  const viewRef = useRef<ViewKey>("library");
+  const pendingViewRef = useRef<ViewKey>("library");
+  const viewLeaveTimerRef = useRef<number | null>(null);
+  const viewEnterTimerRef = useRef<number | null>(null);
   const [rosterSearch, setRosterSearch] = useState("");
   const [rosterMode, setRosterMode] = useState<"mods" | "az" | "modded">("mods");
   const [openRosterChar, setOpenRosterChar] = useState<string | null>(null);
@@ -746,6 +822,12 @@ export function App() {
   const [backdropParticlesEnabled, setBackdropParticlesEnabled] = useState(true);
   const [tauriCanvasCartridges] = useState(readTauriCanvasCartridgeMode);
   const theme = ACTIVE_THEME;
+  const [accent, setAccent] = useState<Accent>(readAccent);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-accent", accent);
+    try { localStorage.setItem(ACCENT_KEY, accent); } catch { /* ignore */ }
+  }, [accent]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", ACTIVE_THEME);
@@ -763,8 +845,101 @@ export function App() {
   const rosterGridRef = useRef<HTMLDivElement | null>(null);
   const pendingSpotlightTimerRef = useRef<number | null>(null);
   const backdropSlotTimerRef = useRef<number | null>(null);
+  const confirmDialogRef = useRef<ConfirmDialogState | null>(null);
+  const confirmDialogIdRef = useRef(0);
+  const confirmCloseTimerRef = useRef<number | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
 
   const log = useCallback((message: string, tone?: LogEntry["tone"]) => pushLog(setLogs, message, tone), []);
+
+  const clearViewMotionTimers = useCallback(() => {
+    if (viewLeaveTimerRef.current) {
+      window.clearTimeout(viewLeaveTimerRef.current);
+      viewLeaveTimerRef.current = null;
+    }
+    if (viewEnterTimerRef.current) {
+      window.clearTimeout(viewEnterTimerRef.current);
+      viewEnterTimerRef.current = null;
+    }
+  }, []);
+
+  const navigateToView = useCallback((nextView: ViewKey) => {
+    const fromView = pendingViewRef.current;
+    if (nextView === fromView) return;
+
+    const fromIndex = Math.max(0, VISIBLE_NAV_ITEMS.findIndex((item) => item.key === fromView));
+    const nextIndex = Math.max(0, VISIBLE_NAV_ITEMS.findIndex((item) => item.key === nextView));
+    const direction: ViewMotionDirection = nextIndex >= fromIndex ? "forward" : "back";
+
+    pendingViewRef.current = nextView;
+    clearViewMotionTimers();
+
+    if (prefersReducedMotion()) {
+      viewRef.current = nextView;
+      setActiveView(nextView);
+      setViewMotion({ phase: "idle", direction });
+      return;
+    }
+
+    setViewMotion({ phase: "leaving", direction });
+    viewLeaveTimerRef.current = window.setTimeout(() => {
+      viewRef.current = nextView;
+      setActiveView(nextView);
+      setViewMotion({ phase: "entering", direction });
+      viewLeaveTimerRef.current = null;
+      viewEnterTimerRef.current = window.setTimeout(() => {
+        setViewMotion((current) => current.phase === "entering" ? { phase: "idle", direction } : current);
+        viewEnterTimerRef.current = null;
+      }, VIEW_MOTION_ENTER_MS);
+    }, VIEW_MOTION_EXIT_MS);
+  }, [clearViewMotionTimers]);
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  const requestConfirm = useCallback((options: ConfirmDialogOptions) => new Promise<boolean>((resolve) => {
+    if (confirmCloseTimerRef.current) {
+      window.clearTimeout(confirmCloseTimerRef.current);
+      confirmCloseTimerRef.current = null;
+    }
+    if (confirmDialogRef.current) confirmDialogRef.current.resolve(false);
+    const request: ConfirmDialogState = {
+      tone: "warn",
+      confirmLabel: "Confirm",
+      cancelLabel: "Cancel",
+      ...options,
+      id: confirmDialogIdRef.current += 1,
+      resolve
+    };
+    confirmDialogRef.current = request;
+    setConfirmDialog(request);
+  }), []);
+
+  const closeConfirmDialog = useCallback((confirmed: boolean) => {
+    const request = confirmDialogRef.current;
+    if (!request || request.closing) return;
+    const closeDelay = prefersReducedMotion() ? 0 : CONFIRM_EXIT_MS;
+    const closingRequest = { ...request, closing: true };
+    confirmDialogRef.current = closingRequest;
+    setConfirmDialog((current) => current?.id === request.id ? closingRequest : current);
+    confirmCloseTimerRef.current = window.setTimeout(() => {
+      confirmDialogRef.current = null;
+      confirmCloseTimerRef.current = null;
+      setConfirmDialog(null);
+      request.resolve(confirmed);
+    }, closeDelay);
+  }, []);
+
+  useEffect(() => {
+    if (!confirmDialog) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeConfirmDialog(false);
+      if ((event.key === "Enter" || event.key === " ") && event.metaKey) closeConfirmDialog(true);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closeConfirmDialog, confirmDialog]);
 
   const stopBackdropSlotRoll = useCallback((finalCharacter?: DetectedCharacter | null) => {
     if (backdropSlotTimerRef.current) {
@@ -832,8 +1007,11 @@ export function App() {
     return () => {
       if (pendingSpotlightTimerRef.current) window.clearTimeout(pendingSpotlightTimerRef.current);
       if (backdropSlotTimerRef.current) window.clearTimeout(backdropSlotTimerRef.current);
+      if (confirmCloseTimerRef.current) window.clearTimeout(confirmCloseTimerRef.current);
+      if (confirmDialogRef.current) confirmDialogRef.current.resolve(false);
+      clearViewMotionTimers();
     };
-  }, []);
+  }, [clearViewMotionTimers]);
 
   useEffect(() => {
     const handleBackdropCharacter = (event: Event) => {
@@ -893,6 +1071,7 @@ export function App() {
   const hasConflict = useMemo(() => pendingChanges.some((c) => c.conflict), [pendingChanges]);
 
   const versionLocked = isGameVersionMismatch(appInfo, gameVersionInfo);
+  const showVersionReleaseLink = isDetectedGameVersionMismatch(appInfo, gameVersionInfo);
   const injectionVersionLocked = isDetectedGameVersionMismatch(appInfo, gameVersionInfo);
   const injectionVersionLockMessage = formatInjectionVersionLockMessage(appInfo, gameVersionInfo);
   const appReady = Boolean(status?.appFound && status?.loaderAvailable);
@@ -905,15 +1084,14 @@ export function App() {
   const backgroundCharacterTitle = backgroundCharacter
     ? `${backgroundCharacter.character}\n${backgroundCharacter.costume}\nCharacter ID ${backgroundCharacter.id}`
     : "Waiting for backdrop character";
-  const injectionActionLocked = busy || gameRunning;
-  const injectionLocked = injectionActionLocked || injectionVersionLocked;
-  const injectionLockTitle = injectionVersionLocked
+  const injectionInstallLocked = busy || injectionVersionLocked;
+  const injectionRemoveLocked = busy;
+  const injectionInstallTitle = injectionVersionLocked
     ? injectionVersionLockMessage
-    : gameRunning
-      ? "Close BrownDust II before changing injection"
-      : busy
-        ? "Action running"
-        : "";
+    : busy
+      ? "Action running"
+      : "";
+  const injectionRemoveTitle = busy ? "Action running" : "";
   const missingModsDir = !modsDir;
   const modsActionLocked = busy;
   const modsLocked = busy || versionLocked || !appReady || injectionMissing || missingModsDir;
@@ -924,6 +1102,13 @@ export function App() {
   const selectableVisibleMods = visibleMods;
   const allVisibleModsSelected = selectableVisibleMods.length > 0 && selectableVisibleMods.every((m) => isDesired(m.folder));
   const hasChanges = pendingChanges.some((c) => !c.implicit);
+
+  const handleOpenGithubReleases = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    void window.bd2.openExternal(BD_SPINEX_RELEASES_URL).catch(() => {
+      window.open(BD_SPINEX_RELEASES_URL, "_blank", "noopener,noreferrer");
+    });
+  }, []);
 
   const registerCartNode = useCallback((folder: string, node: HTMLButtonElement | null) => {
     if (node) cartNodeRefs.current.set(folder, node);
@@ -969,7 +1154,7 @@ export function App() {
     setHoveredPendingFolder(folder);
     setPendingScrollTarget(folder);
     spotlightPendingFolder(folder);
-    if (view !== "library") setView("library");
+    if (view !== "library") navigateToView("library");
     if (modView !== "grid") {
       setModView("grid");
       localStorage.setItem(MODVIEW_KEY, "grid");
@@ -980,7 +1165,7 @@ export function App() {
     window.requestAnimationFrame(() => {
       if (scrollCartIntoView(folder)) setPendingScrollTarget(null);
     });
-  }, [library, modView, scrollCartIntoView, spotlightPendingFolder, view, visibleMods]);
+  }, [library, modView, navigateToView, scrollCartIntoView, spotlightPendingFolder, view, visibleMods]);
 
   const selectDir = useCallback(async () => {
     const dir = await window.bd2.selectDirectory();
@@ -1044,17 +1229,38 @@ export function App() {
     });
     setNewAuthorName("");
   }
-  function removeAuthorRule(id: string) {
-    setAuthorRules((cur) => {
-      const next = cur.filter((rule) => rule.id !== id || !rule.custom);
-      persistAuthorRules(next);
-      return next;
-    });
-  }
-  function resetAuthorRules() {
-    setAuthorRules(DEFAULT_AUTHOR_RULES);
-    persistAuthorRules(DEFAULT_AUTHOR_RULES);
-  }
+  const removeAuthorRule = useCallback((id: string) => {
+    const rule = authorRules.find((item) => item.id === id);
+    if (!rule?.custom) return;
+    void (async () => {
+      const confirmed = await requestConfirm({
+        title: "Remove Author Label?",
+        body: <>Remove <b>{rule.name}</b> from Author Labels. Existing cartridges will fall back to the default author matching rules.</>,
+        confirmLabel: "Remove",
+        tone: "danger"
+      });
+      if (!confirmed) return;
+      setAuthorRules((cur) => {
+        const next = cur.filter((item) => item.id !== id || !item.custom);
+        persistAuthorRules(next);
+        return next;
+      });
+    })();
+  }, [authorRules, requestConfirm]);
+
+  const resetAuthorRules = useCallback(() => {
+    void (async () => {
+      const confirmed = await requestConfirm({
+        title: "Reset Author Labels?",
+        body: "Restore the default Author Labels and remove every custom label you added.",
+        confirmLabel: "Reset",
+        tone: "danger"
+      });
+      if (!confirmed) return;
+      setAuthorRules(DEFAULT_AUTHOR_RULES);
+      persistAuthorRules(DEFAULT_AUTHOR_RULES);
+    })();
+  }, [requestConfirm]);
 
   const runTask = useCallback(
     async (fn: () => Promise<void>) => {
@@ -1066,71 +1272,160 @@ export function App() {
     [log, refreshStatus]
   );
 
-  const installLoader = useCallback(() => {
-    if (injectionVersionLocked) {
-      log(injectionVersionLockMessage, "err");
-      return;
+  const guardGameClosed = useCallback(async (actionLabel: string) => {
+    try {
+      const latest = await refreshStatus();
+      if (!latest.gameRunning) return true;
+      log(`${actionLabel} blocked: close BrownDust II first.`, "warn");
+      await requestConfirm({
+        title: "BrownDust II Is Running",
+        body: `${actionLabel} cannot continue while BrownDust II is running. Close the game, then try again.`,
+        confirmLabel: "OK",
+        hideCancel: true,
+        tone: "danger"
+      });
+      return false;
+    } catch (error) {
+      log(`Could not check game status: ${String(error)}`, "err");
+      await requestConfirm({
+        title: "Could Not Check Game Status",
+        body: "BD-SpineX could not verify whether BrownDust II is running. Close the game, then try again.",
+        confirmLabel: "OK",
+        hideCancel: true,
+        tone: "danger"
+      });
+      return false;
     }
-    if (!window.confirm("Install Runtime Injection into the BrownDust II executable? Close the game before continuing.")) return;
-    void runTask(async () => {
-      const r = await window.bd2.runtimeInstall();
-      log(r.message, r.ok ? "ok" : "err");
-    });
-  }, [injectionVersionLocked, injectionVersionLockMessage, runTask, log]);
+  }, [log, refreshStatus, requestConfirm]);
+
+  const installLoader = useCallback(() => {
+    void (async () => {
+      if (!(await guardGameClosed("Install Runtime Injection"))) return;
+      if (injectionVersionLocked) {
+        log(injectionVersionLockMessage, "err");
+        return;
+      }
+      if (!window.confirm("Install Runtime Injection into the BrownDust II executable? Close the game before continuing.")) return;
+      if (!(await guardGameClosed("Install Runtime Injection"))) return;
+      void runTask(async () => {
+        const r = await window.bd2.runtimeInstall();
+        log(r.message, r.ok ? "ok" : "err");
+      });
+    })();
+  }, [guardGameClosed, injectionVersionLocked, injectionVersionLockMessage, runTask, log]);
 
   const uninstallLoader = useCallback(() => {
-    if (!window.confirm("Remove Runtime Injection and restore the original BrownDust II executable? Close the game before continuing.")) return;
-    void runTask(async () => {
-      const r = await window.bd2.runtimeUninstall();
-      log(r.message, r.ok ? "ok" : "warn");
-    });
-  }, [runTask, log]);
+    void (async () => {
+      if (!(await guardGameClosed("Remove Runtime Injection"))) return;
+      if (!window.confirm("Remove Runtime Injection and restore the original BrownDust II executable? Close the game before continuing.")) return;
+      if (!(await guardGameClosed("Remove Runtime Injection"))) return;
+      void runTask(async () => {
+        const r = await window.bd2.runtimeUninstall();
+        log(r.message, r.ok ? "ok" : "warn");
+      });
+    })();
+  }, [guardGameClosed, runTask, log]);
 
   const toggleModPower = useCallback(() => {
-    void runTask(async () => {
-      const r = await window.bd2.runtimeSetEnabled(!modsEnabled);
-      log(r.message, r.ok ? "ok" : "err");
-    });
-  }, [runTask, modsEnabled, log]);
+    void (async () => {
+      if (!(await guardGameClosed("Mod Power"))) return;
+      const nextEnabled = !modsEnabled;
+      const confirmed = await requestConfirm({
+        title: nextEnabled ? "Restore Mod Power?" : "Turn Off Mod Power?",
+        body: nextEnabled
+          ? "Enable runtime mod loading again. Mounted files stay in place and will take effect when the game reads them."
+          : "Disable all runtime mods without uninstalling mounted files. You can turn Mod Power back on later.",
+        confirmLabel: nextEnabled ? "Turn On" : "Turn Off",
+        tone: nextEnabled ? "warn" : "danger"
+      });
+      if (!confirmed) return;
+      if (!(await guardGameClosed("Mod Power"))) return;
+      void runTask(async () => {
+        const r = await window.bd2.runtimeSetEnabled(!modsEnabled);
+        log(r.message, r.ok ? "ok" : "err");
+      });
+    })();
+  }, [guardGameClosed, requestConfirm, runTask, modsEnabled, log]);
 
   const applyChanges = useCallback(() => {
-    void runTask(async () => {
-      if (pendingChanges.length === 0 || hasConflict) return;
-      const byFolder = new Map(library.map((m) => [m.folder, m]));
-      let mounted = 0, unmounted = 0;
-      for (const c of pendingChanges.filter((c) => !c.enabled)) {
-        const r = await window.bd2.runtimeUnmount(c.folder);
-        log(`${r.message}${c.implicit ? " (auto)" : ""}`, r.ok ? "ok" : "warn");
-        if (r.ok) unmounted++;
-      }
-      for (const c of pendingChanges.filter((c) => c.enabled)) {
-        const mod = byFolder.get(c.folder);
-        if (!mod) continue;
-        const r = await window.bd2.runtimeMount(mod.path, mod.folder);
-        log(r.message, r.ok ? "ok" : "err");
-        if (r.ok) mounted++;
-      }
-      setDesired({});
-      log(`Applied: ${mounted} mounted, ${unmounted} unmounted. Restart the game to apply changes.`, "ok");
-      if (mounted > 0 && !status?.injected) {
-        log("Runtime Injection is not installed yet. Mounted mods will not take effect until injection is installed.", "warn");
-      }
-    });
-  }, [runTask, pendingChanges, hasConflict, status, library, log]);
+    void (async () => {
+      if (modsLocked || pendingChanges.length === 0 || hasConflict) return;
+      if (!(await guardGameClosed("Apply Changes"))) return;
+      const mountCount = pendingChanges.filter((change) => change.enabled).length;
+      const unmountCount = pendingChanges.length - mountCount;
+      const confirmed = await requestConfirm({
+        title: "Apply Changes?",
+        body: (
+          <>
+            Apply <b>{pendingChanges.length}</b> staged change{pendingChanges.length === 1 ? "" : "s"}:
+            {" "}<b>{mountCount}</b> mount, <b>{unmountCount}</b> unmount. Restart Brown Dust II after applying.
+          </>
+        ),
+        confirmLabel: "Apply",
+        tone: "warn"
+      });
+      if (!confirmed) return;
+      if (!(await guardGameClosed("Apply Changes"))) return;
+      void runTask(async () => {
+        const byFolder = new Map(library.map((m) => [m.folder, m]));
+        let mounted = 0, unmounted = 0;
+        for (const c of pendingChanges.filter((c) => !c.enabled)) {
+          const r = await window.bd2.runtimeUnmount(c.folder);
+          log(`${r.message}${c.implicit ? " (auto)" : ""}`, r.ok ? "ok" : "warn");
+          if (r.ok) unmounted++;
+        }
+        for (const c of pendingChanges.filter((c) => c.enabled)) {
+          const mod = byFolder.get(c.folder);
+          if (!mod) continue;
+          const r = await window.bd2.runtimeMount(mod.path, mod.folder);
+          log(r.message, r.ok ? "ok" : "err");
+          if (r.ok) mounted++;
+        }
+        setDesired({});
+        log(`Applied: ${mounted} mounted, ${unmounted} unmounted. Restart the game to apply changes.`, "ok");
+        if (mounted > 0 && !status?.injected) {
+          log("Runtime Injection is not installed yet. Mounted mods will not take effect until injection is installed.", "warn");
+        }
+      });
+    })();
+  }, [guardGameClosed, requestConfirm, runTask, modsLocked, pendingChanges, hasConflict, status, library, log]);
 
   const restoreAll = useCallback(() => {
-    if (!window.confirm(`Unmount all ${mountedMods.length} mounted mod(s)? Runtime Injection will stay installed.`)) return;
-    if (!window.confirm("This removes all mounted runtime mod files from the game container. Your source Mods Folder will not be changed. Continue?")) return;
-    void runTask(async () => {
-      for (const m of mountedMods) {
-        const r = await window.bd2.runtimeUnmount(m.folder);
-        log(r.message, r.ok ? "ok" : "warn");
+    void (async () => {
+      if (!(await guardGameClosed("Restore All"))) return;
+      if (mountedMods.length === 0) {
+        await requestConfirm({
+          title: "Nothing To Restore",
+          body: "There are no mounted runtime mods to unmount right now.",
+          confirmLabel: "OK",
+          hideCancel: true,
+          tone: "info"
+        });
+        return;
       }
-      const p = await window.bd2.runtimeSetEnabled(true);
-      log(p.message, p.ok ? "ok" : "warn");
-      setDesired({});
-    });
-  }, [runTask, mountedMods, log]);
+      const confirmed = await requestConfirm({
+        title: "Restore All Mounted Mods?",
+        body: (
+          <>
+            Unmount all <b>{mountedMods.length}</b> mounted mod{mountedMods.length === 1 ? "" : "s"}. Runtime Injection stays installed, and your source Mods Folder will not be changed.
+          </>
+        ),
+        confirmLabel: "Restore All",
+        tone: "danger"
+      });
+      if (!confirmed) return;
+      if (!(await guardGameClosed("Restore All"))) return;
+      void runTask(async () => {
+        for (const m of mountedMods) {
+          const r = await window.bd2.runtimeUnmount(m.folder);
+          log(r.message, r.ok ? "ok" : "warn");
+        }
+        const p = await window.bd2.runtimeSetEnabled(true);
+        log(p.message, p.ok ? "ok" : "warn");
+        setDesired({});
+      });
+    })();
+  }, [guardGameClosed, requestConfirm, runTask, mountedMods, log]);
 
   const launchGame = useCallback(() => {
     void runTask(async () => {
@@ -1206,7 +1501,7 @@ export function App() {
   }, [modsDir, log, refreshStatus, scanLibrary]);
 
   // ===== view fragments =====
-  const activeNav = NAV_ITEMS.find((n) => n.key === view) ?? NAV_ITEMS[0];
+  const activeNav = VISIBLE_NAV_ITEMS.find((n) => n.key === view) ?? VISIBLE_NAV_ITEMS[0];
 
   const globalBanners = (
     <div className="bannerStack">
@@ -1342,7 +1637,7 @@ export function App() {
               <div className="panelTitle titleWithHelp">
                 <span>Cartridges</span>
                 <HelpButton title="Mod cartridges">
-                  Each mod is a game cartridge. Click a cartridge to stage it for mounting, or click a mounted one to stage removal. Lit gold contact pins mean it is mounted; a green/red/purple frame means staged add / staged removal / same-key conflict. Switch to List for a dense sortable table.
+                  Click a cartridge to stage it. Click a mounted cartridge to stage removal. Gold contact pins mean mounted. Green means mount, red means remove, and purple means conflict. Use List when you want sorting.
                 </HelpButton>
               </div>
               <div className="tableHint">{visibleMods.length} shown / {library.length} scanned</div>
@@ -1704,7 +1999,7 @@ export function App() {
     replacePreviewMod("b", null);
     setPvMode("single");
     setPvFocus("a");
-    setView("preview");
+    navigateToView("preview");
   };
   const renderPvStage = (slot: PreviewSlotKey) => {
     const mod = slot === "b" ? pvSlotB : pvSlotA;
@@ -2148,24 +2443,24 @@ export function App() {
                 <span>{status?.injected ? "Installed · re-signed" : "Not installed"}</span>
               </div>
               <HelpButton title="Runtime Injection">
-                Installs the loader into the game executable after backing up and re-signing it. Close BrownDust II before installing or removing injection. Mounted mods take effect the next time the game starts. Removing injection restores the original executable but keeps mounted mod files in place. Reinstall injection after a game update.
+                Install this once before using runtime mods. Close BrownDust II before installing or removing it. Remove it when the game updates or when you want to restore the original app. Mounted mods stay in place.
               </HelpButton>
-              <div className="cfgConsoleBtns" aria-disabled={injectionLocked || !appReady}>
+              <div className="cfgConsoleBtns" aria-disabled={(injectionInstallLocked || !appReady || Boolean(status?.injected)) && (injectionRemoveLocked || !status?.injected)}>
                 <button
                   type="button"
                   className="cfgBtn primary"
-                  disabled={injectionLocked || !appReady || Boolean(status?.injected)}
+                  disabled={injectionInstallLocked || !appReady || Boolean(status?.injected)}
                   onClick={installLoader}
-                  title={injectionLockTitle}
+                  title={injectionInstallTitle}
                 >
                   Install
                 </button>
                 <button
                   type="button"
                   className="cfgBtn"
-                  disabled={injectionLocked || !status?.injected}
+                  disabled={injectionRemoveLocked || !status?.injected}
                   onClick={uninstallLoader}
-                  title={injectionLockTitle}
+                  title={injectionRemoveTitle}
                 >
                   Remove
                 </button>
@@ -2179,7 +2474,7 @@ export function App() {
           <div className="cfgCard">
             <div className="cfgFieldHead">
               <span>Mods Folder</span>
-              <HelpButton title="Mods Folder">Choose the folder containing your mods. The Library view reads cartridges from here.</HelpButton>
+              <HelpButton title="Mods Folder">Choose the folder where your downloaded mods are stored. After choosing it, Library scans the folder and shows the mods as cartridges.</HelpButton>
             </div>
             <div className={`cfgSlot ${missingModsDir ? "is-invalid" : ""}`}>
               <input className="cfgPath" value={modsDir} onChange={(e) => setModsDir(e.target.value)} placeholder="No folder selected — choose one to load cartridges" spellCheck={false} />
@@ -2193,7 +2488,7 @@ export function App() {
           <div className="cfgCard">
             <div className="cfgFieldHead">
               <span>Author Labels</span>
-              <HelpButton title="Author Labels">Cartridge author stickers are detected from the mod path, folder, or key. Default names come from BD2ModManager's author index; add aliases here when your local folder names use a different author keyword.</HelpButton>
+              <HelpButton title="Author Labels">Use this when an author sticker is missing or wrong. Add an author name or alias, choose its color, and the matching cartridges will use that label. Reset restores the default list.</HelpButton>
               <button type="button" className="cfgBtn cfgHeadBtn" onClick={resetAuthorRules}>Reset</button>
             </div>
             <form className="cfgAuthorAdd" onSubmit={(e) => { e.preventDefault(); addAuthorRule(); }}>
@@ -2221,12 +2516,12 @@ export function App() {
           <div className="cfgCard cfgAppearance">
             <div className="cfgFieldHead">
               <span>Theme</span>
-              <HelpButton title="Theme">Night Press is the fixed interface skin: Soviet-print chrome layered over the original dark glass base. Cartridge artwork stays unchanged.</HelpButton>
+              <HelpButton title="Theme">Pick the print color palette. Night Press is the warm Soviet-print default; Violet Press recolors the same print chrome in iridescent violet + cyan to match the app icon. Cartridge artwork is unchanged.</HelpButton>
             </div>
             <div className="themeSwitch segmentedControl" role="tablist" aria-label="Theme">
-              {THEMES.map((t) => (
-                <button key={t.key} type="button" className={theme === t.key ? "active" : ""} onClick={() => updateTheme(t.key)} aria-pressed={theme === t.key}>
-                  <span>{t.label}</span>
+              {PALETTES.map((p) => (
+                <button key={p.key} type="button" className={accent === p.key ? "active" : ""} onClick={() => setAccent(p.key)} aria-pressed={accent === p.key}>
+                  <span>{p.label}</span>
                 </button>
               ))}
             </div>
@@ -2234,7 +2529,7 @@ export function App() {
           <div className="cfgCard cfgBackdropEffects">
             <div className="cfgFieldHead">
               <span>Backdrop Effects</span>
-              <HelpButton title="Backdrop Effects">Toggle the animated square particle layer used by the character backdrop.</HelpButton>
+              <HelpButton title="Backdrop Effects">Turn Square Particles on or off. Disable them if you want a calmer background or smoother scrolling.</HelpButton>
             </div>
             <label className="cfgToggleRow">
               <span className="cfgToggleCopy">
@@ -2259,6 +2554,18 @@ export function App() {
           <div className="cfgColophon">
             <div className="cfgColoRow"><span className="cfgColoReg" aria-hidden="true" /><span className="k">App</span><span className="v">{appInfo.name} · {appInfo.subtitle} · v{appInfo.version}</span></div>
             <div className="cfgColoRow"><span className="cfgColoReg" aria-hidden="true" /><span className="k">Game</span><span className="v">BrownDust II · {gameVersionInfo?.version ?? "unknown"}</span></div>
+            {showVersionReleaseLink && (
+              <div className="cfgVersionNotice" role="status">
+                <span className="cfgColoReg" aria-hidden="true" />
+                <div className="cfgVersionCopy">
+                  <span className="cfgVersionK">Version mismatch</span>
+                  <span className="cfgVersionV">Supported BrownDust II {appInfo.supportedGameVersion || appInfo.version} · detected {gameVersionInfo?.version ?? "unknown"}</span>
+                </div>
+                <a className="cfgGithubLink" href={BD_SPINEX_RELEASES_URL} target="_blank" rel="noreferrer" onClick={handleOpenGithubReleases}>
+                  Open GitHub
+                </a>
+              </div>
+            )}
             <div className="cfgColoRow"><span className="cfgColoReg" aria-hidden="true" /><span className="k">Runtime</span><span className="v">{status?.injected ? "Injected" : "Not injected"} · {mountedMods.length} mounted · {status?.loaderAvailable ? "loader ready" : "loader missing"}</span></div>
           </div>
         </section>
@@ -2324,7 +2631,7 @@ export function App() {
         <button
           type="button"
           className="dockBtn"
-          disabled={busy || mountedMods.length === 0}
+          disabled={busy}
           onClick={restoreAll}
           title={mountedMods.length === 0 ? "No mounted mods to remove" : "Restore All — unmount every mounted cartridge"}
         >
@@ -2356,6 +2663,64 @@ export function App() {
     </div>
   );
 
+  const activeViewContent = (
+    <>
+      {view !== "preview" && (
+        <div className="viewHead">
+          <div>
+            <h1>{activeNav.label}</h1>
+            <div className="viewSub">{activeNav.subtitle}</div>
+          </div>
+          <div className="spacer" />
+          <div className={`backdropMeta ${backdropSlotRolling ? "is-rolling" : ""}`} title={backgroundCharacterTitle}>
+            <div className="viewCount">
+              <b>{backgroundCharacterCode}</b><span>Character<br />ID</span>
+            </div>
+            <div className="backdropMetaName">
+              {backgroundCharacterName}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {globalBanners}
+
+      {view === "library" && libraryView}
+      {view === "logs" && logView}
+      {view === "settings" && settingsView}
+      {view === "stats" && statsView}
+      {view === "roster" && rosterView}
+      {view === "preview" && previewView}
+      {view !== "library" && view !== "logs" && view !== "settings" && view !== "stats" && view !== "roster" && view !== "preview" && placeholderView(view)}
+    </>
+  );
+  const viewMotionClassName = `viewMotion is-${viewMotion.phase} dir-${viewMotion.direction}`;
+
+  const confirmDialogView = confirmDialog
+    ? createPortal(
+      <div className={`confirmOverlay ${confirmDialog.closing ? "is-closing" : "is-entering"}`} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeConfirmDialog(false); }}>
+        <div
+          className={`confirmDialog tone-${confirmDialog.tone ?? "warn"} ${confirmDialog.closing ? "is-closing" : ""}`}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby={`confirm-title-${confirmDialog.id}`}
+          aria-describedby={`confirm-body-${confirmDialog.id}`}
+        >
+          <div className="confirmKicker">Confirm Action</div>
+          <h2 id={`confirm-title-${confirmDialog.id}`}>{confirmDialog.title}</h2>
+          <div id={`confirm-body-${confirmDialog.id}`} className="confirmBody">{confirmDialog.body}</div>
+          <div className="confirmActions">
+            {!confirmDialog.hideCancel && (
+              <button type="button" className="confirmBtn secondary" onClick={() => closeConfirmDialog(false)}>{confirmDialog.cancelLabel ?? "Cancel"}</button>
+            )}
+            <button type="button" className="confirmBtn primary" onClick={() => closeConfirmDialog(true)}>{confirmDialog.confirmLabel ?? "Confirm"}</button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+    : null;
+
   return (
     <div className="appShell">
       <div className="tauriTitlebarDragRegion" data-tauri-drag-region aria-hidden="true" onMouseDown={startTauriWindowDrag} />
@@ -2371,34 +2736,38 @@ export function App() {
         </div>
 
         <div className="railNav">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.id}>
-              <div className="railGroup">
-                <span className="railGroupCjk">{group.label}</span>
-                <span>{group.en}</span>
-                <i aria-hidden="true" />
+          {NAV_GROUPS.map((group) => {
+            const groupItems = VISIBLE_NAV_ITEMS.filter((item) => item.group === group.id);
+            if (groupItems.length === 0) return null;
+            return (
+              <div key={group.id}>
+                <div className="railGroup">
+                  <span className="railGroupCjk">{group.label}</span>
+                  <span>{group.en}</span>
+                  <i aria-hidden="true" />
+                </div>
+                {groupItems.map((item) => {
+                  const isActive = view === item.key;
+                  const badge = item.key === "library" && pendingChanges.length > 0 ? pendingChanges.length : undefined;
+                  const num = String(VISIBLE_NAV_ITEMS.indexOf(item) + 1).padStart(2, "0");
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      className={`railItem ${isActive ? "active" : ""}`}
+                      onClick={() => navigateToView(item.key)}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <span className="railNum" aria-hidden="true">{num}</span>
+                      <span className="railLabel">{item.label}</span>
+                      {badge ? <span className="railBadge">{badge}</span> : null}
+                      {isActive ? <span className="railStar" aria-hidden="true">★</span> : <span className="railTick" aria-hidden="true" />}
+                    </button>
+                  );
+                })}
               </div>
-              {NAV_ITEMS.filter((item) => item.group === group.id).map((item) => {
-                const isActive = view === item.key;
-                const badge = item.key === "library" && pendingChanges.length > 0 ? pendingChanges.length : undefined;
-                const num = String(NAV_ITEMS.indexOf(item) + 1).padStart(2, "0");
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    className={`railItem ${isActive ? "active" : ""}`}
-                    onClick={() => setView(item.key)}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <span className="railNum" aria-hidden="true">{num}</span>
-                    <span className="railLabel">{item.label}</span>
-                    {badge ? <span className="railBadge">{badge}</span> : null}
-                    {isActive ? <span className="railStar" aria-hidden="true">★</span> : <span className="railTick" aria-hidden="true" />}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="railFoot">
@@ -2421,7 +2790,7 @@ export function App() {
             className={`railVersion ${versionLocked ? "locked" : ""}`}
             title={`${formatVersionTitle(appInfo, gameVersionInfo)}\nOpen Settings`}
             aria-label="Open Settings"
-            onClick={() => setView("settings")}
+            onClick={() => navigateToView("settings")}
           >
             <span className="railReg" aria-hidden="true" />
             <span className="railVersionLabel">Version</span>
@@ -2430,39 +2799,15 @@ export function App() {
         </div>
       </nav>
 
-      <main className={`appMain view-${view}`}>
+      <main className={`appMain view-${view} ${viewMotionClassName}`}>
         <LibraryHalftoneBackdrop />
-        {view !== "preview" && (
-          <div className="viewHead">
-            <div>
-              <h1>{activeNav.label}</h1>
-              <div className="viewSub">BrownDust II Runtime Mod Loader · Mac PlayCover</div>
-            </div>
-            <div className="spacer" />
-            <div className={`backdropMeta ${backdropSlotRolling ? "is-rolling" : ""}`} title={backgroundCharacterTitle}>
-              <div className="viewCount">
-                <b>{backgroundCharacterCode}</b><span>Backdrop<br />ID</span>
-              </div>
-              <div className="backdropMetaName">
-                {backgroundCharacterName}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {globalBanners}
-
-        {view === "library" && libraryView}
-        {view === "logs" && logView}
-        {view === "settings" && settingsView}
-        {view === "stats" && statsView}
-        {view === "roster" && rosterView}
-        {view === "preview" && previewView}
-        {view !== "library" && view !== "logs" && view !== "settings" && view !== "stats" && view !== "roster" && view !== "preview" && placeholderView(view)}
+        <div className="viewMotionVeil" aria-hidden="true" />
+        {activeViewContent}
 
         {playerDock}
         {pendingDiffDock}
       </main>
+      {confirmDialogView}
       {htmlAltTooltip}
     </div>
   );

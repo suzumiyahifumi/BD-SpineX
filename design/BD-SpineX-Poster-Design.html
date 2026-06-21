@@ -470,7 +470,7 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
     <div class="brand"><span class="mark">B</span> BD-SpineX · 印刷局</div>
     <nav>
       <a href="#thesis">主張</a><a href="#schemes">配色</a><a href="#buttons">按鈕</a>
-      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a><a href="#sidebar">側欄</a><a href="#library">Library頁</a><a href="#settings">設定</a><a href="#stats">統計</a><a href="#roster">名冊</a><a href="#profiles">編組</a><a href="#logs">紀錄</a><a href="#preview">預覽</a>
+      <a href="#elements">海報元件</a><a href="#map">保留/改變</a><a href="#build">落地</a><a href="#sidebar">側欄</a><a href="#library">Library頁</a><a href="#settings">設定</a><a href="#stats">統計</a><a href="#roster">名冊</a><a href="#profiles">編組</a><a href="#logs">紀錄</a><a href="#preview">預覽</a><a href="#violet">紫配色</a>
     </nav>
   </div>
 </div>
@@ -1244,6 +1244,141 @@ footer{padding:50px 0 70px;color:var(--paper-dim);font-size:13px}
     <div class="col change"><div class="tagline">⏳ NEXT · 待接 Pixi</div><h4 class="tc">接上 pixi-spine</h4>
       <ul class="tc"><li>用 Pixi + pixi-spine 真正渲染 spine（取代立繪佔位）＋播放/暫停/速度/動畫軌</li><li>部件（slots）：搜尋＋逐一<strong style="color:var(--paper)">透明度滑桿</strong>＋顯隱（目前 UI pending）</li><li>圖層：疊多個 spine、拖曳排序</li><li>皮膚／動畫實際切換、alpha 模式</li><li>Library 卡帶也加「▶ Preview」入口</li></ul></div>
   </div>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- VIOLET PALETTE -->
+<section id="violet" class="wrap reveal">
+  <div class="secnum">16 — 第二配色 · 紫虹印刷</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">紫虹印刷 <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">Violet Press · 呼應虹彩 icon</span></h2>
+  <p class="tc" style="max-width:66ch">給用戶<strong style="color:var(--paper)">第二個選擇</strong>：同一套印刷皮（油墨、斜切、壓縮字、送紙孔全不動），<strong style="color:var(--amber)">只覆蓋顏色 token</strong>——主墨紅→<strong style="color:#7C5CFF">紫</strong>、輔色琥珀→<strong style="color:#46D6E8">青</strong>、奶油紙→珠光紫白、暖近黑→深紫黑，呼應 app 那張全息貼紙 icon 的紫／青虹彩。實作走 <code>:root[data-theme="night"][data-accent="violet"]</code>，切換放在 <strong style="color:var(--paper)">Settings → Theme</strong>。下面兩組可選，<strong style="color:#8fe0ad">A 已實作</strong>。</p>
+
+  <div class="schemes" style="grid-template-columns:repeat(2,1fr);margin-top:24px">
+    <div class="scheme">
+      <div class="hd" style="background:#7C5CFF"><span class="id">A</span> Violet Press <span class="rec">★ 已實作</span></div>
+      <div class="mock" style="--bg:#0C0A14;--surface:#15111F;--ink:#0C0A14;--paper:#EAE6F6;--paper-dim:#9c93bd;--red:#7C5CFF;--red-deep:#5733C9;--amber:#46D6E8;--tray:#08060f;--glass:rgba(228,224,246,.08);--mstroke:rgba(228,224,246,.18)">
+        <div class="rail"><div class="b">BD</div><a class="on">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Library</h4><span class="big">31</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Now Loading<b>31 mounted</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="scheme">
+      <div class="hd" style="background:#A85CF0"><span class="id">B</span> Orchid Press <span class="rec">★ 已實作</span></div>
+      <div class="mock" style="--bg:#100A16;--surface:#1A1022;--ink:#100A16;--paper:#F2E6F4;--paper-dim:#b495bd;--red:#A85CF0;--red-deep:#6E2FB8;--amber:#FF74C8;--tray:#0b0610;--glass:rgba(242,230,244,.08);--mstroke:rgba(242,230,244,.2)">
+        <div class="rail"><div class="b">BD</div><a class="on">Library</a><a>Roster</a><a>Profiles</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Library</h4><span class="big">31</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Now Loading<b>31 mounted</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:18px">
+    <div><div class="tagline" style="color:#7C5CFF;margin-bottom:6px">A · VIOLET PRESS（已實作）</div>
+      <div class="sw"><i style="background:#0C0A14"><b>0C0A14</b></i><i style="background:#EAE6F6"><b>EAE6F6</b></i><i style="background:#7C5CFF"><b>7C5CFF</b></i><i style="background:#5733C9"><b>5733C9</b></i><i style="background:#46D6E8"><b>46D6E8</b></i></div></div>
+    <div><div class="tagline" style="color:#A85CF0;margin-bottom:6px">B · ORCHID PRESS（已實作）</div>
+      <div class="sw"><i style="background:#100A16"><b>100A16</b></i><i style="background:#F2E6F4"><b>F2E6F4</b></i><i style="background:#A85CF0"><b>A85CF0</b></i><i style="background:#6E2FB8"><b>6E2FB8</b></i><i style="background:#FF74C8"><b>FF74C8</b></i></div></div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:var(--paper)">A Violet Press</strong>＝紫主墨＋<strong style="color:#46D6E8">青</strong>輔（冷冽全息，最貼 icon 的藍青），<strong style="color:#8fe0ad">已接上 Settings → Theme 切換</strong>。<strong style="color:var(--paper)">B Orchid Press</strong>＝紫主墨＋<strong style="color:#FF74C8">桃紅</strong>輔（偏暖的虹彩）。<strong style="color:#8fe0ad">三組都已上 Settings → Theme 切換</strong>（Night／Violet／Orchid，localStorage 記憶）。所有 chrome 的暖色 tint 已 token 化（<code>color-mix</code> 綁 <code>--paper／--ink</code>），換色 100% 乾淨；卡帶／立繪維持原樣（主題只動 chrome）。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- BLUEPRINT PALETTE -->
+<section id="blueprint" class="wrap reveal">
+  <div class="secnum">17 — 候選配色 · 藍曬印刷</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">Blueprint Press <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">藍曬印刷 · Cyanotype poster ink</span></h2>
+  <p class="tc" style="max-width:70ch">候選第四組：方向刻意避開既有<strong style="color:var(--paper)">暖紅</strong>、<strong style="color:#46D6E8">紫＋青</strong>、<strong style="color:#FF74C8">紫＋桃紅</strong>，改用字面上的印刷製程——建築藍曬／氰版印刷。主畫面是<strong style="color:#DCEEFF">冷藍珠光紙</strong>壓在<strong style="color:#2FA7FF">azure 主墨</strong>上，底色使用深普魯士藍，輔色只用少量<strong style="color:#F2B84B">暖琥珀</strong>做警示、焦點與海報張力。</p>
+
+  <div class="schemes" style="grid-template-columns:minmax(0,1fr);margin-top:24px">
+    <div class="scheme">
+      <div class="hd" style="background:#2FA7FF;color:#061427"><span class="id">D</span> Blueprint Press <span class="rec" style="border-color:#061427">候選</span></div>
+      <div class="mock" style="--bg:#061427;--surface:#0B2038;--ink:#061427;--paper:#DCEEFF;--paper-dim:#8FB4D5;--red:#2FA7FF;--red-deep:#0B5FA8;--amber:#F2B84B;--tray:#04101F;--glass:rgba(216,236,255,.08);--mstroke:rgba(216,236,255,.2)">
+        <div class="rail"><div class="b">BDⅡ</div><a class="on">Library</a><a>Roster</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Blueprint</h4><span class="big">II</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Cold Pearl Paper<b>azure ink / amber mark</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:18px">
+    <div>
+      <div class="tagline" style="color:#2FA7FF;margin-bottom:6px">BLUEPRINT PRESS · 色票</div>
+      <div class="sw"><i style="background:#061427"><b>061427</b></i><i style="background:#0B2038"><b>0B2038</b></i><i style="background:#DCEEFF"><b>DCEEFF</b></i><i style="background:#2FA7FF"><b>2FA7FF</b></i><i style="background:#0B5FA8"><b>0B5FA8</b></i><i style="background:#F2B84B"><b>F2B84B</b></i></div>
+    </div>
+    <div class="code" style="border-color:#DCEEFF;background:#04101F">
+      <div class="bar">Token proposal · candidate only</div>
+<pre>:root[data-theme="night"][data-accent="blueprint"] {
+  <span class="k">--bg-0</span>: <span class="v">#061427</span>;   /* deep Prussian blue */
+  <span class="k">--bg-1</span>: <span class="v">#0B2038</span>;   /* cyanotype surface */
+  <span class="k">--paper</span>: <span class="v">#DCEEFF</span>;  /* cold blue pearl paper */
+  <span class="k">--paper-dim</span>: <span class="v">#8FB4D5</span>;
+  <span class="k">--red</span>: <span class="v">#2FA7FF</span>;    /* azure main ink */
+  <span class="k">--red-deep</span>: <span class="v">#0B5FA8</span>;
+  <span class="k">--amber</span>: <span class="v">#F2B84B</span>;  /* warm registration mark */
+  <span class="k">--glass</span>: <span class="v">rgba(216,236,255,.08)</span>;
+  <span class="k">--stroke</span>: <span class="v">rgba(216,236,255,.20)</span>;
+}</pre>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:#2FA7FF">Blueprint Press</strong> 的角色是「最像印刷製程」的識別款：深藍底承接藍曬圖紙，azure 做主墨與互動亮面，<strong style="color:#F2B84B">琥珀</strong>只在確認、警示、焦點與套准記號上出現，讓藍×琥珀的互補張力留在少量高價值位置。此段目前只作配色候選，尚未納入 app 主題切換。</p>
+</section>
+
+<hr class="rule red wrap" />
+
+<!-- VERDIGRIS PALETTE -->
+<section id="verdigris" class="wrap reveal">
+  <div class="secnum">18 — 候選配色 · 銅綠凹印</div>
+  <h2 style="font-size:34px;margin:6px 0 4px">Verdigris Plate <span class="tc" style="font-size:17px;color:var(--paper-dim);letter-spacing:0">銅版蝕刻 · Oxidized intaglio ink</span></h2>
+  <p class="tc" style="max-width:70ch">自由候選：把主題從「海報油墨」推向<strong style="color:var(--paper)">金屬印版</strong>。靈感是銅版凹印、蝕刻線、氧化銅綠與潮濕的珠光紙；底色不走紅紫藍，而是深氧化銅綠黑，主墨用<strong style="color:#2AC486">孔雀石綠</strong>，輔色用少量<strong style="color:#D99B4A">老銅金</strong>。視覺會比 Blueprint 更沉、更工藝，也更有「印版被壓過」的質感。</p>
+
+  <div class="schemes" style="grid-template-columns:minmax(0,1fr);margin-top:24px">
+    <div class="scheme">
+      <div class="hd" style="background:#2AC486;color:#06130F"><span class="id">E</span> Verdigris Plate <span class="rec" style="border-color:#06130F">候選</span></div>
+      <div class="mock" style="--bg:#06130F;--surface:#0E211A;--ink:#06130F;--paper:#E2F2DF;--paper-dim:#94B59D;--red:#2AC486;--red-deep:#0E6C4B;--amber:#D99B4A;--tray:#030B09;--glass:rgba(226,242,223,.08);--mstroke:rgba(226,242,223,.2)">
+        <div class="rail"><div class="b">BDⅡ</div><a class="on">Library</a><a>Roster</a><a>Preview</a><a>Settings</a></div>
+        <div class="main">
+          <div class="titleband"><h4>Intaglio</h4><span class="big">18</span></div>
+          <div class="btns"><button class="pbtn primary sm">Apply</button><button class="pbtn paper sm">Refresh</button><button class="pbtn ghost sm">Reset</button></div>
+          <div class="tray"><div class="cart"></div><div class="dock"><div class="disc"></div><div class="nl">Etched Metal Plate<b>verdigris ink / copper mark</b></div><button class="pbtn primary sm apply">▶</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:18px">
+    <div>
+      <div class="tagline" style="color:#2AC486;margin-bottom:6px">VERDIGRIS PLATE · 色票</div>
+      <div class="sw"><i style="background:#06130F"><b>06130F</b></i><i style="background:#0E211A"><b>0E211A</b></i><i style="background:#E2F2DF"><b>E2F2DF</b></i><i style="background:#2AC486"><b>2AC486</b></i><i style="background:#0E6C4B"><b>0E6C4B</b></i><i style="background:#D99B4A"><b>D99B4A</b></i></div>
+    </div>
+    <div class="code" style="border-color:#E2F2DF;background:#030B09">
+      <div class="bar">Token proposal · candidate only</div>
+<pre>:root[data-theme="night"][data-accent="verdigris"] {
+  <span class="k">--bg-0</span>: <span class="v">#06130F</span>;   /* oxidized copper black */
+  <span class="k">--bg-1</span>: <span class="v">#0E211A</span>;   /* etched plate surface */
+  <span class="k">--paper</span>: <span class="v">#E2F2DF</span>;  /* cold celadon pearl paper */
+  <span class="k">--paper-dim</span>: <span class="v">#94B59D</span>;
+  <span class="k">--red</span>: <span class="v">#2AC486</span>;    /* verdigris main ink */
+  <span class="k">--red-deep</span>: <span class="v">#0E6C4B</span>;
+  <span class="k">--amber</span>: <span class="v">#D99B4A</span>;  /* aged copper registration */
+  <span class="k">--glass</span>: <span class="v">rgba(226,242,223,.08)</span>;
+  <span class="k">--stroke</span>: <span class="v">rgba(226,242,223,.20)</span>;
+}</pre>
+    </div>
+  </div>
+
+  <p class="tc" style="margin-top:18px"><strong style="color:#2AC486">Verdigris Plate</strong> 適合作為比較低調但很有質地的第四／第五主題：它不像藍曬那麼直接明亮，而是把 app 變成一塊被蝕刻、上墨、擦版後壓印的銅版。<strong style="color:#D99B4A">老銅金</strong>只用於套准、狀態與高價值操作，避免整體變成暖棕；主體仍保持冷、深、工藝感。此段目前只作配色候選，尚未納入 app 主題切換。</p>
 </section>
 
 <footer class="wrap">

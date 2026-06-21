@@ -1,3 +1,5 @@
+@charset "UTF-8";
+
 /* ============================================================
    BD-SpineX — Liquid Glass Theme (dark)
    Re-skin of the runtime mod manager. Class names and layout
@@ -78,21 +80,33 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
     inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 
-  /* motion - Apple-inspired continuity: snappy controls, smooth state changes,
-     and critically damped settle for layout/card movement. */
+  /* motion - Apple-inspired continuity: causal, subtle, mostly transform/opacity.
+     Micro/state/container/nav mirror the local motion spec and macOS-style pacing. */
   --motion-duration-instant: 80ms;
-  --motion-duration-fast: 120ms;
-  --motion-duration-control: 180ms;
-  --motion-duration-card: 240ms;
-  --motion-duration-panel: 420ms;
+  --motion-duration-fast: 110ms;
+  --motion-duration-control: 190ms;
+  --motion-duration-card: 260ms;
+  --motion-duration-panel: 320ms;
+  --motion-duration-container: 260ms;
+  --motion-duration-nav: 320ms;
+  --motion-duration-exit: 110ms;
   --motion-duration-progress: 400ms;
   --motion-duration-scan: 460ms;
+  --motion-ease-out-soft: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --motion-ease-decel: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.3, 0.45, 1);
   --motion-ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
   --motion-ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-ease-settle: cubic-bezier(0.2, 0.7, 0.2, 1);
   --motion-ease-emphasized: cubic-bezier(0.2, 0.9, 0.2, 1);
   --motion-ease-pop: cubic-bezier(0.18, 1.18, 0.32, 1);
   --motion-ease-linear: linear;
+
+  /* layout */
+  --layout-rail-width: 232px;
+  --layout-main-gutter: 28px;
+  --layout-shell-max: 1320px;
+  --layout-main-content-max: calc(var(--layout-shell-max) - var(--layout-rail-width) - (var(--layout-main-gutter) * 2));
 
   /* brand */
   --gold: #f6c66b;
@@ -140,6 +154,9 @@
     --motion-duration-control: 1ms;
     --motion-duration-card: 1ms;
     --motion-duration-panel: 1ms;
+    --motion-duration-container: 1ms;
+    --motion-duration-nav: 1ms;
+    --motion-duration-exit: 1ms;
     --motion-duration-progress: 1ms;
     --motion-duration-scan: 1ms;
   }
@@ -650,7 +667,14 @@ input[type="checkbox"] {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
   color: var(--text);
   text-align: left;
+  transform-origin: center top;
+  animation: bdPopoverIn var(--motion-duration-container) var(--motion-ease-decel) both;
+  will-change: opacity, transform, filter;
   white-space: normal;
+}
+
+.helpPopup.above {
+  transform-origin: center bottom;
 }
 
 .helpPopupTitle {
@@ -691,6 +715,252 @@ input[type="checkbox"] {
   transform: none;
 }
 
+/* ---------- Confirmation dialog ---------- */
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483400;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(226, 64, 42, 0.1), transparent 36%),
+    rgba(4, 5, 10, 0.34);
+  -webkit-backdrop-filter: blur(6px) saturate(1.05);
+  backdrop-filter: blur(6px) saturate(1.05);
+  animation: bdConfirmOverlayIn var(--motion-duration-container) var(--motion-ease-decel) both;
+}
+
+.confirmOverlay.is-closing {
+  pointer-events: none;
+  animation: bdConfirmOverlayOut var(--motion-duration-exit) var(--motion-ease-out-soft) both;
+}
+
+.confirmDialog {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(430px, calc(100vw - 44px));
+  display: grid;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--amber) 48%, transparent);
+  border-left: 5px solid var(--amber);
+  padding: 18px 18px 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.03)),
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 8%, transparent), transparent 62%),
+    rgba(7, 9, 16, 0.48);
+  -webkit-backdrop-filter: blur(24px) saturate(1.34);
+  backdrop-filter: blur(24px) saturate(1.34);
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--paper);
+  transform-origin: center;
+  animation: bdConfirmDialogIn var(--motion-duration-container) var(--motion-ease-spring) both;
+  will-change: opacity, transform, filter;
+}
+
+.confirmDialog.is-closing {
+  animation: bdConfirmDialogOut var(--motion-duration-exit) var(--motion-ease-out-soft) both;
+}
+
+.confirmDialog::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 16%, transparent), transparent 64%),
+    linear-gradient(90deg, color-mix(in srgb, var(--red-deep) 16%, transparent), transparent 58%);
+  opacity: 0.64;
+}
+
+.confirmDialog.tone-danger {
+  border-color: color-mix(in srgb, var(--red) 68%, transparent);
+  border-left-color: var(--red);
+}
+
+.confirmDialog.tone-info {
+  border-color: color-mix(in srgb, var(--text-dim) 50%, transparent);
+  border-left-color: var(--text-dim);
+}
+
+.confirmKicker {
+  width: max-content;
+  padding: 3px 7px;
+  background: var(--red);
+  color: var(--paper);
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.confirmDialog.tone-warn .confirmKicker {
+  background: var(--amber);
+  color: #171313;
+}
+
+.confirmDialog.tone-info .confirmKicker {
+  background: color-mix(in srgb, var(--text-dim) 72%, transparent);
+  color: var(--paper);
+}
+
+.confirmDialog h2 {
+  margin: 0;
+  color: var(--paper);
+  font-family: var(--cond);
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: 0.035em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.confirmBody {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.confirmBody b {
+  color: var(--paper);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.confirmBtn {
+  min-width: 86px;
+  height: 32px;
+  border-radius: 0;
+  padding: 0 12px;
+  font-family: var(--cond);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.confirmBtn.secondary {
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text-dim);
+}
+
+.confirmBtn.primary {
+  border: 1px solid color-mix(in srgb, var(--red) 72%, #000);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 92%, #fff 8%), var(--red-deep));
+  color: var(--paper);
+}
+
+.confirmDialog.tone-warn .confirmBtn.primary,
+.confirmDialog.tone-info .confirmBtn.primary {
+  border-color: color-mix(in srgb, var(--amber) 74%, #000);
+  background: linear-gradient(180deg, var(--amber), color-mix(in srgb, var(--amber) 70%, #8a271c));
+  color: #171313;
+}
+
+.confirmBtn:hover {
+  border-color: color-mix(in srgb, var(--red) 82%, var(--stroke-2));
+  background:
+    linear-gradient(160deg, rgba(226, 64, 42, 0.42), rgba(158, 35, 23, 0.26)),
+    var(--liquid-surface);
+  color: var(--paper);
+  box-shadow:
+    2px 2px 0 rgba(158, 35, 23, 0.46),
+    0 0 18px rgba(226, 64, 42, 0.34),
+    inset 0 1px 0 rgba(255, 244, 214, 0.24);
+  transform: none;
+}
+
+.confirmBtn.primary:hover,
+.confirmDialog.tone-warn .confirmBtn.primary:hover,
+.confirmDialog.tone-info .confirmBtn.primary:hover {
+  border-color: var(--red);
+  background:
+    linear-gradient(160deg, rgba(226, 64, 42, 0.52), rgba(158, 35, 23, 0.34)),
+    var(--liquid-surface);
+  color: var(--paper);
+  box-shadow:
+    2px 2px 0 rgba(158, 35, 23, 0.55),
+    0 0 22px rgba(226, 64, 42, 0.42),
+    inset 0 1px 0 rgba(255, 244, 214, 0.28);
+}
+
+@keyframes bdConfirmOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bdConfirmOverlayOut {
+  to { opacity: 0; }
+}
+
+@keyframes bdConfirmDialogIn {
+  from {
+    opacity: 0;
+    filter: blur(1px);
+    transform: translate3d(0, 8px, 0) scale(0.94);
+  }
+  72% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, -1px, 0) scale(1.012);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes bdConfirmDialogOut {
+  to {
+    opacity: 0;
+    filter: blur(1px);
+    transform: translate3d(0, 4px, 0) scale(0.975);
+  }
+}
+
+@keyframes bdPopoverIn {
+  from {
+    opacity: 0;
+    filter: blur(1px);
+    transform: translate3d(0, 6px, 0) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.helpPopup.above {
+  animation-name: bdPopoverInAbove;
+}
+
+@keyframes bdPopoverInAbove {
+  from {
+    opacity: 0;
+    filter: blur(1px);
+    transform: translate3d(0, -6px, 0) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 .helpCloseButton {
   justify-self: start;
   min-height: 26px;
@@ -725,16 +995,26 @@ input[type="checkbox"] {
   letter-spacing: 0.02em;
   overflow-wrap: anywhere;
   opacity: 0;
-  transform: translateY(2px);
+  transform: translate3d(0, 4px, 0) scale(0.985);
+  transform-origin: var(--tooltip-origin, center top);
   transition:
-    opacity var(--motion-duration-instant) var(--motion-ease-linear),
-    transform var(--motion-duration-instant) var(--motion-ease-smooth);
+    opacity var(--motion-duration-fast) var(--motion-ease-out-soft),
+    transform var(--motion-duration-fast) var(--motion-ease-decel);
   white-space: normal;
 }
 
 .htmlAltTooltip.is-ready {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.htmlAltTooltip.is-above {
+  --tooltip-origin: center bottom;
+  transform: translate3d(0, -4px, 0) scale(0.985);
+}
+
+.htmlAltTooltip.is-above.is-ready {
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .htmlAltTooltipLine {
@@ -748,7 +1028,7 @@ input[type="checkbox"] {
     linear-gradient(90deg, color-mix(in srgb, var(--red) 12%, transparent), transparent 72%),
     rgba(18, 17, 15, 0.94);
   color: var(--paper);
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(237, 224, 196, 0.14);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.48), inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent);
   text-transform: none;
 }
 
@@ -864,12 +1144,12 @@ progress {
 
 .pendingDiffDock {
   position: fixed;
-  left: max(260px, calc((100vw - 1320px) / 2 + 260px));
+  left: calc(var(--layout-rail-width) + var(--layout-main-gutter));
   bottom: 72px;
   z-index: 26;
   display: grid;
   gap: 8px;
-  width: min(320px, calc(100vw - 288px));
+  width: min(320px, calc(100vw - var(--layout-rail-width) - (var(--layout-main-gutter) * 2)));
   max-height: min(250px, calc(100vh - 160px));
   padding: 10px;
   overflow: hidden;
@@ -879,6 +1159,8 @@ progress {
   -webkit-backdrop-filter: blur(6px) saturate(1.5);
   backdrop-filter: blur(6px) saturate(1.5);
   box-shadow: var(--liquid-shadow);
+  transform-origin: left bottom;
+  animation: bdFloatingDockIn var(--motion-duration-container) var(--motion-ease-decel) both;
 }
 
 .pendingDiffDock.has-conflict {
@@ -2068,11 +2350,16 @@ tr.pendingPatchChange.pendingPatchRepair:hover td {
   padding: 11px 14px;
   border: 1px solid rgba(255, 206, 106, 0.3);
   border-radius: 12px;
-  background: var(--warn-bg);
+  background:
+    linear-gradient(90deg, rgba(255, 206, 106, 0.14), transparent 70%),
+    var(--liquid-surface);
   color: var(--warn);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.4;
+  box-shadow: var(--liquid-shadow);
+  backdrop-filter: blur(14px) saturate(1.28);
+  -webkit-backdrop-filter: blur(14px) saturate(1.28);
 }
 
 .errorPill + .warningPill,
@@ -2127,10 +2414,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
    ============================================================ */
 .appShell {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: var(--layout-rail-width) minmax(0, 1fr);
+  width: 100%;
   min-height: 100vh;
-  max-width: 1320px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .tauriTitlebarDragRegion {
@@ -2613,10 +2901,98 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .appMain {
   min-width: 0;
   padding: 26px 28px 176px;
+  overflow-x: clip;
 }
 
 :root[data-runtime="tauri"] .appMain {
   padding-top: 42px;
+}
+
+.viewMotionVeil {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, transparent 0 18%, color-mix(in srgb, var(--paper) 6%, transparent) 38%, rgba(226, 64, 42, 0.14) 48%, color-mix(in srgb, var(--paper) 8%, transparent) 58%, transparent 82%),
+    radial-gradient(500px 280px at 72% 18%, rgba(226, 64, 42, 0.1), transparent 70%),
+    rgba(7, 8, 12, 0.04);
+  -webkit-backdrop-filter: blur(3px) saturate(1.12);
+  backdrop-filter: blur(3px) saturate(1.12);
+  transform: translate3d(0, 0, 0);
+  will-change: opacity, transform;
+}
+
+.viewMotion.is-leaving {
+  pointer-events: none;
+}
+
+.viewMotion.is-leaving.dir-forward .viewMotionVeil {
+  animation: bdViewVeilInForward var(--motion-duration-exit) var(--motion-ease-out-soft) both;
+}
+
+.viewMotion.is-entering.dir-forward .viewMotionVeil {
+  animation: bdViewVeilOutForward var(--motion-duration-nav) var(--motion-ease-decel) both;
+}
+
+.viewMotion.is-leaving.dir-back .viewMotionVeil {
+  animation: bdViewVeilInBack var(--motion-duration-exit) var(--motion-ease-out-soft) both;
+}
+
+.viewMotion.is-entering.dir-back .viewMotionVeil {
+  animation: bdViewVeilOutBack var(--motion-duration-nav) var(--motion-ease-decel) both;
+}
+
+.viewMotion.is-entering .viewHead {
+  animation: bdViewHeadSettle var(--motion-duration-nav) var(--motion-ease-decel) both;
+}
+
+@keyframes bdViewVeilInForward {
+  from { opacity: 0; transform: translate3d(-14%, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes bdViewVeilOutForward {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 0; transform: translate3d(14%, 0, 0); }
+}
+
+@keyframes bdViewVeilInBack {
+  from { opacity: 0; transform: translate3d(14%, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes bdViewVeilOutBack {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 0; transform: translate3d(-14%, 0, 0); }
+}
+
+@keyframes bdViewHeadSettle {
+  from {
+    opacity: 0.72;
+    transform: translate3d(0, 4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewMotionVeil,
+  .viewMotion .viewHead,
+  .confirmOverlay,
+  .confirmDialog,
+  .helpPopup,
+  .pendingDiffDock,
+  .dock,
+  .rstExpandInner,
+  .pvStageWrap.dual .pvStage {
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
 }
 
 .viewHead {
@@ -3052,8 +3428,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 .dock {
   position: fixed;
-  left: max(260px, calc((100vw - 1320px) / 2 + 260px));
-  right: max(28px, calc((100vw - 1320px) / 2 + 28px));
+  left: calc(var(--layout-rail-width) + var(--layout-main-gutter));
+  right: var(--layout-main-gutter);
   bottom: 16px;
   z-index: 25;
   margin-top: 0;
@@ -3132,6 +3508,19 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 @keyframes dockSpin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes bdFloatingDockIn {
+  from {
+    opacity: 0;
+    filter: blur(1px);
+    transform: translate3d(-8px, 8px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3418,6 +3807,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --rcart-shell-base-shadow: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.46));
   --rcart-shell-hover-shadow: drop-shadow(0 0 0 transparent);
   --rcart-shell-state-shadow: drop-shadow(0 0 0 transparent);
+  --rcart-nameplate-counter-rotation: 0deg;
   --label-red: #d3192e;
   --label-red-deep: #8d0f20;
   --label-paper: #f2f1ea;
@@ -3507,6 +3897,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --rcart-shell-hover-shadow:
     drop-shadow(0 0 3px rgba(255, 255, 255, 0.18))
     drop-shadow(0 0 9px rgba(164, 203, 255, 0.16));
+  --rcart-nameplate-counter-rotation: 1.2deg;
   transform: translateY(-5px) rotate(-1.2deg);
   filter: saturate(1.04);
 }
@@ -3515,6 +3906,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   --rcart-shell-hover-shadow:
     drop-shadow(0 0 3px rgba(255, 255, 255, 0.2))
     drop-shadow(0 0 9px rgba(164, 203, 255, 0.18));
+  --rcart-nameplate-counter-rotation: 1.2deg;
 }
 
 .rcart:disabled {
@@ -4334,7 +4726,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rcart.is-pending-linked:not(:disabled) .rcartNamePlate,
 .rcart.is-pending-target:not(:disabled) .rcartNamePlate,
 .rcartWrap:hover .rcartNamePlate {
-  transform: translateX(calc(-50% - 2.5px)) translateY(5px) rotate(1.2deg);
+  transform: translateX(calc(-50% - 2.5px)) translateY(5px) rotate(var(--rcart-nameplate-counter-rotation));
 }
 
 /* embedded INTO the nameplate's kind bar (child of .rcartNameKind) */
@@ -4964,8 +5356,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 :root[data-theme="night"] {
   --bg-0:#0E0D0C; --bg-1:#17150F;
   --text:#EDE0C4; --text-dim:#B9AD8E; --text-faint:#8a7f63;
-  --glass:rgba(237,224,196,0.06); --glass-2:rgba(237,224,196,0.10); --glass-3:rgba(237,224,196,0.15);
-  --stroke:rgba(237,224,196,0.16); --stroke-2:rgba(237,224,196,0.28); --shine:rgba(255,244,214,0.5);
+  --glass:color-mix(in srgb, var(--paper) 6%, transparent); --glass-2:color-mix(in srgb, var(--paper) 10%, transparent); --glass-3:color-mix(in srgb, var(--paper) 15%, transparent);
+  --stroke:color-mix(in srgb, var(--paper) 16%, transparent); --stroke-2:color-mix(in srgb, var(--paper) 28%, transparent); --shine:rgba(255,244,214,0.5);
   --shadow:rgba(0,0,0,0.6);
   --red:#E2402A; --red-deep:#9E2317; --amber:#E8A22C; --paper:#EDE0C4; --ink:#0E0D0C;
   --scrollbar-track:transparent; --scrollbar-thumb:#E2402A;
@@ -4979,6 +5371,40 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     radial-gradient(1000px 760px at 8% -8%, #241a10 0%, transparent 60%),
     radial-gradient(900px 720px at 100% 0%, #2a120b 0%, transparent 55%),
     #0E0D0C;
+}
+
+/* ===== Violet Press palette — same print skin, iridescent violet+cyan ===== */
+:root[data-theme="night"][data-accent="violet"] {
+  --bg-0:#0C0A14; --bg-1:#15111F;
+  --text:#EAE6F6; --text-dim:#ABA2CC; --text-faint:#7C739A;
+  --glass:rgba(228,224,246,0.06); --glass-2:rgba(228,224,246,0.10); --glass-3:rgba(228,224,246,0.15);
+  --stroke:rgba(228,224,246,0.16); --stroke-2:rgba(228,224,246,0.28); --shine:rgba(214,224,255,0.55);
+  --shadow:rgba(4,2,12,0.62);
+  --red:#7C5CFF; --red-deep:#5733C9; --amber:#46D6E8; --paper:#EAE6F6; --ink:#0C0A14;
+  --scrollbar-thumb:#7C5CFF; --scrollbar-thumb-hover:#7C5CFF; --scrollbar-thumb-active:#5733C9;
+}
+[data-theme="night"][data-accent="violet"] body {
+  background:
+    radial-gradient(1000px 760px at 8% -8%, #1d1640 0%, transparent 60%),
+    radial-gradient(900px 720px at 100% 0%, #0f2740 0%, transparent 55%),
+    #0C0A14;
+}
+
+/* ===== Orchid Press palette — violet ink + holographic pink ===== */
+:root[data-theme="night"][data-accent="orchid"] {
+  --bg-0:#100A16; --bg-1:#1A1022;
+  --text:#F2E6F4; --text-dim:#B495BD; --text-faint:#86678F;
+  --glass:rgba(242,230,244,0.06); --glass-2:rgba(242,230,244,0.10); --glass-3:rgba(242,230,244,0.15);
+  --stroke:rgba(242,230,244,0.16); --stroke-2:rgba(242,230,244,0.28); --shine:rgba(255,224,244,0.55);
+  --shadow:rgba(8,2,12,0.62);
+  --red:#A85CF0; --red-deep:#6E2FB8; --amber:#FF74C8; --paper:#F2E6F4; --ink:#100A16;
+  --scrollbar-thumb:#A85CF0; --scrollbar-thumb-hover:#A85CF0; --scrollbar-thumb-active:#6E2FB8;
+}
+[data-theme="night"][data-accent="orchid"] body {
+  background:
+    radial-gradient(1000px 760px at 8% -8%, #2a1640 0%, transparent 60%),
+    radial-gradient(900px 720px at 100% 0%, #3a1038 0%, transparent 55%),
+    #100A16;
 }
 
 /* ============ print chrome (shared, non-rail) ============ */
@@ -5436,8 +5862,20 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   color:var(--red); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
 }
 :where([data-theme="night"]) .warningPill {
-  border-radius:0; background:transparent; border:1.5px solid var(--amber); border-left-width:5px;
+  border-radius:0;
+  border:1.5px solid color-mix(in srgb, var(--amber) 72%, transparent);
+  border-left-width:5px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 18%, transparent), transparent 66%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.025)),
+    rgba(12, 13, 18, 0.58);
   color:var(--amber); font-family:var(--cond); text-transform:uppercase; letter-spacing:0.03em;
+  box-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(255, 206, 106, 0.08);
+  backdrop-filter: blur(18px) saturate(1.32);
+  -webkit-backdrop-filter: blur(18px) saturate(1.32);
 }
 :where([data-theme="night"]) .migrationPanel,
 :where([data-theme="night"]) .inheritHistoryPanel {
@@ -5563,8 +6001,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     radial-gradient(520px 360px at 8% -10%, rgba(36, 26, 16, 0.72), transparent 62%),
     radial-gradient(rgba(226, 64, 42, 0.07) 1px, transparent 1.5px),
     radial-gradient(rgba(232, 162, 44, 0.07) 1px, transparent 1.5px),
-    linear-gradient(rgba(237, 224, 196, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(237, 224, 196, 0.045) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--paper) 4.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--paper) 4.5%, transparent) 1px, transparent 1px);
   background-size:
     auto,
     16px 16px,
@@ -5579,9 +6017,17 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     0 0;
 }
 
-:where([data-theme="night"]) .appMain > :not(.libraryHalftoneBackdrop):not(.dock):not(.pendingDiffDock) {
+:where([data-theme="night"]) .appMain > :not(.libraryHalftoneBackdrop):not(.viewMotionVeil):not(.dock):not(.pendingDiffDock) {
   position: relative;
   z-index: 2;
+  width: 100%;
+  max-width: var(--layout-main-content-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+:where([data-theme="night"]) .appMain.view-preview > :not(.libraryHalftoneBackdrop):not(.viewMotionVeil):not(.dock):not(.pendingDiffDock) {
+  max-width: none;
 }
 
 :where([data-theme="night"]) .libraryHalftoneBackdrop {
@@ -5611,7 +6057,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background: radial-gradient(360px 280px at calc(100% - 86px) 48px, rgba(42, 18, 11, 0.58), transparent 58%);
   background-attachment: fixed;
   background-repeat: no-repeat;
-  color: rgba(237, 224, 196, 0.036);
+  color: color-mix(in srgb, var(--paper) 3.6%, transparent);
   font-family: var(--cond);
   font-size: clamp(128px, 15vw, 220px);
   font-weight: 800;
@@ -5631,9 +6077,9 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   pointer-events: none;
   opacity: 0.56;
   background:
-    radial-gradient(circle at 18px 18px, transparent 0 7px, rgba(237, 224, 196, 0.34) 7px 8.5px, transparent 9px),
-    linear-gradient(rgba(237, 224, 196, 0.34), rgba(237, 224, 196, 0.34)) 17.25px 6px / 1.5px 24px no-repeat,
-    linear-gradient(90deg, rgba(237, 224, 196, 0.34), rgba(237, 224, 196, 0.34)) 6px 17.25px / 24px 1.5px no-repeat;
+    radial-gradient(circle at 18px 18px, transparent 0 7px, color-mix(in srgb, var(--paper) 34%, transparent) 7px 8.5px, transparent 9px),
+    linear-gradient(color-mix(in srgb, var(--paper) 34%, transparent), color-mix(in srgb, var(--paper) 34%, transparent)) 17.25px 6px / 1.5px 24px no-repeat,
+    linear-gradient(90deg, color-mix(in srgb, var(--paper) 34%, transparent), color-mix(in srgb, var(--paper) 34%, transparent)) 6px 17.25px / 24px 1.5px no-repeat;
 }
 
 /* cartridge labels: letterpress paper nameplates with idle/staged/mounted states */
@@ -5680,8 +6126,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 :where([data-theme="night"]) .rcartNamePlate {
   border-radius: 0;
   background:
-    linear-gradient(180deg, #171511 0 14px, rgba(237, 224, 196, 0.95) 14px 100%),
-    radial-gradient(72px 28px at 90% 86%, rgba(14, 13, 12, 0.08), transparent 70%),
+    linear-gradient(180deg, var(--bg-1) 0 14px, color-mix(in srgb, var(--paper) 95%, transparent) 14px 100%),
+    radial-gradient(72px 28px at 90% 86%, color-mix(in srgb, var(--ink) 8%, transparent), transparent 70%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='92' height='92'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .36 0 0 0 0 .26 0 0 0 .12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
     var(--paper);
   background-blend-mode: normal, multiply, multiply, normal;
@@ -5693,8 +6139,8 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 :where([data-theme="night"]) .rcartNamePlate::before {
   background:
-    linear-gradient(180deg, rgba(237, 224, 196, 0.1) 0 1px, transparent 1px 13px, rgba(0, 0, 0, 0.26) 13px 14px, transparent 14px),
-    linear-gradient(90deg, rgba(14, 13, 12, 0.14) 0 1px, transparent 1px calc(100% - 1px), rgba(255, 255, 255, 0.18) calc(100% - 1px));
+    linear-gradient(180deg, color-mix(in srgb, var(--paper) 10%, transparent) 0 1px, transparent 1px 13px, rgba(0, 0, 0, 0.26) 13px 14px, transparent 14px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 14%, transparent) 0 1px, transparent 1px calc(100% - 1px), rgba(255, 255, 255, 0.18) calc(100% - 1px));
   opacity: 0.72;
 }
 
@@ -5707,7 +6153,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   align-items: center;
   justify-content: flex-start;
   padding: 0 86px 0 9px;
-  background: #171511;
+  background: var(--bg-1);
   color: var(--amber);
   font-family: var(--cond);
   font-size: 9px;
@@ -5735,7 +6181,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 
 :where([data-theme="night"]) .rcartNamePlate strong {
   padding: 7px 10px 9px 12px;
-  color: rgba(14, 13, 12, 0.76);
+  color: color-mix(in srgb, var(--ink) 76%, transparent);
   font-family: var(--cond);
   font-size: 14.5px;
   font-weight: 800;
@@ -5768,7 +6214,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     linear-gradient(90deg,
       transparent 0%,
       color-mix(in srgb, var(--amber) 14%, transparent) 22%,
-      rgba(237, 224, 196, 0.28) 46%,
+      color-mix(in srgb, var(--paper) 28%, transparent) 46%,
       color-mix(in srgb, var(--pending-diff-color) 18%, transparent) 58%,
       transparent 78%);
   mix-blend-mode: screen;
@@ -5957,11 +6403,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   padding: 15px;
   border: 1px solid var(--stroke-2);
   background:
-    linear-gradient(0deg, rgba(14, 13, 12, 0.46), rgba(14, 13, 12, 0.46)),
+    linear-gradient(0deg, color-mix(in srgb, var(--ink) 46%, transparent), color-mix(in srgb, var(--ink) 46%, transparent)),
     var(--glass-2);
   -webkit-backdrop-filter: blur(13px) saturate(1.3);
   backdrop-filter: blur(13px) saturate(1.3);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.14), 0 10px 22px rgba(0, 0, 0, 0.34);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent), 0 10px 22px rgba(0, 0, 0, 0.34);
 }
 .cfgCard.is-locked { border-color: color-mix(in srgb, var(--red) 50%, transparent); }
 
@@ -6094,7 +6540,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.12)),
     var(--glass);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.1);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 10%, transparent);
   transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
 }
 .cfgSwitchThumb {
@@ -6112,7 +6558,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background:
     linear-gradient(90deg, rgba(226, 64, 42, 0.42), rgba(232, 162, 44, 0.14)),
     var(--glass-3);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.16), 3px 3px 0 rgba(158, 35, 23, 0.42);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 16%, transparent), 3px 3px 0 rgba(158, 35, 23, 0.42);
 }
 .cfgSwitchInput:checked + .cfgSwitchTrack .cfgSwitchThumb {
   transform: translateX(26px);
@@ -6190,11 +6636,114 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .cfgColoReg::after { top: 50%; left: -3px; right: -3px; height: 1.5px; transform: translateY(-50%); }
 .cfgColoRow .k { width: 64px; font-family: var(--cond); font-weight: 800; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red-deep); }
 .cfgColoRow .v { font-family: var(--cond); font-weight: 700; font-size: 13px; color: var(--ink); }
+.cfgVersionNotice {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px 8px 14px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--red) 62%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 16%, transparent), transparent 68%),
+    color-mix(in srgb, var(--glass-3) 92%, #080a0e);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(14px) saturate(1.28);
+  -webkit-backdrop-filter: blur(14px) saturate(1.28);
+}
+.cfgVersionNotice::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--red);
+}
+.cfgVersionNotice::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background:
+    linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--paper) 16%, transparent) 38%, transparent 62%),
+    radial-gradient(circle at 14% 20%, color-mix(in srgb, var(--red) 18%, transparent), transparent 28%);
+  mix-blend-mode: screen;
+}
+.cfgVersionNotice .cfgColoReg { z-index: 1; border-color: var(--paper); opacity: 0.75; }
+.cfgVersionNotice .cfgColoReg::before,
+.cfgVersionNotice .cfgColoReg::after { background: var(--paper); }
+.cfgVersionCopy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.cfgVersionK {
+  font-family: var(--cond);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.cfgVersionV {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--paper) 82%, var(--text-dim));
+}
+.cfgGithubLink {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 11px;
+  border: 1px solid color-mix(in srgb, var(--red) 76%, var(--paper));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 28%, transparent), transparent 68%),
+    var(--liquid-surface);
+  color: var(--paper);
+  font-family: var(--cond);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.32);
+  transition:
+    border-color var(--motion-duration-control) var(--motion-ease-out-soft),
+    background var(--motion-duration-control) var(--motion-ease-out-soft),
+    transform var(--motion-duration-fast) var(--motion-ease-out-soft);
+}
+.cfgGithubLink:hover,
+.cfgGithubLink:focus-visible {
+  border-color: var(--red);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 44%, transparent), transparent 72%),
+    var(--liquid-surface);
+  transform: translateY(-1px);
+  outline: none;
+}
+.cfgGithubLink:active { transform: translateY(0); }
 
 @media (max-width: 820px) {
   .cfgConsole { grid-template-columns: 1fr; }
   .cfgIndex { position: static; flex-direction: row; flex-wrap: wrap; }
   .cfgIndexItem { width: auto; }
+  .cfgVersionNotice { grid-template-columns: auto minmax(0, 1fr); }
+  .cfgGithubLink { grid-column: 2; justify-self: start; }
 }
 
 /* ============================================================
@@ -6237,11 +6786,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   padding: 16px;
   border: 1px solid var(--stroke-2);
   background:
-    linear-gradient(0deg, rgba(14, 13, 12, 0.5), rgba(14, 13, 12, 0.5)),
+    linear-gradient(0deg, color-mix(in srgb, var(--ink) 50%, transparent), color-mix(in srgb, var(--ink) 50%, transparent)),
     var(--glass-2);
   -webkit-backdrop-filter: blur(13px) saturate(1.3);
   backdrop-filter: blur(13px) saturate(1.3);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.14), 0 10px 22px rgba(0, 0, 0, 0.34);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent), 0 10px 22px rgba(0, 0, 0, 0.34);
 }
 .stxHead {
   display: flex;
@@ -6371,18 +6920,18 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   cursor: pointer;
   border: 1px solid var(--stroke-2);
   background:
-    linear-gradient(0deg, rgba(14, 13, 12, 0.4), rgba(14, 13, 12, 0.4)),
+    linear-gradient(0deg, color-mix(in srgb, var(--ink) 40%, transparent), color-mix(in srgb, var(--ink) 40%, transparent)),
     var(--glass-2);
   -webkit-backdrop-filter: blur(12px) saturate(1.3);
   backdrop-filter: blur(12px) saturate(1.3);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.14), 0 8px 18px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent), 0 8px 18px rgba(0, 0, 0, 0.3);
 }
 .rstCard:hover:not(:disabled) {
   border-color: var(--red);
   background:
-    linear-gradient(0deg, rgba(14, 13, 12, 0.4), rgba(14, 13, 12, 0.4)),
+    linear-gradient(0deg, color-mix(in srgb, var(--ink) 40%, transparent), color-mix(in srgb, var(--ink) 40%, transparent)),
     var(--glass-2);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.14), 0 8px 18px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent), 0 8px 18px rgba(0, 0, 0, 0.3);
   transform: none;
 }
 .rstCard.open { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber), 0 10px 22px rgba(0, 0, 0, 0.4); }
@@ -6434,7 +6983,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   height: 60px;
   transform: translateX(-50%);
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, rgba(237, 224, 196, 0.5), rgba(237, 224, 196, 0.08) 70%, transparent);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--paper) 50%, transparent), color-mix(in srgb, var(--paper) 8%, transparent) 70%, transparent);
 }
 
 .rstPlate { position: relative; z-index: 2; display: block; }
@@ -6443,7 +6992,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   justify-content: space-between;
   gap: 6px;
   padding: 3px 8px;
-  background: #171511;
+  background: var(--bg-1);
   color: var(--amber);
   font-family: var(--cond);
   font-weight: 700;
@@ -6454,7 +7003,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .rstPlate .nm {
   display: block;
   padding: 6px 8px 8px;
-  background: rgba(14, 13, 12, 0.92);
+  background: color-mix(in srgb, var(--ink) 92%, transparent);
   overflow: hidden;
   font-family: var(--cond);
   font-weight: 800;
@@ -6476,16 +7025,24 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   border: 1px solid var(--stroke-2);
   border-left: 3px solid var(--red);
   background:
-    linear-gradient(0deg, rgba(14, 13, 12, 0.5), rgba(14, 13, 12, 0.5)),
+    linear-gradient(0deg, color-mix(in srgb, var(--ink) 50%, transparent), color-mix(in srgb, var(--ink) 50%, transparent)),
     var(--glass-2);
   -webkit-backdrop-filter: blur(13px) saturate(1.3);
   backdrop-filter: blur(13px) saturate(1.3);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.14), 0 12px 26px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent), 0 12px 26px rgba(0, 0, 0, 0.4);
   animation: rstOpen var(--motion-duration-panel) var(--motion-ease-settle);
 }
 @keyframes rstOpen {
-  from { max-height: 0; opacity: 0; }
-  to { max-height: 1600px; opacity: 1; }
+  from {
+    max-height: 0;
+    opacity: 0;
+    transform: translate3d(0, -8px, 0) scale(0.995);
+  }
+  to {
+    max-height: 1600px;
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 .rstExpandHead { display: flex; align-items: center; gap: 12px; padding: 13px 16px 0; }
 .rstExpandHead .t { font-family: var(--cond); font-weight: 800; font-size: 20px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--paper); }
@@ -6538,11 +7095,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   padding: 4px 9px;
   border: 1px solid var(--stroke-2);
   background:
-    linear-gradient(180deg, rgba(237, 224, 196, 0.12), rgba(237, 224, 196, 0.02) 44%, rgba(0, 0, 0, 0.12)),
+    linear-gradient(180deg, color-mix(in srgb, var(--paper) 12%, transparent), color-mix(in srgb, var(--paper) 2%, transparent) 44%, rgba(0, 0, 0, 0.12)),
     var(--glass);
   -webkit-backdrop-filter: blur(8px) saturate(1.28);
   backdrop-filter: blur(8px) saturate(1.28);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.16), 0 8px 18px rgba(0, 0, 0, 0.24);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 16%, transparent), 0 8px 18px rgba(0, 0, 0, 0.24);
   font-family: var(--cond);
   font-weight: 700;
   font-size: 11px;
@@ -6600,11 +7157,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   overflow: hidden;
   border: 1px solid var(--stroke-2);
   background:
-    linear-gradient(0deg, rgba(14, 13, 12, 0.5), rgba(14, 13, 12, 0.5)),
+    linear-gradient(0deg, color-mix(in srgb, var(--ink) 50%, transparent), color-mix(in srgb, var(--ink) 50%, transparent)),
     var(--glass-2);
   -webkit-backdrop-filter: blur(13px) saturate(1.3);
   backdrop-filter: blur(13px) saturate(1.3);
-  box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.14), 0 10px 22px rgba(0, 0, 0, 0.34);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent), 0 10px 22px rgba(0, 0, 0, 0.34);
 }
 .lgConsole::before {
   content: "";
@@ -6627,7 +7184,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   z-index: 0;
   pointer-events: none;
   opacity: 0.5;
-  background: repeating-linear-gradient(0deg, rgba(237, 224, 196, 0.045) 0 1px, transparent 1px 5px);
+  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--paper) 4.5%, transparent) 0 1px, transparent 1px 5px);
 }
 .lgStream {
   position: relative;
@@ -6747,7 +7304,11 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   background-color: color-mix(in srgb, var(--red) 72%, transparent) !important;
 }
 .pvCharCol .pvList {
+  padding-block: 12px 14px;
   scrollbar-width: none;
+  scroll-padding-block: 12px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
 }
 .pvCharCol .pvList::-webkit-scrollbar {
   display: none !important;
@@ -6769,6 +7330,44 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   border: 0 !important;
   background: transparent !important;
   background-color: transparent !important;
+}
+.pvCharCol {
+  --pv-char-edge-fade: 24px;
+  position: relative;
+}
+.pvCharCol::before,
+.pvCharCol::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: var(--pv-char-edge-fade);
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(4px) saturate(0.9);
+  backdrop-filter: blur(4px) saturate(0.9);
+}
+.pvCharCol::before {
+  top: 26px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-0) 70%, transparent) 0%,
+    color-mix(in srgb, var(--bg-0) 30%, transparent) 58%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.72) 48%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.72) 48%, transparent 100%);
+}
+.pvCharCol::after {
+  bottom: 0;
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--bg-0) 74%, transparent) 0%,
+    color-mix(in srgb, var(--bg-0) 32%, transparent) 58%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.72) 48%, transparent 100%);
+  mask-image: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.72) 48%, transparent 100%);
 }
 .pvItem { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 30px; padding: 5px 7px; text-align: left; cursor: pointer; border: 0; border-left: 3px solid transparent; border-radius: 0; background: transparent; box-shadow: none; color: var(--text-dim); font-family: var(--cond); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; text-transform: uppercase; transform: none; }
 .pvItem.char { position: relative; min-height: 42px; justify-content: center; padding: 5px 4px; border-left: 3px solid transparent; }
@@ -6793,7 +7392,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 .pvItem.on { background: linear-gradient(100deg, var(--red) 0 82%, transparent 82%); color: var(--paper); border-left-color: var(--amber); }
 .pvItem.char .ct { position: absolute; right: 4px; bottom: 4px; min-width: 14px; height: 14px; display: grid; place-items: center; border: 1px solid rgba(0, 0, 0, 0.45); background: var(--red); color: var(--paper); font-size: 8px; line-height: 1; }
-.pvAvatar { width: 32px; height: 32px; flex: none; overflow: hidden; border-radius: 50%; border: 1px solid rgba(237, 224, 196, 0.26); background: rgba(0, 0, 0, 0.34); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35); }
+.pvAvatar { width: 32px; height: 32px; flex: none; overflow: hidden; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--paper) 26%, transparent); background: rgba(0, 0, 0, 0.34); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35); }
 .pvAvatar img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.22); }
 .pvItem.char:hover .pvAvatar, .pvItem.char.on .pvAvatar { border-color: var(--amber); }
 .pvItem.char.on { background: rgba(226, 64, 42, 0.22); }
@@ -6857,16 +7456,52 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 }
 .pvHint { padding: 16px 10px; text-align: center; font-family: var(--cond); font-weight: 700; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
 
-.pvStageWrap { display: grid; gap: 12px; min-height: 0; overflow: hidden; overscroll-behavior: contain; }
+.pvStageWrap {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  transition:
+    gap var(--motion-duration-container) var(--motion-ease-decel),
+    grid-template-columns var(--motion-duration-container) var(--motion-ease-decel);
+}
 .pvStageWrap.dual { grid-template-columns: 1fr 1fr; }
-.pvStage { position: relative; display: flex; flex-direction: column; min-height: 382px; overflow: hidden; border: 2px solid var(--stroke-2); background: radial-gradient(320px 240px at 50% -6%, #1b1812, #0a0907); cursor: pointer; }
+.pvStage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 382px;
+  overflow: hidden;
+  border: 2px solid var(--stroke-2);
+  background: radial-gradient(320px 240px at 50% -6%, var(--bg-1), var(--ink));
+  cursor: pointer;
+  transform-origin: center;
+  transition:
+    border-color var(--motion-duration-control) var(--motion-ease-out-soft),
+    opacity var(--motion-duration-container) var(--motion-ease-decel),
+    transform var(--motion-duration-container) var(--motion-ease-decel);
+}
+.pvStageWrap.dual .pvStage {
+  animation: bdStageIn var(--motion-duration-container) var(--motion-ease-decel) both;
+}
 .pvStage.focus { border-color: var(--amber); }
+@keyframes bdStageIn {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 .pvTag { position: absolute; z-index: 3; top: 8px; left: 8px; width: 24px; height: 24px; display: grid; place-items: center; background: var(--red); color: var(--paper); font-family: var(--cond); font-weight: 800; font-size: 14px; clip-path: polygon(0 0, 100% 0, 100% 100%, 22% 100%); }
 .pvTag.b { background: var(--amber); color: var(--ink); }
 .pvField { position: relative; flex: 1; min-height: 340px; display: grid; place-items: center; overflow: hidden; overscroll-behavior: contain; }
 .pvField::before { content: ""; position: absolute; inset: 0; opacity: 0.05; background-image: radial-gradient(var(--red) 1px, transparent 1.5px); background-size: 15px 15px; }
-.pvReg { position: absolute; z-index: 1; width: 16px; height: 16px; border: 1.5px solid rgba(237, 224, 196, 0.3); border-radius: 50%; }
-.pvReg::before, .pvReg::after { content: ""; position: absolute; background: rgba(237, 224, 196, 0.3); }
+.pvReg { position: absolute; z-index: 1; width: 16px; height: 16px; border: 1.5px solid color-mix(in srgb, var(--paper) 30%, transparent); border-radius: 50%; }
+.pvReg::before, .pvReg::after { content: ""; position: absolute; background: color-mix(in srgb, var(--paper) 30%, transparent); }
 .pvReg::before { left: 50%; top: -4px; bottom: -4px; width: 1.5px; transform: translateX(-50%); }
 .pvReg::after { top: 50%; left: -4px; right: -4px; height: 1.5px; transform: translateY(-50%); }
 .pvCanvasHost { position: absolute; inset: 0; z-index: 1; cursor: grab; touch-action: none; }
@@ -6908,7 +7543,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   height: 4px;
   border: 1px solid var(--stroke);
   border-radius: 0;
-  background: linear-gradient(90deg, rgba(226, 64, 42, 0.62), rgba(237, 224, 196, 0.16));
+  background: linear-gradient(90deg, rgba(226, 64, 42, 0.62), color-mix(in srgb, var(--paper) 16%, transparent));
 }
 .pvView input[type="range"]::-webkit-slider-thumb {
   width: 7px;
@@ -6925,7 +7560,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
   height: 4px;
   border: 1px solid var(--stroke);
   border-radius: 0;
-  background: linear-gradient(90deg, rgba(226, 64, 42, 0.62), rgba(237, 224, 196, 0.16));
+  background: linear-gradient(90deg, rgba(226, 64, 42, 0.62), color-mix(in srgb, var(--paper) 16%, transparent));
 }
 .pvView input[type="range"]::-moz-range-thumb {
   width: 7px;
@@ -6948,7 +7583,7 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .pvInspect { display: grid; grid-template-columns: minmax(360px, 520px) minmax(240px, 320px); gap: 12px; align-items: start; justify-content: start; max-height: 216px; overflow: hidden; overscroll-behavior: contain; }
 @media (max-width: 900px) { .pvInspect { grid-template-columns: 1fr; } }
 .pvRenderSec { display: none; }
-.pvSec { min-width: 0; min-height: 0; padding: 10px; border: 1px solid var(--stroke-2); background: var(--glass-2); -webkit-backdrop-filter: blur(12px) saturate(1.3); backdrop-filter: blur(12px) saturate(1.3); box-shadow: inset 0 1px 0 rgba(237, 224, 196, 0.14), 0 10px 22px rgba(0, 0, 0, 0.3); }
+.pvSec { min-width: 0; min-height: 0; padding: 10px; border: 1px solid var(--stroke-2); background: var(--glass-2); -webkit-backdrop-filter: blur(12px) saturate(1.3); backdrop-filter: blur(12px) saturate(1.3); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 14%, transparent), 0 10px 22px rgba(0, 0, 0, 0.3); }
 .pvSec .h { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; font-family: var(--cond); font-weight: 800; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--paper); }
 .pvSec .h .num { color: var(--red); }
 .pvSec .h i { flex: 1; height: 1px; background: var(--stroke); }

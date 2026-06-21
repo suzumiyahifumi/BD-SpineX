@@ -20,6 +20,7 @@ const LOADER_DYLIB: &str = "libbd2loader.dylib";
 const LOADER_LOAD_NAME: &str = "@executable_path/Frameworks/libbd2loader.dylib";
 const DISABLED_MARKER: &str = ".bdspinex-disabled";
 const SUPPORTED_GAME_VERSION: &str = env!("CARGO_PKG_VERSION");
+const GITHUB_RELEASES_URL_PREFIX: &str = "https://github.com/suzumiyahifumi/BD-SpineX/releases";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -302,7 +303,7 @@ fn get_default_paths() -> Result<serde_json::Value, String> {
 fn get_app_info() -> AppInfo {
     AppInfo {
         name: "BD-SpineX".to_string(),
-        subtitle: "Runtime Mod Manager".to_string(),
+        subtitle: "PlayCover Mod Manager".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         supported_game_version: SUPPORTED_GAME_VERSION.to_string(),
         development: cfg!(debug_assertions),
@@ -320,6 +321,19 @@ fn detect_game_version() -> GameVersionInfo {
         version,
         source_path: info_path.map(|p| p.to_string_lossy().to_string()),
         detected_at: Utc::now().to_rfc3339(),
+    }
+}
+
+#[tauri::command]
+fn open_external(url: String) -> Result<bool, String> {
+    if !url.starts_with(GITHUB_RELEASES_URL_PREFIX) {
+        return Err("Unsupported external URL.".to_string());
+    }
+    let status = Command::new("open").arg(&url).status().map_err(|e| e.to_string())?;
+    if status.success() {
+        Ok(true)
+    } else {
+        Err(format!("Could not open external URL: {status}"))
     }
 }
 
@@ -793,6 +807,7 @@ pub fn run() {
             get_default_paths,
             get_app_info,
             detect_game_version,
+            open_external,
             select_directory,
             runtime_status,
             runtime_migration_check,

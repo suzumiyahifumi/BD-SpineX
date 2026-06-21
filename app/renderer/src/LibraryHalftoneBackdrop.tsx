@@ -5,7 +5,15 @@ type LineArtMeta = { image: string };
 type LibraryBackdropMode = "classic" | "posterGhost" | "duotone" | "pureTone";
 type ParticleDensityPreset = "full" | "sparse";
 type ParticleLayerMode = "standard" | "outer";
+type PureToneStyle = "original" | "grayscale";
 type BackdropCharacterPhase = "ready" | "transition" | "settled";
+type RgbColor = [number, number, number];
+type ParticlePalette = {
+  amber: RgbColor;
+  paper: RgbColor;
+  red: RgbColor;
+  redDeep: RgbColor;
+};
 export type LibraryBackdropCharacterDetail = {
   duration?: number;
   fromId?: string;
@@ -32,6 +40,7 @@ type HalftoneShape = HalftoneData & {
   duotoneImage: HTMLImageElement;
   lineArtImage: HTMLImageElement;
   pureToneImage: HTMLImageElement;
+  pureToneMaskImage?: HTMLImageElement;
 };
 type ParticleTarget = {
   x: number;
@@ -69,6 +78,7 @@ type LibraryBackdropConsoleApi = {
   modes: readonly LibraryBackdropMode[];
   particleLayerModes: readonly ParticleLayerMode[];
   particleModes: readonly ParticleDensityPreset[];
+  pureToneStyles: readonly PureToneStyle[];
   resetSettings: () => LibraryBackdropSettings;
   setInk: (value: number, target?: string) => LibraryBackdropSettings;
   setMode: (mode: string) => LibraryBackdropMode;
@@ -76,6 +86,7 @@ type LibraryBackdropConsoleApi = {
   setParticleLayerMode: (mode: string) => LibraryBackdropSettings;
   setParticleMode: (mode: string) => LibraryBackdropSettings;
   setParticlesEnabled: (enabled: boolean) => LibraryBackdropSettings;
+  setPureToneStyle: (style: string) => LibraryBackdropSettings;
   setSettings: (settings: Partial<LibraryBackdropSettings>) => LibraryBackdropSettings;
   toggleParticles: () => LibraryBackdropSettings;
 };
@@ -89,6 +100,7 @@ type LibraryBackdropSettings = {
   particlesEnabled: boolean;
   posterGhostInk: number;
   pureToneInk: number;
+  pureToneStyle: PureToneStyle;
 };
 
 declare global {
@@ -105,6 +117,7 @@ const LIBRARY_BACKDROP_SETTINGS_STORAGE_KEY = "bd-spinex.libraryBackdrop.setting
 const LIBRARY_BACKDROP_MODES = ["classic", "posterGhost", "duotone", "pureTone"] as const satisfies readonly LibraryBackdropMode[];
 const PARTICLE_DENSITY_PRESETS = ["full", "sparse"] as const satisfies readonly ParticleDensityPreset[];
 const PARTICLE_LAYER_MODES = ["standard", "outer"] as const satisfies readonly ParticleLayerMode[];
+const PURE_TONE_STYLES = ["original", "grayscale"] as const satisfies readonly PureToneStyle[];
 const SPARSE_PARTICLE_DENSITY = 0.35;
 const OUTER_PARTICLE_KEEP_RATIO = 0.36;
 const DEFAULT_BACKDROP_MODE: LibraryBackdropMode = "pureTone";
@@ -117,7 +130,8 @@ const DEFAULT_BACKDROP_SETTINGS: LibraryBackdropSettings = {
   particleLayerMode: "outer",
   particlesEnabled: true,
   posterGhostInk: 0.72,
-  pureToneInk: 0.3
+  pureToneInk: 0.3,
+  pureToneStyle: "original"
 };
 const TRANSITION_DURATION = 4200;
 const SETTLED_HOLD_DURATION = 16000;
@@ -125,12 +139,13 @@ const INITIAL_HOLD_DURATION = 14000;
 const LINE_FADE_IN_DURATION = 3200;
 const LINE_FADE_OUT_DURATION = 520;
 const BACKDROP_SCATTER_END = 0.46;
-const DOT_COLORS = {
+const DEFAULT_DOT_COLORS: ParticlePalette = {
   red: [226, 64, 42],
   redDeep: [158, 35, 23],
   amber: [232, 162, 44],
   paper: [237, 224, 196]
 };
+const pureToneThemeCache = new WeakMap<HTMLImageElement, Map<string, HTMLCanvasElement>>();
 
 export function LibraryHalftoneBackdrop() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -152,6 +167,7 @@ export function LibraryHalftoneBackdrop() {
     let loadingTransition = false;
     let renderMode = readStoredBackdropMode();
     let renderSettings = readStoredBackdropSettings();
+    let particlePalette = readParticlePalette();
     const shapeCache = new Map<string, HalftoneShape>();
     let particles: Particle[] = [];
     let transition: Transition | null = null;
@@ -171,15 +187,19 @@ export function LibraryHalftoneBackdrop() {
     const setRenderSettings = (settings: Partial<LibraryBackdropSettings>) => {
       const previousParticleDensity = renderSettings.particleDensity;
       const previousParticleLayerMode = renderSettings.particleLayerMode;
+      const previousParticlesEnabled = renderSettings.particlesEnabled;
       renderSettings = normalizeBackdropSettings(settings, renderSettings);
       storeBackdropSettings(renderSettings);
       const now = performance.now();
-      if (
+      if (!renderSettings.particlesEnabled) {
+        particles = [];
+      } else if (
         currentShape &&
         !transition &&
         width > 0 &&
         height > 0 &&
         (
+          renderSettings.particlesEnabled !== previousParticlesEnabled ||
           Math.abs(renderSettings.particleDensity - previousParticleDensity) > 0.001 ||
           renderSettings.particleLayerMode !== previousParticleLayerMode
         )
@@ -221,6 +241,7 @@ export function LibraryHalftoneBackdrop() {
       modes: LIBRARY_BACKDROP_MODES,
       particleLayerModes: PARTICLE_LAYER_MODES,
       particleModes: PARTICLE_DENSITY_PRESETS,
+      pureToneStyles: PURE_TONE_STYLES,
       resetSettings: () => setRenderSettings(DEFAULT_BACKDROP_SETTINGS),
       setInk,
       setMode: setRenderMode,
@@ -228,6 +249,7 @@ export function LibraryHalftoneBackdrop() {
       setParticleLayerMode,
       setParticleMode,
       setParticlesEnabled: (enabled: boolean) => setRenderSettings({ particlesEnabled: enabled }),
+      setPureToneStyle: (style: string) => setRenderSettings({ pureToneStyle: normalizePureToneStyle(style, renderSettings.pureToneStyle) }),
       setSettings: setRenderSettings,
       toggleParticles: () => setRenderSettings({ particlesEnabled: !renderSettings.particlesEnabled })
     };
@@ -243,7 +265,8 @@ export function LibraryHalftoneBackdrop() {
       setInk: "bdLibraryBackdrop.setInk(value, optionalMode)",
       setMode: "bdLibraryBackdrop.setMode('classic' | 'posterGhost' | 'duotone' | 'pureTone')",
       setParticlesEnabled: "bdLibraryBackdrop.setParticlesEnabled(true | false)",
-      setSettings: "bdLibraryBackdrop.setSettings({ particlesEnabled, particleDensity, particleLayerMode, classicInk, dotStrength, lineWidth, posterGhostInk, duotoneInk, pureToneInk })"
+      setPureToneStyle: "bdLibraryBackdrop.setPureToneStyle('original' | 'grayscale')",
+      setSettings: "bdLibraryBackdrop.setSettings({ particlesEnabled, particleDensity, particleLayerMode, pureToneStyle, classicInk, dotStrength, lineWidth, posterGhostInk, duotoneInk, pureToneInk })"
     });
 
     const resize = () => {
@@ -257,14 +280,16 @@ export function LibraryHalftoneBackdrop() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (currentShape) {
-        particles = createParticlesForShape(
-          currentShape,
-          currentIndex,
-          width,
-          height,
-          renderSettings.particleDensity,
-          renderSettings.particleLayerMode
-        );
+        particles = renderSettings.particlesEnabled
+          ? createParticlesForShape(
+            currentShape,
+            currentIndex,
+            width,
+            height,
+            renderSettings.particleDensity,
+            renderSettings.particleLayerMode
+          )
+          : [];
         transition = null;
         lineVisibleSince = performance.now() - LINE_FADE_IN_DURATION;
         draw(performance.now());
@@ -283,32 +308,37 @@ export function LibraryHalftoneBackdrop() {
       try {
         const nextShape = await loadHalftoneShape(ids[nextIndex], shapeCache);
         if (cancelled || !currentShape) return;
-        const targets = mapShapeToCanvas(nextShape, width, height, renderSettings.particleDensity, renderSettings.particleLayerMode);
-        const count = Math.max(particles.length, targets.length);
-        const nextParticles: Particle[] = [];
+        if (renderSettings.particlesEnabled) {
+          const targets = mapShapeToCanvas(nextShape, width, height, renderSettings.particleDensity, renderSettings.particleLayerMode);
+          const count = Math.max(particles.length, targets.length);
+          const nextParticles: Particle[] = [];
 
-        for (let index = 0; index < count; index += 1) {
-          const particle = particles[index] ?? createDormantParticle(index, nextIndex, width, height);
-          const target = targets[index % targets.length];
-          const scatter = scatterPoint(index, particle, width, height);
-          nextParticles.push({
-            ...particle,
-            fromX: particle.x,
-            fromY: particle.y,
-            fromAlpha: particle.alpha,
-            fromSize: particle.size,
-            scatterX: scatter.x,
-            scatterY: scatter.y,
-            tx: target.x,
-            ty: target.y,
-            targetAlpha: index < targets.length ? target.alpha : 0,
-            targetSize: index < targets.length ? target.size : 0,
-            tone: index < targets.length ? target.tone : particle.tone,
-            seed: particle.seed || hash(index, nextIndex + 7)
-          });
+          for (let index = 0; index < count; index += 1) {
+            const particle = particles[index] ?? createDormantParticle(index, nextIndex, width, height);
+            const target = targets[index % targets.length];
+            const scatter = scatterPoint(index, particle, width, height);
+            nextParticles.push({
+              ...particle,
+              fromX: particle.x,
+              fromY: particle.y,
+              fromAlpha: particle.alpha,
+              fromSize: particle.size,
+              scatterX: scatter.x,
+              scatterY: scatter.y,
+              tx: target.x,
+              ty: target.y,
+              targetAlpha: index < targets.length ? target.alpha : 0,
+              targetSize: index < targets.length ? target.size : 0,
+              tone: index < targets.length ? target.tone : particle.tone,
+              seed: particle.seed || hash(index, nextIndex + 7)
+            });
+          }
+
+          particles = nextParticles;
+        } else {
+          particles = [];
         }
 
-        particles = nextParticles;
         const start = performance.now();
         transition = { start, duration: TRANSITION_DURATION, fromShape: currentShape, nextShape, nextIndex };
         emitBackdropCharacter(nextShape, { duration: TRANSITION_DURATION, fromId: currentShape.id, phase: "transition" });
@@ -336,38 +366,42 @@ export function LibraryHalftoneBackdrop() {
     const updateParticles = (now: number) => {
       if (!transition) return;
       const t = clamp((now - transition.start) / transition.duration, 0, 1);
-      const isScatterPhase = t < BACKDROP_SCATTER_END;
-      const scatterProgress = motionSnappy(clamp(t / BACKDROP_SCATTER_END, 0, 1));
-      const settleProgress = motionSettle(clamp((t - BACKDROP_SCATTER_END) / (1 - BACKDROP_SCATTER_END), 0, 1));
+      if (renderSettings.particlesEnabled && particles.length > 0) {
+        const isScatterPhase = t < BACKDROP_SCATTER_END;
+        const scatterProgress = motionSnappy(clamp(t / BACKDROP_SCATTER_END, 0, 1));
+        const settleProgress = motionSettle(clamp((t - BACKDROP_SCATTER_END) / (1 - BACKDROP_SCATTER_END), 0, 1));
 
-      for (const particle of particles) {
-        const fromX = particle.fromX ?? particle.x;
-        const fromY = particle.fromY ?? particle.y;
-        const fromAlpha = particle.fromAlpha ?? particle.alpha;
-        const fromSize = particle.fromSize ?? particle.size;
-        const scatterX = particle.scatterX ?? particle.x;
-        const scatterY = particle.scatterY ?? particle.y;
-        const tx = particle.tx ?? particle.x;
-        const ty = particle.ty ?? particle.y;
-        const targetAlpha = particle.targetAlpha ?? particle.alpha;
-        const targetSize = particle.targetSize ?? particle.size;
-        const phase = (particle.seed % 6283) / 1000;
+        for (const particle of particles) {
+          const fromX = particle.fromX ?? particle.x;
+          const fromY = particle.fromY ?? particle.y;
+          const fromAlpha = particle.fromAlpha ?? particle.alpha;
+          const fromSize = particle.fromSize ?? particle.size;
+          const scatterX = particle.scatterX ?? particle.x;
+          const scatterY = particle.scatterY ?? particle.y;
+          const tx = particle.tx ?? particle.x;
+          const ty = particle.ty ?? particle.y;
+          const targetAlpha = particle.targetAlpha ?? particle.alpha;
+          const targetSize = particle.targetSize ?? particle.size;
+          const phase = (particle.seed % 6283) / 1000;
 
-        if (isScatterPhase) {
-          const q = scatterProgress;
-          const drift = Math.sin(now * 0.01 + phase) * 12 * q;
-          particle.x = lerp(fromX, scatterX, q) + drift;
-          particle.y = lerp(fromY, scatterY, q) + Math.cos(now * 0.008 + phase) * 9 * q;
-          particle.size = lerp(fromSize, Math.max(fromSize, targetSize) * 0.82, q);
-          particle.alpha = lerp(fromAlpha, Math.max(0.14, (fromAlpha || targetAlpha) * 0.54), q);
-        } else {
-          const q = settleProgress;
-          const settle = Math.sin((1 - q) * Math.PI) * (1 - q);
-          particle.x = lerp(scatterX, tx, q) + Math.sin(phase + q * Math.PI) * 22 * settle;
-          particle.y = lerp(scatterY, ty, q) + Math.cos(phase + q * Math.PI) * 16 * settle;
-          particle.size = lerp(Math.max(fromSize, targetSize) * 0.82, targetSize, q);
-          particle.alpha = lerp(Math.max(0.14, targetAlpha * 0.48), targetAlpha, q);
+          if (isScatterPhase) {
+            const q = scatterProgress;
+            const drift = Math.sin(now * 0.01 + phase) * 12 * q;
+            particle.x = lerp(fromX, scatterX, q) + drift;
+            particle.y = lerp(fromY, scatterY, q) + Math.cos(now * 0.008 + phase) * 9 * q;
+            particle.size = lerp(fromSize, Math.max(fromSize, targetSize) * 0.82, q);
+            particle.alpha = lerp(fromAlpha, Math.max(0.14, (fromAlpha || targetAlpha) * 0.54), q);
+          } else {
+            const q = settleProgress;
+            const settle = Math.sin((1 - q) * Math.PI) * (1 - q);
+            particle.x = lerp(scatterX, tx, q) + Math.sin(phase + q * Math.PI) * 22 * settle;
+            particle.y = lerp(scatterY, ty, q) + Math.cos(phase + q * Math.PI) * 16 * settle;
+            particle.size = lerp(Math.max(fromSize, targetSize) * 0.82, targetSize, q);
+            particle.alpha = lerp(Math.max(0.14, targetAlpha * 0.48), targetAlpha, q);
+          }
         }
+      } else if (particles.length > 0) {
+        particles = [];
       }
 
       if (t >= 1) {
@@ -376,7 +410,7 @@ export function LibraryHalftoneBackdrop() {
         emitBackdropCharacter(currentShape, { phase: "settled" });
         transition = null;
         lineVisibleSince = renderMode === "classic" ? now : now - LINE_FADE_IN_DURATION;
-        particles = width > 0 && height > 0
+        particles = renderSettings.particlesEnabled && width > 0 && height > 0
           ? createParticlesForShape(
             currentShape,
             currentIndex,
@@ -385,7 +419,7 @@ export function LibraryHalftoneBackdrop() {
             renderSettings.particleDensity,
             renderSettings.particleLayerMode
           )
-          : particles.filter((particle) => particle.targetAlpha === undefined || particle.targetAlpha > 0.01);
+          : [];
       }
     };
 
@@ -394,7 +428,7 @@ export function LibraryHalftoneBackdrop() {
 
       if (renderMode === "classic") {
         if (renderSettings.particlesEnabled) {
-          drawParticles(ctx, particles, now, renderSettings.dotStrength);
+          drawParticles(ctx, particles, now, renderSettings.dotStrength, particlePalette);
         }
 
         if (transition) {
@@ -409,13 +443,18 @@ export function LibraryHalftoneBackdrop() {
       }
 
       if (renderSettings.particlesEnabled && renderSettings.particleLayerMode === "outer") {
-        drawParticles(ctx, particles, now, renderSettings.dotStrength);
+        drawParticles(ctx, particles, now, renderSettings.dotStrength, particlePalette);
       }
 
-      drawStillBackdrop(ctx, renderMode, renderSettings, transition, currentShape, width, height, now, lineVisibleSince);
+      drawStillBackdrop(ctx, renderMode, renderSettings, transition, currentShape, width, height, now, lineVisibleSince, particlePalette);
       if (renderSettings.particlesEnabled && renderSettings.particleLayerMode !== "outer") {
-        drawParticles(ctx, particles, now, renderSettings.dotStrength);
+        drawParticles(ctx, particles, now, renderSettings.dotStrength, particlePalette);
       }
+    };
+
+    const refreshParticlePalette = () => {
+      particlePalette = readParticlePalette();
+      draw(performance.now());
     };
 
     void (async () => {
@@ -433,11 +472,18 @@ export function LibraryHalftoneBackdrop() {
       // Keep Library usable if optional background assets fail to load.
     });
 
+    const paletteObserver = new MutationObserver(refreshParticlePalette);
+    paletteObserver.observe(document.documentElement, {
+      attributeFilter: ["class", "data-accent", "data-theme", "style"],
+      attributes: true
+    });
+
     window.addEventListener("resize", resize, { passive: true });
 
     return () => {
       cancelled = true;
       stopAnimation();
+      paletteObserver.disconnect();
       window.removeEventListener("resize", resize);
       if (window.bdLibraryBackdrop === consoleApi) {
         delete window.bdLibraryBackdrop;
@@ -540,7 +586,8 @@ function normalizeBackdropSettings(value: unknown, fallback: LibraryBackdropSett
     particleLayerMode: normalizeParticleLayerMode(input.particleLayerMode, fallback.particleLayerMode),
     particlesEnabled: booleanValue(input.particlesEnabled, fallback.particlesEnabled),
     posterGhostInk: finiteNumber(input.posterGhostInk, fallback.posterGhostInk, 0, 1.5),
-    pureToneInk: finiteNumber(input.pureToneInk, fallback.pureToneInk, 0, 1.5)
+    pureToneInk: finiteNumber(input.pureToneInk, fallback.pureToneInk, 0, 1.5),
+    pureToneStyle: normalizePureToneStyle(input.pureToneStyle, fallback.pureToneStyle)
   };
 }
 
@@ -550,6 +597,62 @@ function normalizeParticleLayerMode(value: unknown, fallback: ParticleLayerMode)
   if (key === "outer" || key === "outside" || key === "outline" || key === "perimeter" || key === "halo" || key === "behind") return "outer";
   if (key === "standard" || key === "normal" || key === "front" || key === "default" || key === "full") return "standard";
   return fallback;
+}
+
+function normalizePureToneStyle(value: unknown, fallback: PureToneStyle): PureToneStyle {
+  if (typeof value !== "string") return fallback;
+  const key = value.trim().toLowerCase();
+  if (key === "grayscale" || key === "greyscale" || key === "gray" || key === "grey" || key === "mono" || key === "monochrome") return "grayscale";
+  if (key === "original" || key === "source" || key === "color" || key === "default") return "original";
+  return fallback;
+}
+
+function readParticlePalette(): ParticlePalette {
+  if (typeof window === "undefined") return DEFAULT_DOT_COLORS;
+  const styles = window.getComputedStyle(document.documentElement);
+  return {
+    amber: readCssColor(styles, "--amber", DEFAULT_DOT_COLORS.amber),
+    paper: readCssColor(styles, "--paper", DEFAULT_DOT_COLORS.paper),
+    red: readCssColor(styles, "--red", DEFAULT_DOT_COLORS.red),
+    redDeep: readCssColor(styles, "--red-deep", DEFAULT_DOT_COLORS.redDeep)
+  };
+}
+
+function readCssColor(styles: CSSStyleDeclaration, token: string, fallback: RgbColor): RgbColor {
+  return parseCssColor(styles.getPropertyValue(token)) ?? fallback;
+}
+
+function parseCssColor(value: string): RgbColor | null {
+  const color = value.trim();
+  const hex = color.match(/^#([\da-f]{3}|[\da-f]{6})$/i);
+  if (hex) {
+    const raw = hex[1].length === 3
+      ? hex[1].split("").map((part) => `${part}${part}`).join("")
+      : hex[1];
+    return [
+      Number.parseInt(raw.slice(0, 2), 16),
+      Number.parseInt(raw.slice(2, 4), 16),
+      Number.parseInt(raw.slice(4, 6), 16)
+    ];
+  }
+
+  const rgb = color.match(/^rgba?\(([^)]+)\)$/i);
+  if (!rgb) return null;
+  const channels = rgb[1]
+    .split(/[,\s/]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((part) => part.endsWith("%")
+      ? (Number.parseFloat(part) / 100) * 255
+      : Number.parseFloat(part));
+
+  if (channels.length < 3 || channels.some((channel) => !Number.isFinite(channel))) return null;
+  return [
+    Math.round(clamp(channels[0], 0, 255)),
+    Math.round(clamp(channels[1], 0, 255)),
+    Math.round(clamp(channels[2], 0, 255))
+  ];
 }
 
 function finiteNumber(value: unknown, fallback: number, min: number, max: number) {
@@ -596,12 +699,11 @@ async function loadHalftoneShape(id: string, cache: Map<string, HalftoneShape>) 
   const response = await fetch(`${LIBRARY_HALFTONE_DIR}/${id}.json`);
   if (!response.ok) throw new Error(`Failed to load halftone data for ${id}`);
   const data = await response.json() as HalftoneData;
-  const lineArt = data.lineArtVariants?.posterGhost ?? data.lineArtVariants?.duotone ?? data.lineArt;
-  const duotone = data.lineArtVariants?.duotone ?? lineArt;
-  const pureTone = data.lineArtVariants?.pureTone ?? duotone;
-  if (!lineArt?.image) throw new Error(`Missing line art for ${id}`);
-  if (!duotone?.image) throw new Error(`Missing duotone art for ${id}`);
+  const pureTone = data.lineArtVariants?.pureTone ?? data.lineArtVariants?.duotone ?? data.lineArt;
   if (!pureTone?.image) throw new Error(`Missing pure tone art for ${id}`);
+  const pureToneMask = data.lineArtVariants?.pureToneMask;
+  const lineArt = data.lineArtVariants?.posterGhost ?? data.lineArtVariants?.duotone ?? data.lineArt ?? pureTone;
+  const duotone = data.lineArtVariants?.duotone ?? lineArt;
   const lineArtImage = await loadImage(`${LIBRARY_HALFTONE_DIR}/${lineArt.image}`);
   const duotoneImage = duotone.image === lineArt.image
     ? lineArtImage
@@ -611,7 +713,10 @@ async function loadHalftoneShape(id: string, cache: Map<string, HalftoneShape>) 
     : pureTone.image === duotone.image
       ? duotoneImage
       : await loadImage(`${LIBRARY_HALFTONE_DIR}/${pureTone.image}`);
-  const shape = { ...data, duotoneImage, lineArtImage, pureToneImage };
+  const pureToneMaskImage = pureToneMask?.image
+    ? await loadOptionalImage(`${LIBRARY_HALFTONE_DIR}/${pureToneMask.image}`)
+    : undefined;
+  const shape = { ...data, duotoneImage, lineArtImage, pureToneImage, pureToneMaskImage };
   cache.set(id, shape);
   return shape;
 }
@@ -623,6 +728,14 @@ function loadImage(src: string) {
     image.onerror = () => reject(new Error(`Failed to load ${src}`));
     image.src = src;
   });
+}
+
+async function loadOptionalImage(src: string) {
+  try {
+    return await loadImage(src);
+  } catch {
+    return undefined;
+  }
 }
 
 function createParticlesForShape(
@@ -743,7 +856,13 @@ function shapeLayout(shape: HalftoneShape, width: number, height: number) {
   return { left, top, shapeWidth, shapeHeight, baseSize };
 }
 
-function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], now: number, dotStrength: number) {
+function drawParticles(
+  ctx: CanvasRenderingContext2D,
+  particles: Particle[],
+  now: number,
+  dotStrength: number,
+  palette: ParticlePalette
+) {
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
   for (const particle of particles) {
@@ -754,16 +873,16 @@ function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[], now
     const size = particle.size * pulse;
     const x = Math.round(particle.x - size * 0.5);
     const y = Math.round(particle.y - size * 0.5);
-    const color = particle.tone === 2 ? DOT_COLORS.amber : particle.tone === 1 ? DOT_COLORS.redDeep : DOT_COLORS.red;
+    const color = particle.tone === 2 ? palette.amber : particle.tone === 1 ? palette.redDeep : palette.red;
 
     if (particle.tone !== 1) {
-      fillRect(ctx, x + size * 0.34, y + size * 0.34, size, size, DOT_COLORS.redDeep, particleAlpha * 0.34);
+      fillRect(ctx, x + size * 0.34, y + size * 0.34, size, size, palette.redDeep, particleAlpha * 0.34);
     }
     fillRect(ctx, x, y, size, size, color, particleAlpha);
 
     if (size > 7) {
-      fillRect(ctx, x + 1, y + 1, Math.max(1, size - 2), 1, DOT_COLORS.paper, particleAlpha * 0.05);
-      fillRect(ctx, x + 1, y + Math.max(1, size - 2), Math.max(1, size - 2), 1, DOT_COLORS.redDeep, particleAlpha * 0.11);
+      fillRect(ctx, x + 1, y + 1, Math.max(1, size - 2), 1, palette.paper, particleAlpha * 0.05);
+      fillRect(ctx, x + 1, y + Math.max(1, size - 2), Math.max(1, size - 2), 1, palette.redDeep, particleAlpha * 0.11);
     }
   }
   ctx.restore();
@@ -813,19 +932,20 @@ function drawStillBackdrop(
   width: number,
   height: number,
   now: number,
-  lineVisibleSince: number
+  lineVisibleSince: number,
+  palette: ParticlePalette
 ) {
   if (transition) {
     const t = clamp((now - transition.start) / transition.duration, 0, 1);
     const fadeOut = 1 - motionSmooth(clamp(t / 0.42, 0, 1));
     const fadeIn = motionSmooth(clamp((t - 0.18) / 0.82, 0, 1));
-    drawStillBackdropImage(ctx, mode, settings, transition.fromShape, width, height, fadeOut);
-    drawStillBackdropImage(ctx, mode, settings, transition.nextShape, width, height, fadeIn);
+    drawStillBackdropImage(ctx, mode, settings, transition.fromShape, width, height, fadeOut, palette);
+    drawStillBackdropImage(ctx, mode, settings, transition.nextShape, width, height, fadeIn, palette);
     return;
   }
 
   const fadeIn = motionSmooth(clamp((now - lineVisibleSince) / LINE_FADE_IN_DURATION, 0, 1));
-  drawStillBackdropImage(ctx, mode, settings, currentShape, width, height, fadeIn);
+  drawStillBackdropImage(ctx, mode, settings, currentShape, width, height, fadeIn, palette);
 }
 
 function drawStillBackdropImage(
@@ -835,14 +955,15 @@ function drawStillBackdropImage(
   shape: HalftoneShape | null | undefined,
   width: number,
   height: number,
-  visibility: number
+  visibility: number,
+  palette: ParticlePalette
 ) {
   if (mode === "duotone") {
     drawStandardDuotoneImage(ctx, shape, width, height, visibility, settings.duotoneInk);
     return;
   }
   if (mode === "pureTone") {
-    drawPureToneImage(ctx, shape, width, height, visibility, settings.pureToneInk);
+    drawPureToneImage(ctx, shape, width, height, visibility, settings.pureToneInk, settings.pureToneStyle, palette);
     return;
   }
 
@@ -897,7 +1018,9 @@ function drawPureToneImage(
   width: number,
   height: number,
   visibility: number,
-  ink: number
+  ink: number,
+  style: PureToneStyle,
+  palette: ParticlePalette
 ) {
   if (!shape?.pureToneImage || visibility <= 0) {
     drawStandardDuotoneImage(ctx, shape, width, height, visibility, ink);
@@ -909,11 +1032,81 @@ function drawPureToneImage(
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = ink * clamp(visibility, 0, 1);
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(shape.pureToneImage, layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
+  const sourceImage = style === "grayscale" ? shape.pureToneMaskImage ?? shape.pureToneImage : shape.pureToneImage;
+  ctx.drawImage(pureToneImageSource(sourceImage, style, palette), layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
   ctx.restore();
 }
 
-function fillRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, color: number[], alpha: number) {
+function pureToneImageSource(image: HTMLImageElement, style: PureToneStyle, palette: ParticlePalette): CanvasImageSource {
+  if (style !== "grayscale") return image;
+  const cacheKey = particlePaletteKey(palette);
+  const cached = pureToneThemeCache.get(image)?.get(cacheKey);
+  if (cached) return cached;
+
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  if (width <= 0 || height <= 0) return image;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return image;
+
+  try {
+    ctx.drawImage(image, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    for (let offset = 0; offset < data.length; offset += 4) {
+      if (data[offset + 3] <= 0) continue;
+      const luminance = (data[offset] * 0.2126 + data[offset + 1] * 0.7152 + data[offset + 2] * 0.0722) / 255;
+      const color = pureTonePaletteColor(luminance, palette);
+      data[offset] = color[0];
+      data[offset + 1] = color[1];
+      data[offset + 2] = color[2];
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    const imageCache = pureToneThemeCache.get(image) ?? new Map<string, HTMLCanvasElement>();
+    imageCache.set(cacheKey, canvas);
+    pureToneThemeCache.set(image, imageCache);
+    return canvas;
+  } catch {
+    return image;
+  }
+}
+
+function particlePaletteKey(palette: ParticlePalette) {
+  return [
+    palette.red,
+    palette.redDeep,
+    palette.amber,
+    palette.paper
+  ].map((color) => color.join(",")).join("|");
+}
+
+function pureTonePaletteColor(luminance: number, palette: ParticlePalette): RgbColor {
+  const value = clamp(luminance, 0, 1);
+  if (value > 0.72) {
+    return mixRgb(palette.amber, palette.paper, clamp((value - 0.72) / 0.28, 0, 1));
+  }
+  if (value > 0.38) {
+    return mixRgb(palette.red, palette.amber, clamp((value - 0.38) / 0.34, 0, 1));
+  }
+  return mixRgb(palette.redDeep, palette.red, clamp(value / 0.38, 0, 1));
+}
+
+function mixRgb(from: RgbColor, to: RgbColor, amount: number): RgbColor {
+  const t = clamp(amount, 0, 1);
+  return [
+    Math.round(lerp(from[0], to[0], t)),
+    Math.round(lerp(from[1], to[1], t)),
+    Math.round(lerp(from[2], to[2], t))
+  ];
+}
+
+function fillRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, color: RgbColor, alpha: number) {
   ctx.globalAlpha = clamp(alpha, 0, 1);
   ctx.fillStyle = `rgb(${color[0]} ${color[1]} ${color[2]})`;
   ctx.fillRect(x, y, width, height);

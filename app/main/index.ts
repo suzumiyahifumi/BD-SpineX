@@ -16,7 +16,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const appDisplayName = "BD-SpineX";
-const appSubtitle = "Mod Manager";
+const appSubtitle = "PlayCover Mod Manager";
+const githubReleaseHost = "github.com";
+const githubReleasePathPrefix = "/suzumiyahifumi/BD-SpineX/releases";
 const isDev = !app.isPackaged;
 let stopSharedScanRequested = false;
 
@@ -70,6 +72,14 @@ function setupProductionWindowGuards(window: BrowserWindow) {
   });
 }
 
+function parseAllowedExternalUrl(rawUrl: string) {
+  const url = new URL(rawUrl);
+  if (url.protocol !== "https:" || url.hostname !== githubReleaseHost || !url.pathname.startsWith(githubReleasePathPrefix)) {
+    throw new Error("Unsupported external URL.");
+  }
+  return url;
+}
+
 ipcMain.handle("dialog:select-directory", async () => {
   const result = await dialog.showOpenDialog({
     properties: ["openDirectory", "createDirectory"]
@@ -90,6 +100,11 @@ ipcMain.handle("app:write-settings", async (_event, settings: unknown) => {
 });
 ipcMain.handle("app:open-detected-shared-folder", async () => openDetectedSharedFolder());
 ipcMain.handle("app:open-records-folder", async () => openRecordsFolder());
+ipcMain.handle("app:open-external", async (_event, rawUrl: string) => {
+  const url = parseAllowedExternalUrl(rawUrl);
+  await shell.openExternal(url.toString());
+  return true;
+});
 ipcMain.handle("app:info", async (): Promise<AppInfo> => ({
   name: appDisplayName,
   subtitle: appSubtitle,
