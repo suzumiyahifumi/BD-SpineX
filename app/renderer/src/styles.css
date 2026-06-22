@@ -5407,6 +5407,142 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
     #100A16;
 }
 
+/* ===== Ultramarine Press palette — saturated cobalt ink + coral ===== */
+:root[data-theme="night"][data-accent="ultramarine"] {
+  --bg-0:#0A0E1C; --bg-1:#121A33;
+  --text:#E6ECF7; --text-dim:#9FB0CE; --text-faint:#65779A;
+  --glass:rgba(230,236,247,0.06); --glass-2:rgba(230,236,247,0.10); --glass-3:rgba(230,236,247,0.15);
+  --stroke:rgba(230,236,247,0.16); --stroke-2:rgba(230,236,247,0.28); --shine:rgba(210,224,255,0.55);
+  --shadow:rgba(2,5,14,0.62);
+  --red:#3D5AF1; --red-deep:#243FB0; --amber:#FF6A3C; --paper:#E6ECF7; --ink:#0A0E1C;
+  --scrollbar-thumb:#3D5AF1; --scrollbar-thumb-hover:#3D5AF1; --scrollbar-thumb-active:#243FB0;
+}
+[data-theme="night"][data-accent="ultramarine"] body {
+  background:
+    radial-gradient(1000px 760px at 8% -8%, #182350 0%, transparent 60%),
+    radial-gradient(900px 720px at 100% 0%, #141a3e 0%, transparent 55%),
+    #0A0E1C;
+}
+
+/* ===== Emerald Press palette — clean jade ink + gold foil ===== */
+:root[data-theme="night"][data-accent="emerald"] {
+  --bg-0:#08140E; --bg-1:#11231A;
+  --text:#E6F1E8; --text-dim:#9CB8A6; --text-faint:#637E6E;
+  --glass:rgba(230,241,232,0.06); --glass-2:rgba(230,241,232,0.10); --glass-3:rgba(230,241,232,0.15);
+  --stroke:rgba(230,241,232,0.16); --stroke-2:rgba(230,241,232,0.28); --shine:rgba(214,255,228,0.5);
+  --shadow:rgba(2,10,6,0.62);
+  --red:#12B981; --red-deep:#0A7A55; --amber:#F0C24E; --paper:#E6F1E8; --ink:#08140E;
+  --scrollbar-thumb:#12B981; --scrollbar-thumb-hover:#12B981; --scrollbar-thumb-active:#0A7A55;
+}
+[data-theme="night"][data-accent="emerald"] body {
+  background:
+    radial-gradient(1000px 760px at 8% -8%, #0f3022 0%, transparent 60%),
+    radial-gradient(900px 720px at 100% 0%, #123528 0%, transparent 55%),
+    #08140E;
+}
+
+/* ===== Onyx Press palette — deep graphite, malachite-petrol ink + champagne gold ===== */
+:root[data-theme="night"][data-accent="onyx"] {
+  --bg-0:#0A0C10; --bg-1:#14171E;
+  --text:#DEE3EA; --text-dim:#969DAA; --text-faint:#5E6571;
+  --glass:rgba(222,227,234,0.06); --glass-2:rgba(222,227,234,0.10); --glass-3:rgba(222,227,234,0.15);
+  --stroke:rgba(222,227,234,0.16); --stroke-2:rgba(222,227,234,0.28); --shine:rgba(214,228,255,0.5);
+  --shadow:rgba(2,4,8,0.64);
+  --red:#1C6E74; --red-deep:#0E4A50; --amber:#CCA862; --paper:#DEE3EA; --ink:#0A0C10;
+  --scrollbar-thumb:#1C6E74; --scrollbar-thumb-hover:#1C6E74; --scrollbar-thumb-active:#0E4A50;
+}
+[data-theme="night"][data-accent="onyx"] body {
+  background:
+    radial-gradient(1000px 760px at 8% -8%, #0e2a2c 0%, transparent 60%),
+    radial-gradient(900px 720px at 100% 0%, #14181f 0%, transparent 55%),
+    #0A0C10;
+}
+
+/* ===== Porcelain Press palette — airy slate, dove-blue ink + soft clay ===== */
+:root[data-theme="night"][data-accent="porcelain"] {
+  --bg-0:#1A1D24; --bg-1:#242832;
+  --text:#EEF1F6; --text-dim:#BCC3CD; --text-faint:#868E9A;
+  --glass:rgba(238,241,246,0.06); --glass-2:rgba(238,241,246,0.10); --glass-3:rgba(238,241,246,0.15);
+  --stroke:rgba(238,241,246,0.16); --stroke-2:rgba(238,241,246,0.28); --shine:rgba(255,250,244,0.5);
+  --shadow:rgba(8,10,16,0.5);
+  --red:#5F92AE; --red-deep:#3E6C86; --amber:#D6A88C; --paper:#EEF1F6; --ink:#1A1D24;
+  --scrollbar-thumb:#5F92AE; --scrollbar-thumb-hover:#5F92AE; --scrollbar-thumb-active:#3E6C86;
+}
+[data-theme="night"][data-accent="porcelain"] body {
+  background:
+    radial-gradient(1000px 760px at 8% -8%, #2a3340 0%, transparent 60%),
+    radial-gradient(900px 720px at 100% 0%, #2e2a32 0%, transparent 55%),
+    #1A1D24;
+}
+
+/* ===== Hakuji Proof palette — white porcelain proof + small stamp accents ===== */
+:root[data-theme="night"][data-accent="hakuji"] {
+  color-scheme: light;
+  --bg-0:#F7F8F4; --bg-1:#EBF1EC;
+  --text:#25312F; --text-dim:#62706B; --text-faint:#8D9994;
+  --glass:rgba(37,49,47,0.045); --glass-2:rgba(37,49,47,0.07); --glass-3:rgba(37,49,47,0.11);
+  --stroke:rgba(37,49,47,0.13); --stroke-2:rgba(37,49,47,0.22); --shine:rgba(255,255,255,0.84);
+  --shadow:rgba(37,49,47,0.16);
+  --liquid-border:rgba(37,49,47,0.13);
+  --liquid-surface:
+    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(247,248,244,0.5)),
+    rgba(255,255,255,0.56);
+  --liquid-surface-disabled:
+    linear-gradient(180deg, rgba(255,255,255,0.52), rgba(247,248,244,0.34)),
+    rgba(255,255,255,0.34);
+  --liquid-shadow:
+    0 10px 24px rgba(37,49,47,0.11),
+    inset 0 1px 0 rgba(255,255,255,0.82),
+    inset 0 -1px 0 rgba(37,49,47,0.055);
+  --red:#AE5958; --red-deep:#7C3F43; --amber:#447A75; --paper:#25312F; --ink:#F7F8F4;
+  --ok:#3F8C69; --ok-bg:rgba(63,140,105,0.12);
+  --warn:#8A6C34; --warn-bg:rgba(138,108,52,0.12);
+  --err:#AE5958; --err-bg:rgba(174,89,88,0.12);
+  --conflict:#74649A; --conflict-bg:rgba(116,100,154,0.12);
+  --scrollbar-track:transparent; --scrollbar-thumb:#B8C8C1;
+  --scrollbar-thumb-hover:#9CB3AA; --scrollbar-thumb-active:#447A75;
+}
+[data-theme="night"][data-accent="hakuji"] body {
+  background:
+    radial-gradient(900px 660px at 10% -10%, rgba(226,238,230,0.82) 0%, transparent 62%),
+    radial-gradient(840px 640px at 100% 0%, rgba(244,220,211,0.56) 0%, transparent 56%),
+    linear-gradient(180deg, #FBFCFA 0%, #F2F6F1 100%);
+}
+
+/* ===== Signal Sketch palette — white animation draft + orange/red marks ===== */
+:root[data-theme="night"][data-palette="signal"] {
+  color-scheme: light;
+  --bg-0:#FAFAF6; --bg-1:#F0EFE7;
+  --text:#232A2D; --text-dim:#5F696B; --text-faint:#929896;
+  --glass:rgba(35,42,45,0.04); --glass-2:rgba(35,42,45,0.065); --glass-3:rgba(35,42,45,0.105);
+  --stroke:rgba(35,42,45,0.14); --stroke-2:rgba(35,42,45,0.24); --shine:rgba(255,255,255,0.86);
+  --shadow:rgba(35,42,45,0.18);
+  --liquid-border:rgba(35,42,45,0.14);
+  --liquid-surface:
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(250,250,246,0.54)),
+    rgba(255,255,255,0.6);
+  --liquid-surface-disabled:
+    linear-gradient(180deg, rgba(255,255,255,0.55), rgba(250,250,246,0.36)),
+    rgba(255,255,255,0.36);
+  --liquid-shadow:
+    0 10px 24px rgba(35,42,45,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.86),
+    inset 0 -1px 0 rgba(35,42,45,0.06);
+  --red:#C8322B; --red-deep:#8F2424; --amber:#BD4F12; --paper:#232A2D; --ink:#FFF8F0;
+  --ok:#2F7E68; --ok-bg:rgba(47,126,104,0.12);
+  --warn:#BD4F12; --warn-bg:rgba(189,79,18,0.12);
+  --err:#C8322B; --err-bg:rgba(200,50,43,0.12);
+  --conflict:#596274; --conflict-bg:rgba(89,98,116,0.12);
+  --scrollbar-track:transparent; --scrollbar-thumb:#D9A278;
+  --scrollbar-thumb-hover:#BD4F12; --scrollbar-thumb-active:#8F2424;
+}
+[data-theme="night"][data-palette="signal"] body {
+  background:
+    radial-gradient(900px 660px at 8% -12%, rgba(255,238,216,0.88) 0%, transparent 62%),
+    radial-gradient(780px 560px at 100% 0%, rgba(200,50,43,0.12) 0%, transparent 58%),
+    linear-gradient(180deg, #FFFDF8 0%, #F4F2EA 100%);
+}
+
 /* ============ print chrome (shared, non-rail) ============ */
 :where([data-theme="night"]) .viewHead h1,
 :where([data-theme="night"]) .panelTitle,
@@ -7630,3 +7766,793 @@ tr.pendingPatchChange.pendingPatchConflict:hover td {
 .pvRow:last-child { border-bottom: 0; }
 .pvRow .k { font-weight: 700; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
 .pvRow .v { font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--amber); }
+
+/* ============================================================
+   Hakuji Proof — white porcelain proof theme
+   Bright Tauri-first palette: porcelain white ground, sumi ink
+   type, and tiny cinnabar/celadon registration marks. This
+   keeps the Night Press layout language but removes the heavy
+   dark press-bed mood.
+   ============================================================ */
+
+:where([data-theme="night"][data-accent="hakuji"]) button {
+  border-color: var(--stroke);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.72), rgba(247,248,244,0.46)),
+    var(--glass);
+  color: var(--paper);
+  box-shadow:
+    2px 2px 0 rgba(37,49,47,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.78);
+}
+:where([data-theme="night"][data-accent="hakuji"]) button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--amber) 52%, var(--stroke-2));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.86), rgba(247,248,244,0.58)),
+    var(--glass-2);
+  box-shadow:
+    1px 1px 0 rgba(37,49,47,0.11),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+}
+:where([data-theme="night"][data-accent="hakuji"]) button:disabled {
+  background: rgba(37,49,47,0.035);
+  border-color: rgba(37,49,47,0.08);
+  color: var(--text-faint);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) input,
+:where([data-theme="night"][data-accent="hakuji"]) select,
+:where([data-theme="night"][data-accent="hakuji"]) .modFilterField input,
+:where([data-theme="night"][data-accent="hakuji"]) .cartridgeToolbar .modFilterField input,
+:where([data-theme="night"][data-accent="hakuji"]) .cfgPath,
+:where([data-theme="night"][data-accent="hakuji"]) .cfgAuthorAdd input,
+:where([data-theme="night"][data-accent="hakuji"]) .rstSearch input,
+:where([data-theme="night"][data-accent="hakuji"]) .pvSearchRow input,
+:where([data-theme="night"][data-accent="hakuji"]) .pvLayerAnim,
+:where([data-theme="night"][data-accent="hakuji"]) .pvSelect {
+  border-color: var(--stroke);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(247,248,244,0.62)),
+    rgba(255,255,255,0.5);
+  color: var(--paper);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.82);
+}
+:where([data-theme="night"][data-accent="hakuji"]) input::placeholder {
+  color: color-mix(in srgb, var(--text-faint) 72%, transparent);
+}
+:where([data-theme="night"][data-accent="hakuji"]) input:focus,
+:where([data-theme="night"][data-accent="hakuji"]) select:focus,
+:where([data-theme="night"][data-accent="hakuji"]) .modFilterField input:focus,
+:where([data-theme="night"][data-accent="hakuji"]) .cfgPath:focus,
+:where([data-theme="night"][data-accent="hakuji"]) .cfgAuthorAdd input:focus,
+:where([data-theme="night"][data-accent="hakuji"]) .rstSearch input:focus,
+:where([data-theme="night"][data-accent="hakuji"]) .pvSearchRow input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 16%, transparent);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .appRail {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(237,244,238,0.72)),
+    rgba(247,248,244,0.76);
+  border-right-color: rgba(37,49,47,0.12);
+  box-shadow: 12px 0 34px rgba(37,49,47,0.07);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .appRail::before {
+  width: 4px;
+  background: var(--red);
+  box-shadow: 2px 0 0 color-mix(in srgb, var(--red) 22%, transparent);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .appRail::after {
+  opacity: 0.16;
+  background-image: radial-gradient(var(--amber) 0.8px, transparent 1.4px);
+  background-size: 8px 8px;
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railLogo,
+:where([data-theme="night"][data-accent="hakuji"]) .railBadge,
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active .railStar {
+  color: var(--ink);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railName,
+:where([data-theme="night"][data-accent="hakuji"]) .railStampMain,
+:where([data-theme="night"][data-accent="hakuji"]) .railCount span,
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion strong {
+  color: var(--paper);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railGroup {
+  color: var(--red-deep);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railGroupCjk,
+:where([data-theme="night"][data-accent="hakuji"]) .railSub,
+:where([data-theme="night"][data-accent="hakuji"]) .railStampSub,
+:where([data-theme="night"][data-accent="hakuji"]) .railCount span {
+  color: var(--text-dim);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railItem {
+  border-left-color: color-mix(in srgb, var(--red) 26%, transparent);
+  background: transparent;
+  color: var(--text-dim);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railItem:hover:not(:disabled),
+:where([data-theme="night"][data-accent="hakuji"]) .railItem:focus-visible {
+  color: var(--paper);
+  border-left-color: var(--amber);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--amber) 10%, transparent), transparent 68%);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active {
+  color: var(--ink);
+  border-left-color: var(--amber);
+  background: linear-gradient(100deg, var(--red) 0 76%, transparent 76%);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active .railNum,
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active .railLabel {
+  color: var(--ink);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion {
+  background: rgba(255,255,255,0.74);
+  color: var(--paper);
+  box-shadow: 2px 2px 0 rgba(37,49,47,0.1);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .appMain {
+  background-image:
+    radial-gradient(560px 380px at 8% -8%, rgba(229,239,230,0.78), transparent 64%),
+    radial-gradient(rgba(174,89,88,0.035) 1px, transparent 1.5px),
+    radial-gradient(rgba(68,122,117,0.045) 1px, transparent 1.5px),
+    linear-gradient(rgba(37,49,47,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,49,47,0.035) 1px, transparent 1px);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .libraryHalftoneBackdrop {
+  opacity: 0.18;
+  mix-blend-mode: multiply;
+  filter: saturate(0.62) contrast(0.86) brightness(1.18);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .appMain::before {
+  background: none;
+  color: rgba(37,49,47,0.035);
+  mix-blend-mode: multiply;
+}
+:where([data-theme="night"][data-accent="hakuji"]) .appMain::after {
+  opacity: 0.32;
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .viewHead h1 {
+  color: var(--paper);
+  -webkit-text-fill-color: var(--paper);
+  border-bottom-color: var(--red);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .viewCount b,
+:where([data-theme="night"][data-accent="hakuji"]) .stxNum b {
+  color: var(--amber);
+  text-shadow: 2px 2px 0 color-mix(in srgb, var(--red) 20%, transparent);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .backdropMetaName,
+:where([data-theme="night"][data-accent="hakuji"]) .statusPill {
+  background: rgba(255,255,255,0.66);
+  color: var(--paper);
+  border-color: color-mix(in srgb, var(--red) 62%, var(--stroke-2));
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .segmentedControl,
+:where([data-theme="night"][data-accent="hakuji"]) .rstSort,
+:where([data-theme="night"][data-accent="hakuji"]) .lgFilter {
+  border-color: var(--stroke);
+  background: rgba(255,255,255,0.66);
+  box-shadow: var(--liquid-shadow);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .segmentedControl button.active {
+  background: var(--red);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .segmentedControl button.active span {
+  color: var(--ink);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .panel,
+:where([data-theme="night"][data-accent="hakuji"]) .cfgCard,
+:where([data-theme="night"][data-accent="hakuji"]) .stxHeatCol,
+:where([data-theme="night"][data-accent="hakuji"]) .stxSideCol,
+:where([data-theme="night"][data-accent="hakuji"]) .rstCard,
+:where([data-theme="night"][data-accent="hakuji"]) .rstExpandInner,
+:where([data-theme="night"][data-accent="hakuji"]) .lgConsole,
+:where([data-theme="night"][data-accent="hakuji"]) .pvFinder,
+:where([data-theme="night"][data-accent="hakuji"]) .pvSec {
+  border-color: var(--stroke);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.76), rgba(247,248,244,0.52)),
+    var(--glass-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.84),
+    0 12px 26px rgba(37,49,47,0.1);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .cfgGroupHead,
+:where([data-theme="night"][data-accent="hakuji"]) .cfgFieldHead,
+:where([data-theme="night"][data-accent="hakuji"]) .cfgConsoleLbl b,
+:where([data-theme="night"][data-accent="hakuji"]) .stxHead,
+:where([data-theme="night"][data-accent="hakuji"]) .stxBar .nm,
+:where([data-theme="night"][data-accent="hakuji"]) .rstExpandHead .t,
+:where([data-theme="night"][data-accent="hakuji"]) .pvTitle,
+:where([data-theme="night"][data-accent="hakuji"]) .pvSec .h,
+:where([data-theme="night"][data-accent="hakuji"]) .pvPart .nm,
+:where([data-theme="night"][data-accent="hakuji"]) .pvLayer,
+:where([data-theme="night"][data-accent="hakuji"]) .pvTb,
+:where([data-theme="night"][data-accent="hakuji"]) .pvSel {
+  color: var(--paper);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .cfgCard,
+:where([data-theme="night"][data-accent="hakuji"]) .stxHeatCol,
+:where([data-theme="night"][data-accent="hakuji"]) .stxSideCol {
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  backdrop-filter: blur(16px) saturate(1.08);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .cfgBtn.primary,
+:where([data-theme="night"][data-accent="hakuji"]) .dockBtn.apply {
+  border-color: color-mix(in srgb, var(--red) 72%, var(--stroke-2));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 22%, transparent), transparent 76%),
+    var(--liquid-surface);
+  color: var(--paper);
+  box-shadow:
+    2px 2px 0 rgba(124,63,67,0.16),
+    0 8px 22px rgba(37,49,47,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.82);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .dockBtn.apply:hover:not(:disabled),
+:where([data-theme="night"][data-accent="hakuji"]) .cfgBtn.primary:hover:not(:disabled) {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 28%, transparent), transparent 78%),
+    var(--liquid-surface);
+  color: var(--paper);
+  box-shadow:
+    1px 1px 0 rgba(124,63,67,0.2),
+    0 10px 24px rgba(37,49,47,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .dockApplyCount,
+:where([data-theme="night"][data-accent="hakuji"]) .pvTag.b,
+:where([data-theme="night"][data-accent="hakuji"]) .rcart.is-add {
+  --nameplate-status-ink: var(--ink);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .dockApplyCount,
+:where([data-theme="night"][data-accent="hakuji"]) .pvTag.b {
+  color: var(--ink);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .badge.patched,
+:where([data-theme="night"][data-accent="hakuji"]) .injectionBadge.injected,
+:where([data-theme="night"][data-accent="hakuji"]) .pendingDiffHead strong,
+:where([data-theme="night"][data-accent="hakuji"]) .rstStamp,
+:where([data-theme="night"][data-accent="hakuji"]) .rstPreview,
+:where([data-theme="night"][data-accent="hakuji"]) .pvTag,
+:where([data-theme="night"][data-accent="hakuji"]) .pvTb.play,
+:where([data-theme="night"][data-accent="hakuji"]) .pvItem.char .ct,
+:where([data-theme="night"][data-accent="hakuji"]) .railLogo {
+  color: var(--ink);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .rcartNamePlate {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--paper) 8%, var(--ink)) 0 14px, rgba(255,255,255,0.9) 14px 100%),
+    radial-gradient(72px 28px at 90% 86%, rgba(37,49,47,0.06), transparent 70%),
+    var(--ink);
+  box-shadow:
+    inset 4px 0 0 var(--nameplate-strip),
+    2px 2px 0 rgba(37,49,47,0.16);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rcartNameKind {
+  background: color-mix(in srgb, var(--paper) 8%, var(--ink));
+  color: var(--amber);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rcartNameKind::after {
+  color: var(--nameplate-status-ink);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rcartNamePlate strong {
+  color: var(--paper);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .rstPlate .k {
+  background: color-mix(in srgb, var(--paper) 8%, var(--ink));
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rstPlate .nm {
+  background: rgba(255,255,255,0.9);
+  color: var(--paper);
+  text-shadow: none;
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rstCard.open {
+  box-shadow: 0 0 0 1px var(--amber), 0 10px 22px rgba(37,49,47,0.14);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .stxBar .track,
+:where([data-theme="night"][data-accent="hakuji"]) .pvScrub,
+:where([data-theme="night"][data-accent="hakuji"]) .pvPartList {
+  background: rgba(37,49,47,0.055);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .lgConsole::before {
+  background: rgba(37,49,47,0.05);
+  border-right-color: var(--stroke);
+  background-image: radial-gradient(circle at 13px 9px, rgba(37,49,47,0.32) 0 2.4px, transparent 3px);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .lgConsole::after {
+  opacity: 0.55;
+  background: repeating-linear-gradient(0deg, rgba(68,122,117,0.065) 0 1px, transparent 1px 5px);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .lgChip,
+:where([data-theme="night"][data-accent="hakuji"]) .lgBtn {
+  background: rgba(255,255,255,0.68);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.82), 0 8px 18px rgba(37,49,47,0.08);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .lgChip b {
+  color: var(--paper);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .pvStage {
+  border-color: color-mix(in srgb, var(--amber) 42%, var(--stroke-2));
+  background:
+    radial-gradient(340px 250px at 50% -8%, #FFFFFF, #EEF4EF 64%, #E0E9E3);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 12px 28px rgba(37,49,47,0.12);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .pvStage.focus {
+  border-color: var(--amber);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .pvField::before {
+  opacity: 0.06;
+  background-image: radial-gradient(var(--amber) 1px, transparent 1.5px);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .pvPlay {
+  background: rgba(255,255,255,0.7);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .pvLoad,
+:where([data-theme="night"][data-accent="hakuji"]) .pvErr {
+  background: rgba(255,255,255,0.78);
+  color: var(--amber);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .pvErr {
+  color: var(--red-deep);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .pvEmpty2,
+:where([data-theme="night"][data-accent="hakuji"]) .pvHint,
+:where([data-theme="night"][data-accent="hakuji"]) .pvPending {
+  color: var(--text-dim);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active,
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active:hover:not(:disabled),
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active:focus-visible {
+  color: var(--paper);
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--red) 30%, var(--ink)) 0 76%, transparent 76%);
+  border-left-color: var(--amber);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active .railNum,
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active .railLabel,
+:where([data-theme="night"][data-accent="hakuji"]) .railItem.active .railStar {
+  color: var(--paper);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .pvItem.on {
+  color: var(--paper);
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--red) 22%, var(--ink)) 0 82%, transparent 82%);
+}
+
+/* White proof cleanup: remove dark-theme residue from status, tooltips, dialogs. */
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod {
+  border: 1px solid color-mix(in srgb, var(--paper) 10%, var(--stroke));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.94), color-mix(in srgb, var(--ink) 86%, var(--bg-1))),
+    var(--ink);
+  box-shadow:
+    0 8px 16px rgba(37,49,47,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.92),
+    inset 0 -2px 3px rgba(37,49,47,0.08);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod.is-check,
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod.is-plus.on,
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod.is-minus {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.92), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--red) 11%, var(--ink)), color-mix(in srgb, var(--red) 5%, var(--ink)));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--red) 72%, var(--ink)),
+    0 8px 16px rgba(37,49,47,0.17),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod.is-check .rcartPodMark,
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod.is-minus .rcartPodMark {
+  color: var(--red);
+  --rcart-pod-symbol: var(--red);
+  text-shadow: none;
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod.is-plus.on {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.92), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--amber) 13%, var(--ink)), color-mix(in srgb, var(--amber) 5%, var(--ink)));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--amber) 72%, var(--ink)),
+    0 8px 16px rgba(37,49,47,0.17),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .rcartPod.is-plus.on .rcartPodMark {
+  --rcart-pod-symbol: var(--amber);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .htmlAltTooltip {
+  border-color: color-mix(in srgb, var(--red) 58%, var(--stroke-2));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 7%, transparent), transparent 76%),
+    linear-gradient(180deg, rgba(255,255,255,0.92), color-mix(in srgb, var(--ink) 82%, var(--bg-1))),
+    var(--ink);
+  color: var(--paper);
+  box-shadow:
+    2px 2px 0 rgba(37,49,47,0.13),
+    0 14px 30px rgba(37,49,47,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .htmlAltTooltipLine:first-child {
+  color: var(--paper);
+  font-weight: 850;
+}
+:where([data-theme="night"][data-accent="hakuji"]) .htmlAltTooltipLine:not(:first-child) {
+  color: var(--text-dim);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion,
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion:hover:not(:disabled),
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion:focus-visible {
+  border: 1px solid var(--stroke);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 7%, transparent), transparent 74%),
+    rgba(255,255,255,0.76);
+  color: var(--paper);
+  box-shadow:
+    2px 2px 0 rgba(37,49,47,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion:hover:not(:disabled),
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion:focus-visible {
+  border-color: color-mix(in srgb, var(--amber) 52%, var(--stroke-2));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 10%, transparent), transparent 72%),
+    rgba(255,255,255,0.84);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion::before {
+  background: var(--red);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersionLabel {
+  color: var(--red-deep);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion strong {
+  color: var(--paper);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railReg {
+  border-color: var(--red-deep);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railReg::before,
+:where([data-theme="night"][data-accent="hakuji"]) .railReg::after {
+  background: var(--red-deep);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked,
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked:hover:not(:disabled),
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked:focus-visible {
+  border-color: color-mix(in srgb, var(--red) 52%, var(--stroke-2));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 16%, transparent), transparent 74%),
+    rgba(255,255,255,0.8);
+  color: var(--paper);
+  box-shadow:
+    2px 2px 0 rgba(37,49,47,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked .railVersionLabel,
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked strong {
+  color: var(--paper);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked .railReg {
+  border-color: var(--red);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked .railReg::before,
+:where([data-theme="night"][data-accent="hakuji"]) .railVersion.locked .railReg::after {
+  background: var(--red);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .helpPopup {
+  border: 1.5px solid color-mix(in srgb, var(--red) 58%, var(--stroke-2));
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 7%, transparent), transparent 76%),
+    linear-gradient(180deg, rgba(255,255,255,0.92), color-mix(in srgb, var(--ink) 84%, var(--bg-1))),
+    var(--ink);
+  -webkit-backdrop-filter: blur(16px) saturate(1.04);
+  backdrop-filter: blur(16px) saturate(1.04);
+  box-shadow:
+    3px 3px 0 rgba(37,49,47,0.12),
+    0 18px 42px rgba(37,49,47,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+  color: var(--paper);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .helpPopupTitle {
+  color: var(--red-deep);
+  font-family: var(--cond);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+:where([data-theme="night"][data-accent="hakuji"]) .helpPopupText {
+  color: var(--text-dim);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .helpCloseButton {
+  border: 1px solid var(--stroke);
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.74), rgba(247,248,244,0.48)),
+    var(--glass);
+  color: var(--paper);
+  box-shadow:
+    1px 1px 0 rgba(37,49,47,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.82);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .helpCloseButton:hover,
+:where([data-theme="night"][data-accent="hakuji"]) .helpCloseButton:focus-visible {
+  border-color: color-mix(in srgb, var(--amber) 54%, var(--stroke-2));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.88), rgba(247,248,244,0.58)),
+    var(--glass-2);
+  color: var(--paper);
+  box-shadow:
+    1px 1px 0 rgba(37,49,47,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+}
+
+:where([data-theme="night"][data-accent="hakuji"]) .confirmOverlay {
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--red) 8%, transparent), transparent 38%),
+    rgba(247,248,244,0.58);
+  -webkit-backdrop-filter: blur(12px) saturate(0.92);
+  backdrop-filter: blur(12px) saturate(0.92);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog {
+  border-color: color-mix(in srgb, var(--red) 54%, var(--stroke-2));
+  border-left-color: var(--red);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.88), color-mix(in srgb, var(--ink) 82%, var(--bg-1))),
+    var(--ink);
+  color: var(--paper);
+  box-shadow:
+    0 22px 54px rgba(37,49,47,0.2),
+    3px 3px 0 rgba(37,49,47,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog::before {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 8%, transparent), transparent 68%),
+    linear-gradient(rgba(37,49,47,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,49,47,0.035) 1px, transparent 1px);
+  background-size: auto, 34px 34px, 34px 34px;
+  opacity: 1;
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog h2,
+:where([data-theme="night"][data-accent="hakuji"]) .confirmBody b {
+  color: var(--paper);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmBody {
+  color: var(--text-dim);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmKicker,
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog.tone-warn .confirmKicker,
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog.tone-info .confirmKicker {
+  background: var(--red);
+  color: var(--ink);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmBtn.secondary {
+  border-color: var(--stroke);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.72), rgba(247,248,244,0.46)),
+    var(--glass);
+  color: var(--paper);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.82);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmBtn.primary {
+  border-color: color-mix(in srgb, var(--red-deep) 78%, var(--stroke-2));
+  background: linear-gradient(180deg, var(--red), var(--red-deep));
+  color: var(--ink);
+  box-shadow:
+    2px 2px 0 color-mix(in srgb, var(--red-deep) 22%, transparent),
+    0 10px 22px color-mix(in srgb, var(--red) 18%, transparent);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog.tone-warn .confirmBtn.primary,
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog.tone-info .confirmBtn.primary {
+  border-color: color-mix(in srgb, var(--amber) 72%, var(--stroke-2));
+  background: linear-gradient(180deg, var(--amber), color-mix(in srgb, var(--amber) 72%, var(--paper)));
+  color: var(--ink);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmBtn:hover {
+  border-color: color-mix(in srgb, var(--amber) 54%, var(--stroke-2));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.88), rgba(247,248,244,0.58)),
+    var(--glass-2);
+  color: var(--paper);
+  box-shadow:
+    1px 1px 0 rgba(37,49,47,0.14),
+    0 10px 22px rgba(37,49,47,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+}
+:where([data-theme="night"][data-accent="hakuji"]) .confirmBtn.primary:hover,
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog.tone-warn .confirmBtn.primary:hover,
+:where([data-theme="night"][data-accent="hakuji"]) .confirmDialog.tone-info .confirmBtn.primary:hover {
+  border-color: color-mix(in srgb, var(--red-deep) 82%, var(--stroke-2));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 92%, #fff), var(--red-deep));
+  color: var(--ink);
+  box-shadow:
+    1px 1px 0 color-mix(in srgb, var(--red-deep) 24%, transparent),
+    0 10px 24px color-mix(in srgb, var(--red) 22%, transparent);
+}
+
+/* ============================================================
+   Signal Sketch — white/orange/red drafting-paper variant
+   Shares the Hakuji light proof structure, then adds cinematic
+   warning-orange marks, red verification stamps, and graphite
+   sketch hatching without copying any specific franchise asset.
+   ============================================================ */
+
+:where([data-theme="night"][data-palette="signal"]) .appRail {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.88), rgba(244,241,232,0.76)),
+    rgba(250,250,246,0.8);
+  border-right-color: rgba(35,42,45,0.14);
+}
+:where([data-theme="night"][data-palette="signal"]) .appRail::before {
+  width: 5px;
+  background:
+    linear-gradient(180deg, var(--red) 0 30%, var(--amber) 30% 100%);
+  box-shadow: 2px 0 0 rgba(35,42,45,0.08);
+}
+:where([data-theme="night"][data-palette="signal"]) .appRail::after {
+  opacity: 0.22;
+  background-image:
+    repeating-linear-gradient(116deg, transparent 0 8px, rgba(35,42,45,0.18) 8px 9px, transparent 9px 18px),
+    radial-gradient(var(--amber) 0.75px, transparent 1.4px);
+  background-size: auto, 9px 9px;
+}
+:where([data-theme="night"][data-palette="signal"]) .appMain {
+  background-image:
+    radial-gradient(520px 360px at 82% 2%, rgba(189,79,18,0.13), transparent 64%),
+    radial-gradient(420px 300px at 8% 98%, rgba(200,50,43,0.08), transparent 66%),
+    repeating-linear-gradient(116deg, transparent 0 17px, rgba(35,42,45,0.035) 17px 18px, transparent 18px 31px),
+    linear-gradient(rgba(35,42,45,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(35,42,45,0.04) 1px, transparent 1px);
+  background-size: auto, auto, auto, 40px 40px, 40px 40px;
+}
+:where([data-theme="night"][data-palette="signal"]) .libraryHalftoneBackdrop {
+  opacity: 0.14;
+  filter: grayscale(0.75) saturate(0.34) contrast(1.08) brightness(1.2);
+}
+:where([data-theme="night"][data-palette="signal"]) .appMain::before {
+  color: rgba(35,42,45,0.04);
+}
+:where([data-theme="night"][data-palette="signal"]) .viewHead h1 {
+  border-bottom-color: var(--amber);
+  box-shadow: inset 4px 0 0 var(--red);
+  padding-left: 12px;
+}
+:where([data-theme="night"][data-palette="signal"]) .viewCount b,
+:where([data-theme="night"][data-palette="signal"]) .stxNum b {
+  color: var(--amber);
+  text-shadow: 2px 2px 0 rgba(200,50,43,0.2);
+}
+:where([data-theme="night"][data-palette="signal"]) .railGroup,
+:where([data-theme="night"][data-palette="signal"]) .railStampMain {
+  color: var(--red-deep);
+}
+:where([data-theme="night"][data-palette="signal"]) .railItem:hover:not(:disabled),
+:where([data-theme="night"][data-palette="signal"]) .railItem:focus-visible {
+  border-left-color: var(--amber);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 12%, transparent), transparent 68%),
+    repeating-linear-gradient(116deg, transparent 0 9px, rgba(35,42,45,0.04) 9px 10px, transparent 10px 18px);
+}
+:where([data-theme="night"][data-palette="signal"]) .railItem.active,
+:where([data-theme="night"][data-palette="signal"]) .railItem.active:hover:not(:disabled),
+:where([data-theme="night"][data-palette="signal"]) .railItem.active:focus-visible {
+  color: var(--paper);
+  border-left-color: var(--red);
+  background:
+    linear-gradient(100deg,
+      color-mix(in srgb, var(--amber) 28%, var(--ink)) 0 66%,
+      color-mix(in srgb, var(--red) 36%, var(--ink)) 66% 76%,
+      transparent 76%);
+}
+:where([data-theme="night"][data-palette="signal"]) .railItem.active .railNum,
+:where([data-theme="night"][data-palette="signal"]) .railItem.active .railLabel,
+:where([data-theme="night"][data-palette="signal"]) .railItem.active .railStar {
+  color: var(--paper);
+}
+
+:where([data-theme="night"][data-palette="signal"]) .panel,
+:where([data-theme="night"][data-palette="signal"]) .cfgCard,
+:where([data-theme="night"][data-palette="signal"]) .stxHeatCol,
+:where([data-theme="night"][data-palette="signal"]) .stxSideCol,
+:where([data-theme="night"][data-palette="signal"]) .rstCard,
+:where([data-theme="night"][data-palette="signal"]) .rstExpandInner,
+:where([data-theme="night"][data-palette="signal"]) .lgConsole,
+:where([data-theme="night"][data-palette="signal"]) .pvFinder,
+:where([data-theme="night"][data-palette="signal"]) .pvSec {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(250,250,246,0.54)),
+    repeating-linear-gradient(116deg, transparent 0 16px, rgba(35,42,45,0.026) 16px 17px, transparent 17px 29px),
+    var(--glass-2);
+  outline: 1px dashed rgba(35,42,45,0.08);
+  outline-offset: -5px;
+}
+:where([data-theme="night"][data-palette="signal"]) .segmentedControl button.active {
+  background:
+    linear-gradient(90deg, var(--red), var(--amber));
+}
+:where([data-theme="night"][data-palette="signal"]) .cfgBtn.primary,
+:where([data-theme="night"][data-palette="signal"]) .dockBtn.apply {
+  border-color: color-mix(in srgb, var(--amber) 70%, var(--stroke-2));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 24%, transparent), transparent 68%),
+    linear-gradient(90deg, transparent 0 74%, color-mix(in srgb, var(--red) 18%, transparent) 74% 82%, transparent 82%),
+    var(--liquid-surface);
+}
+:where([data-theme="night"][data-palette="signal"]) .cfgBtn.primary:hover:not(:disabled),
+:where([data-theme="night"][data-palette="signal"]) .dockBtn.apply:hover:not(:disabled) {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 32%, transparent), transparent 70%),
+    linear-gradient(90deg, transparent 0 74%, color-mix(in srgb, var(--red) 22%, transparent) 74% 84%, transparent 84%),
+    var(--liquid-surface);
+}
+:where([data-theme="night"][data-palette="signal"]) .backdropMetaName,
+:where([data-theme="night"][data-palette="signal"]) .statusPill {
+  border-color: color-mix(in srgb, var(--amber) 58%, var(--stroke-2));
+}
+:where([data-theme="night"][data-palette="signal"]) .cfgColoRow,
+:where([data-theme="night"][data-palette="signal"]) .cfgVersionNotice {
+  border: 1px solid var(--stroke);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 10%, transparent), transparent 72%),
+    rgba(255,255,255,0.72);
+  color: var(--paper);
+  box-shadow: 2px 2px 0 rgba(35,42,45,0.1);
+}
+:where([data-theme="night"][data-palette="signal"]) .cfgColoRow .v,
+:where([data-theme="night"][data-palette="signal"]) .cfgVersionV {
+  color: var(--paper);
+}
+:where([data-theme="night"][data-palette="signal"]) .cfgColoRow .k,
+:where([data-theme="night"][data-palette="signal"]) .cfgVersionK {
+  color: var(--red-deep);
+}
+:where([data-theme="night"][data-palette="signal"]) .lgConsole::before {
+  background: rgba(35,42,45,0.055);
+  border-right-color: rgba(35,42,45,0.12);
+  background-image: radial-gradient(circle at 13px 9px, rgba(35,42,45,0.34) 0 2.4px, transparent 3px);
+}
+:where([data-theme="night"][data-palette="signal"]) .lgConsole::after {
+  opacity: 0.62;
+  background:
+    repeating-linear-gradient(0deg, rgba(189,79,18,0.075) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(116deg, transparent 0 13px, rgba(35,42,45,0.04) 13px 14px, transparent 14px 24px);
+}
+:where([data-theme="night"][data-palette="signal"]) .pvStage {
+  border-color: color-mix(in srgb, var(--amber) 56%, var(--stroke-2));
+  background:
+    radial-gradient(360px 260px at 50% -8%, #FFFFFF, #FFF5EA 58%, #EEE9DE),
+    repeating-linear-gradient(116deg, transparent 0 19px, rgba(35,42,45,0.035) 19px 20px, transparent 20px 34px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.92),
+    inset 0 0 0 1px rgba(200,50,43,0.08),
+    0 12px 28px rgba(35,42,45,0.14);
+}
+:where([data-theme="night"][data-palette="signal"]) .pvField::before {
+  opacity: 0.08;
+  background-image:
+    linear-gradient(90deg, rgba(189,79,18,0.35) 1px, transparent 1px),
+    linear-gradient(rgba(189,79,18,0.28) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+:where([data-theme="night"][data-palette="signal"]) .pvItem.on {
+  color: var(--paper);
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--amber) 24%, var(--ink)) 0 76%, color-mix(in srgb, var(--red) 24%, var(--ink)) 76% 84%, transparent 84%);
+}
