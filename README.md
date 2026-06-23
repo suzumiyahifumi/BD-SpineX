@@ -114,20 +114,21 @@ Each mod folder usually contains a matching set: `.atlas`, `.png`, and `.skel` o
 
 ---
 
-## 💡 Why BD-SpineX?
+## ❤️ Support & Feedback
 
-Modding BrownDust II on Mac usually means digging through game files and patching AssetBundles by hand. BD-SpineX replaces all of that with one app:
-
-- **Install once, mods just load.** Set up the loader a single time, and your selected mods load when the game starts.
-- **Keep every mod in one place.** Point BD-SpineX at your mods folder and it organizes everything for you.
-- **See before you commit.** Preview a mod's animations live, then stage your picks and apply the whole set in one click.
-- **Nothing is permanent.** Turn mods off, swap them, or restore the game to clean — your downloaded files are never touched.
+Found a bug or have an idea? [Open an issue](https://github.com/suzumiyahifumi/BD-SpineX/issues) — feedback is always welcome. If BD-SpineX makes your modding easier, a ⭐ on the repo means a lot.
 
 ---
+## 🧰 Community & Related projects
 
-## 🌐 Where to get mods
+BD-SpineX is built for **Mac + PlayCover**. On another platform, or looking for more tools? These sister projects are worth a look:
 
-Mods are made and shared by the community — BD-SpineX doesn't host any itself. The main hub is the **BrownDustX** community, where modders post their work:
+- **BD2ModManager** · `WINDOWS` — by bruhnn → [github.com/bruhnn/BD2ModManager](https://github.com/bruhnn/BD2ModManager)
+- **browndust2-mod-manager** · `WINDOWS` — by kxdekxde → [github.com/kxdekxde/browndust2-mod-manager](https://github.com/kxdekxde/browndust2-mod-manager)
+- **BDroid_X** · `ANDROID` — by Ark-Repoleved → [github.com/Ark-Repoleved/BDroid_X](https://github.com/Ark-Repoleved/BDroid_X)
+- **BD2 L2D Viewer** · `WEB` — Live2D model viewer by jelosus2 → [jelosus2.github.io/BD2-L2D-Viewer](https://jelosus2.github.io/BD2-L2D-Viewer)
+
+### 🔥 Where to get mods
 
 - **BrownDustX Discord** · community mods & discussion → [discord.gg/B3Aqz6tDG2](https://discord.gg/B3Aqz6tDG2)
 
@@ -135,19 +136,6 @@ Mods are made and shared by the community — BD-SpineX doesn't host any itself.
 > These are community spaces run by other people. Follow each server's rules, and only install mods from sources you trust.
 
 ---
-
-## 🔗 Related projects
-
-BD-SpineX is built for **Mac + PlayCover**. On another platform, or looking for more tools? These sister projects are worth a look:
-
-- **BrownDustX** · `PC` — the runtime mod framework by Synae that inspired BD-SpineX's loader (shared via the [BrownDustX Discord](https://discord.gg/B3Aqz6tDG2))
-- **BD2ModManager** · `WINDOWS` — by bruhnn → [github.com/bruhnn/BD2ModManager](https://github.com/bruhnn/BD2ModManager)
-- **browndust2-mod-manager** · `WINDOWS` — by kxdekxde → [github.com/kxdekxde/browndust2-mod-manager](https://github.com/kxdekxde/browndust2-mod-manager)
-- **BDroid_X** · `ANDROID` — by Ark-Repoleved → [github.com/Ark-Repoleved/BDroid_X](https://github.com/Ark-Repoleved/BDroid_X)
-- **BD2 L2D Viewer** · `WEB` — Live2D model viewer by jelosus2 → [jelosus2.github.io/BD2-L2D-Viewer](https://jelosus2.github.io/BD2-L2D-Viewer)
-
----
-
 ## ❓ FAQ
 
 <details>
@@ -185,12 +173,6 @@ Download the matching BD-SpineX release, install Runtime Injection again, then r
 
 No — BD-SpineX is built for the macOS PlayCover version only. For Windows, see [BD2ModManager](https://github.com/bruhnn/BD2ModManager).
 </details>
-
----
-
-## ❤️ Support & Feedback
-
-Found a bug or have an idea? [Open an issue](https://github.com/suzumiyahifumi/BD-SpineX/issues) — feedback is always welcome. If BD-SpineX makes your modding easier, a ⭐ on the repo means a lot.
 
 ---
 
