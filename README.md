@@ -33,7 +33,7 @@
   <img src="docs/images/readme/library.png" alt="BD-SpineX library view" width="640">
 </p>
 
----
+
 
 ## 🎯 Is this for you?
 
@@ -47,7 +47,7 @@ If that sounds like you, you're in the right place. 🙂
 
 > Playing on **Windows**? Check out [BD2ModManager](https://github.com/bruhnn/BD2ModManager) instead — BD-SpineX is Mac + PlayCover only.
 
----
+
 
 ## 🚀 Quick Start
 
@@ -61,7 +61,7 @@ If that sounds like you, you're in the right place. 🙂
 > [!IMPORTANT]
 > Use the BD-SpineX release that **matches your BrownDust II version**, and **close the game** before installing the loader, applying changes, or restoring mods.
 
----
+
 
 <div align="center">
 <table>
@@ -78,7 +78,7 @@ If that sounds like you, you're in the right place. 🙂
 </table>
 </div>
 
----
+
 
 ## 🧩 Requirements
 
@@ -89,7 +89,7 @@ If that sounds like you, you're in the right place. 🙂
 > [!NOTE]
 > The app is currently unsigned. On first launch, macOS may ask you to approve it in **System Settings → Privacy & Security**.
 
----
+
 
 ## 📁 Organizing your mods
 
@@ -112,13 +112,14 @@ Mods/
 
 Each mod folder usually contains a matching set: `.atlas`, `.png`, and `.skel` or `.json`.
 
----
+
 
 ## ❤️ Support & Feedback
 
 Found a bug or have an idea? [Open an issue](https://github.com/suzumiyahifumi/BD-SpineX/issues) — feedback is always welcome. If BD-SpineX makes your modding easier, a ⭐ on the repo means a lot.
 
----
+
+
 ## 🧰 Community & Related projects
 
 BD-SpineX is built for **Mac + PlayCover**. On another platform, or looking for more tools? These sister projects are worth a look:
@@ -135,7 +136,8 @@ BD-SpineX is built for **Mac + PlayCover**. On another platform, or looking for 
 > [!NOTE]
 > These are community spaces run by other people. Follow each server's rules, and only install mods from sources you trust.
 
----
+
+
 ## ❓ FAQ
 
 <details>
@@ -174,7 +176,7 @@ Download the matching BD-SpineX release, install Runtime Injection again, then r
 No — BD-SpineX is built for the macOS PlayCover version only. For Windows, see [BD2ModManager](https://github.com/bruhnn/BD2ModManager).
 </details>
 
----
+
 
 ## 🙏 Credits
 
@@ -182,7 +184,7 @@ No — BD-SpineX is built for the macOS PlayCover version only. For Windows, see
 - [BD2ModManager](https://github.com/bruhnn/BD2ModManager) for character metadata and type icons.
 - The open-source projects and tools that make Spine modding possible.
 
----
+
 
 ## 📜 License
 
