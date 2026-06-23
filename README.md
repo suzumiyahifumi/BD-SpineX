@@ -91,38 +91,6 @@ Modding BrownDust II on Mac usually means digging through game files and patchin
 
 ---
 
-## ✨ What you can do
-
-##### **`LIBRARY` · Browse your mods as cartridges**
-
-  Every mod becomes a visual card. Filter instantly and see what's mounted, staged, or conflicting at a glance.
-
-##### **`ROSTER` · Find mods by character**
-
-  Groups your mods by character, so you don't have to remember which folder a costume lives in.
-
-##### **`PREVIEW` · Watch mods animate before installing**
-
-  Play animations, stack animation tracks, toggle visible parts, and compare two mods side by side.
-
-##### **`APPLY` · Stage, then apply in one click**
-
-  Pick the mods you want, review the pending list, then apply the whole set together.
-
-##### **`MOD POWER` · Flip mods off or on**
-
-  Temporarily switch mounted mods off (or back on) without deleting anything.
-
-##### **`RESTORE` · Reset to clean**
-
-  Clear every mounted mod in one go. Your source mods folder stays exactly as it was.
-
-##### **`LABELS` · Author stickers**
-
-  Tag mods with author labels so your library stays easy to recognize.
-
----
-
 ## 🧩 Requirements
 
 - macOS on **Apple Silicon**
