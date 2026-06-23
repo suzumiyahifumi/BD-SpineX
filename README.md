@@ -80,17 +80,6 @@ If that sounds like you, you're in the right place. 🙂
 
 ---
 
-## 💡 Why BD-SpineX?
-
-Modding BrownDust II on Mac usually means digging through game files and patching AssetBundles by hand. BD-SpineX replaces all of that with one app:
-
-- **Install once, mods just load.** Set up the loader a single time, and your selected mods load when the game starts.
-- **Keep every mod in one place.** Point BD-SpineX at your mods folder and it organizes everything for you.
-- **See before you commit.** Preview a mod's animations live, then stage your picks and apply the whole set in one click.
-- **Nothing is permanent.** Turn mods off, swap them, or restore the game to clean — your downloaded files are never touched.
-
----
-
 ## 🧩 Requirements
 
 - macOS on **Apple Silicon**
@@ -122,6 +111,17 @@ Mods/
 ```
 
 Each mod folder usually contains a matching set: `.atlas`, `.png`, and `.skel` or `.json`.
+
+---
+
+## 💡 Why BD-SpineX?
+
+Modding BrownDust II on Mac usually means digging through game files and patching AssetBundles by hand. BD-SpineX replaces all of that with one app:
+
+- **Install once, mods just load.** Set up the loader a single time, and your selected mods load when the game starts.
+- **Keep every mod in one place.** Point BD-SpineX at your mods folder and it organizes everything for you.
+- **See before you commit.** Preview a mod's animations live, then stage your picks and apply the whole set in one click.
+- **Nothing is permanent.** Turn mods off, swap them, or restore the game to clean — your downloaded files are never touched.
 
 ---
 
