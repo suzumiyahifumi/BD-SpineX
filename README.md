@@ -1,81 +1,142 @@
 <p align="center">
-  <img src="build/icon.png" alt="BD-SpineX icon" width="128" height="128">
+  <img src="build/icon.png" alt="BD-SpineX" width="120" height="120">
 </p>
 
 <h1 align="center">BD-SpineX</h1>
 
 <p align="center">
-  BrownDust II PlayCover mod manager for macOS.
+  <b>The mod manager for <i>BrownDust II</i> on Mac (PlayCover).</b><br>
+  Install a loader once, then browse, preview, and swap Spine mods — no AssetBundle editing.
 </p>
 
-[![GitHub Release](https://img.shields.io/github/v/release/suzumiyahifumi/BD-SpineX?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
-[![Downloads](https://img.shields.io/github/downloads/suzumiyahifumi/BD-SpineX/total?style=flat-square)](https://github.com/suzumiyahifumi/BD-SpineX/releases)
-[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?style=flat-square)](#requirements)
-[![License](https://img.shields.io/badge/source-GPLv3-blue?style=flat-square)](LICENSE)
+<!-- Supported game version — auto-updates from the latest GitHub release tag -->
+<p align="center">
+  <a href="https://github.com/suzumiyahifumi/BD-SpineX/releases/latest">
+    <img src="https://img.shields.io/github/v/release/suzumiyahifumi/BD-SpineX?style=for-the-badge&label=SUPPORTS%20BROWNDUST%20II&labelColor=151515&color=e02d28" alt="Supported BrownDust II version">
+  </a>
+</p>
+<p align="center">
+  <sub>📌 Download the release whose number matches your game version.</sub>
+</p>
 
-> Easily manage, preview, and switch BrownDust II Spine mods for the PlayCover version on Mac.
->
-> Download the latest version: [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases)
+<p align="center">
+  <a href="https://github.com/suzumiyahifumi/BD-SpineX/releases"><img src="https://img.shields.io/github/downloads/suzumiyahifumi/BD-SpineX/total?style=flat-square&label=downloads" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20(Apple%20Silicon)-lightgrey?style=flat-square" alt="Platform">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/source-GPLv3-blue?style=flat-square" alt="License"></a>
+</p>
 
-BD-SpineX is made for players who want a cleaner way to use BrownDust II mods on macOS. Keep your mods in one folder, preview them before installing, stage changes safely, and apply everything from a single app.
+<p align="center">
+  <a href="https://github.com/suzumiyahifumi/BD-SpineX/releases"><b>⬇️ Download for macOS</b></a>
+</p>
 
-If you run into problems or have ideas, feel free to open an issue.
-
-> [!WARNING]
-> Use the BD-SpineX release that matches your BrownDust II game version. Close BrownDust II before installing or removing Runtime Injection, applying changes, or restoring all mods.
-
----
-
-## ✨ Features
-
-- **Cartridge Library**: Browse your mods as visual cartridges, filter them quickly, and see which ones are mounted, staged, or conflicting.
-
-- **Pending Changes**: Review everything before applying. Click a pending item to jump back to the matching cartridge.
-
-- **Spine Preview**: Preview supported Spine mods before installing. Compare up to two mods, switch animations, stack animation tracks, and adjust visible parts.
-
-- **Roster View**: Find mods by character instead of digging through folders.
-
-- **One-click Apply**: Stage the mods you want, then apply the whole set when you are ready.
-
-- **Restore All**: Remove all mounted mods in one go while keeping your source mod folder untouched.
-
-- **Mod Power**: Temporarily turn mounted mods off or back on without deleting them.
-
-- **Author Labels**: Add or adjust author stickers so your library stays easy to recognize.
-
-- **PlayCover-first Workflow**: Designed around the macOS PlayCover version of BrownDust II.
+<p align="center">
+  <img src="docs/images/readme/library.png" alt="BD-SpineX library view" width="640">
+</p>
 
 ---
 
-## Requirements
+## 🎯 Is this for you?
 
-- macOS on Apple Silicon
-- PlayCover version of BrownDust II
-- A BD-SpineX release matching your BrownDust II game version
+BD-SpineX is for you if…
 
-The app may be unsigned. On first launch, macOS might ask you to approve it in System Settings.
+- ✅ You play **BrownDust II** on **Mac** using **PlayCover**
+- ✅ You want to use **Spine costume / skin mods**
+- ✅ You want mods that just **load when the game runs** — plug-and-play, like *BrownDustX* on PC
 
----
+If that sounds like you, you're in the right place. 🙂
 
-## ⚙️ How to Use
-
-1. Download the DMG from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
-2. Open BD-SpineX.
-3. Choose your Mods Folder.
-4. Click **Install Runtime Injection**.
-5. Click **Refresh Mods**.
-6. Select the mods you want to use.
-7. Click **Apply Changes**.
-8. Launch or restart BrownDust II.
-
-After a BrownDust II update, download the matching BD-SpineX release and install Runtime Injection again.
+> Playing on **Windows**? Check out [BD2ModManager](https://github.com/bruhnn/BD2ModManager) instead — BD-SpineX is Mac + PlayCover only.
 
 ---
 
-## 📁 Mods Folder
+## 🚀 Quick Start
 
-You can organize mods however you like. Nested folders are supported.
+1. **Download** the latest DMG from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases) and open BD-SpineX.
+2. **Choose your Mods Folder** (where you keep your downloaded mods).
+3. Click **Install Runtime Injection** — this sets up the loader. *(One time. Re-run it after a game update.)*
+4. Click **Refresh Mods** to scan your folder.
+5. **Select** the mods you want and click **Apply Changes**.
+6. **Launch BrownDust II** and enjoy. 🎮
+
+> [!IMPORTANT]
+> Use the BD-SpineX release that **matches your BrownDust II version**, and **close the game** before installing the loader, applying changes, or restoring mods.
+
+---
+
+<div align="center">
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="docs/images/readme/roster.png" alt="Roster view" width="380"><br>
+<sub><b>Roster</b> — find mods by character</sub>
+</td>
+<td align="center" width="50%">
+<img src="docs/images/readme/preview.png" alt="Preview view" width="380"><br>
+<sub><b>Preview</b> — see mods animate before installing</sub>
+</td>
+</tr>
+</table>
+</div>
+
+---
+
+## 💡 Why BD-SpineX?
+
+Modding BrownDust II on Mac usually means digging through game files and patching AssetBundles by hand. BD-SpineX replaces all of that with one app:
+
+- **Install once, mods just load.** Set up the loader a single time, and your selected mods load when the game starts.
+- **Keep every mod in one place.** Point BD-SpineX at your mods folder and it organizes everything for you.
+- **See before you commit.** Preview a mod's animations live, then stage your picks and apply the whole set in one click.
+- **Nothing is permanent.** Turn mods off, swap them, or restore the game to clean — your downloaded files are never touched.
+
+---
+
+## ✨ What you can do
+
+**`LIBRARY` · Browse your mods as cartridges**
+
+Every mod becomes a visual card. Filter instantly and see what's mounted, staged, or conflicting at a glance.
+
+**`ROSTER` · Find mods by character**
+
+Groups your mods by character, so you don't have to remember which folder a costume lives in.
+
+**`PREVIEW` · Watch mods animate before installing**
+
+Play animations, stack animation tracks, toggle visible parts, and compare two mods side by side.
+
+**`APPLY` · Stage, then apply in one click**
+
+Pick the mods you want, review the pending list, then apply the whole set together.
+
+**`MOD POWER` · Flip mods off or on**
+
+Temporarily switch mounted mods off (or back on) without deleting anything.
+
+**`RESTORE` · Reset to clean**
+
+Clear every mounted mod in one go. Your source mods folder stays exactly as it was.
+
+**`LABELS` · Author stickers**
+
+Tag mods with author labels so your library stays easy to recognize.
+
+---
+
+## 🧩 Requirements
+
+- macOS on **Apple Silicon**
+- The **PlayCover** version of **BrownDust II**
+- A BD-SpineX release matching your game version
+
+> [!NOTE]
+> The app is currently unsigned. On first launch, macOS may ask you to approve it in **System Settings → Privacy & Security**.
+
+---
+
+## 📁 Organizing your mods
+
+Drop your mods anywhere inside your Mods Folder — nested folders are fine. BD-SpineX scans everything for you.
 
 ```text
 Mods/
@@ -92,69 +153,88 @@ Mods/
       illust_dating11.png
 ```
 
-Each mod folder usually includes:
-
-- `.atlas`
-- `.png`
-- `.skel` or `.json`
+Each mod folder usually contains a matching set: `.atlas`, `.png`, and `.skel` or `.json`.
 
 ---
 
-## 🖼️ Screenshots
+## 🌐 Where to get mods
 
-### Library
+Mods are made and shared by the community — BD-SpineX doesn't host any itself. The main hub is the **BrownDustX** community, where modders post their work:
 
-![BD-SpineX Library](docs/images/readme/library.png)
+- **BrownDustX Discord** · community mods & discussion → [discord.gg/B3Aqz6tDG2](https://discord.gg/B3Aqz6tDG2)
 
-### Roster
+> [!NOTE]
+> These are community spaces run by other people. Follow each server's rules, and only install mods from sources you trust.
 
-![BD-SpineX Roster](docs/images/readme/roster.png)
+---
 
-### Preview
+## 🔗 Related projects
 
-![BD-SpineX Preview](docs/images/readme/preview.png)
+BD-SpineX is built for **Mac + PlayCover**. On another platform, or looking for more tools? These sister projects are worth a look:
+
+- **BrownDustX** · `PC` — the runtime mod framework by Synae that inspired BD-SpineX's loader (shared via the [BrownDustX Discord](https://discord.gg/B3Aqz6tDG2))
+- **BD2ModManager** · `WINDOWS` — by bruhnn → [github.com/bruhnn/BD2ModManager](https://github.com/bruhnn/BD2ModManager)
+- **browndust2-mod-manager** · `WINDOWS` — by kxdekxde → [github.com/kxdekxde/browndust2-mod-manager](https://github.com/kxdekxde/browndust2-mod-manager)
+- **BDroid_X** · `ANDROID` — by Ark-Repoleved → [github.com/Ark-Repoleved/BDroid_X](https://github.com/Ark-Repoleved/BDroid_X)
+- **BD2 L2D Viewer** · `WEB` — Live2D model viewer by jelosus2 → [jelosus2.github.io/BD2-L2D-Viewer](https://jelosus2.github.io/BD2-L2D-Viewer)
 
 ---
 
 ## ❓ FAQ
 
-### Where do I download BD-SpineX?
+<details>
+<summary><b>Where do I download it?</b></summary>
 
-Download the latest release from [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases).
+From [GitHub Releases](https://github.com/suzumiyahifumi/BD-SpineX/releases). Always grab the version that matches your BrownDust II game version.
+</details>
 
-### Why are some buttons locked?
+<details>
+<summary><b>Do I need to close the game to change mods?</b></summary>
 
-BD-SpineX locks actions when the game is running, the game version does not match, Runtime Injection is missing, the Mods Folder is not set, or another task is already running.
+Yes. Close BrownDust II before installing/removing the loader, applying changes, using Mod Power, or restoring mods.
+</details>
 
-### Do I need to close the game before changing mods?
+<details>
+<summary><b>Will "Restore All" delete my downloaded mods?</b></summary>
 
-Yes. Close BrownDust II before installing or removing Runtime Injection, applying changes, using Mod Power, or restoring all mods.
+No. Restore All only clears mods from the game side. Your source Mods Folder is left untouched.
+</details>
 
-### Will Restore All delete my downloaded mods?
+<details>
+<summary><b>Why are some buttons greyed out?</b></summary>
 
-No. Restore All removes mounted mods from the game side only. Your source Mods Folder is kept as-is.
+BD-SpineX locks actions when the game is running, the version doesn't match, the loader isn't installed, the Mods Folder isn't set, or another task is in progress.
+</details>
 
-### Can I use this with the Windows version?
+<details>
+<summary><b>What do I do after a BrownDust II update?</b></summary>
 
-No. BD-SpineX is built for macOS and the PlayCover version of BrownDust II.
+Download the matching BD-SpineX release, install Runtime Injection again, then re-scan and re-apply your mods.
+</details>
+
+<details>
+<summary><b>Can I use it on Windows / mobile?</b></summary>
+
+No — BD-SpineX is built for the macOS PlayCover version only. For Windows, see [BD2ModManager](https://github.com/bruhnn/BD2ModManager).
+</details>
 
 ---
 
 ## ❤️ Support & Feedback
 
-If BD-SpineX helps you, starring the repo is always appreciated. For bugs, suggestions, or questions, please open an issue on GitHub.
+Found a bug or have an idea? [Open an issue](https://github.com/suzumiyahifumi/BD-SpineX/issues) — feedback is always welcome. If BD-SpineX makes your modding easier, a ⭐ on the repo means a lot.
 
 ---
 
-## 🙏 Credits & Thanks
+## 🙏 Credits
 
-- Thanks to the BrownDust II modding community for testing, feedback, and workflows.
-- Thanks to the projects and tools that make Spine modding possible.
+- The BrownDust II modding community for testing, feedback, and workflows.
+- [BD2ModManager](https://github.com/bruhnn/BD2ModManager) for character metadata and type icons.
+- The open-source projects and tools that make Spine modding possible.
 
 ---
 
 ## 📜 License
 
-BD-SpineX source code is licensed under **GPLv3**. See [LICENSE](LICENSE).
-
-Packaged release builds include third-party tools with separate licenses. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.
+BD-SpineX source code is licensed under **GPLv3** — see [LICENSE](LICENSE).
+Packaged release builds bundle third-party tools under their own licenses; see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for details.

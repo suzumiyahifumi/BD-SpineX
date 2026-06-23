@@ -134,19 +134,32 @@ const THEMES: { key: Theme; label: string }[] = [
 ];
 
 // Color palettes — the print "skin" (data-theme=night) stays; only the color
-// tokens are swapped via data-accent. Add a palette by overriding tokens under
-// :root[data-theme="night"][data-accent="<key>"] in styles.css.
-type Accent = "press" | "violet" | "orchid";
+// tokens are swapped via data-accent/data-palette. Add a palette by overriding
+// tokens under :root[data-theme="night"][data-palette="<key>"] in styles.css.
+type Accent = "press" | "violet" | "orchid" | "ultramarine" | "emerald" | "hakuji" | "signal" | "onyx" | "porcelain";
 const ACCENT_KEY = "bd-spinex:accent";
 const PALETTES: { key: Accent; label: string }[] = [
   { key: "press", label: "Night Press" },
   { key: "violet", label: "Violet Press" },
-  { key: "orchid", label: "Orchid Press" }
+  { key: "orchid", label: "Orchid Press" },
+  { key: "ultramarine", label: "Ultramarine" },
+  { key: "emerald", label: "Emerald" },
+  { key: "hakuji", label: "Hakuji Proof" },
+  { key: "signal", label: "Signal Sketch" },
+  { key: "onyx", label: "Onyx Press" },
+  { key: "porcelain", label: "Porcelain" }
 ];
+const ACCENT_KEYS: Accent[] = PALETTES.map((p) => p.key);
+const VISIBLE_PALETTE_KEYS: Accent[] = ["press", "signal", "ultramarine", "emerald", "onyx", "porcelain"];
+const VISIBLE_PALETTES = VISIBLE_PALETTE_KEYS.map((key) => PALETTES.find((p) => p.key === key)).filter(Boolean) as typeof PALETTES;
+const WHITE_BACKDROP_ACCENTS = new Set<Accent>(["hakuji", "signal"]);
+function backdropPureToneInkForAccent(accent: Accent) {
+  return WHITE_BACKDROP_ACCENTS.has(accent) ? 0.65 : 0.35;
+}
 function readAccent(): Accent {
   try {
-    const v = localStorage.getItem(ACCENT_KEY);
-    return v === "violet" || v === "orchid" ? v : "press";
+    const v = localStorage.getItem(ACCENT_KEY) as Accent | null;
+    return v && ACCENT_KEYS.includes(v) ? v : "press";
   } catch {
     return "press";
   }
@@ -825,8 +838,16 @@ export function App() {
   const [accent, setAccent] = useState<Accent>(readAccent);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-accent", accent);
+    const visualAccent: Accent = accent === "signal" ? "hakuji" : accent;
+    document.documentElement.setAttribute("data-accent", visualAccent);
+    document.documentElement.setAttribute("data-palette", accent);
+    const syncBackdropInk = () => {
+      window.bdLibraryBackdrop?.setInk(backdropPureToneInkForAccent(accent), "pureTone");
+    };
+    syncBackdropInk();
+    const frame = window.requestAnimationFrame(syncBackdropInk);
     try { localStorage.setItem(ACCENT_KEY, accent); } catch { /* ignore */ }
+    return () => window.cancelAnimationFrame(frame);
   }, [accent]);
 
   useEffect(() => {
@@ -2516,10 +2537,10 @@ export function App() {
           <div className="cfgCard cfgAppearance">
             <div className="cfgFieldHead">
               <span>Theme</span>
-              <HelpButton title="Theme">Pick the print color palette. Night Press is the warm Soviet-print default; Violet Press recolors the same print chrome in iridescent violet + cyan to match the app icon. Cartridge artwork is unchanged.</HelpButton>
+              <HelpButton title="Theme">Pick the print color palette. The print chrome changes color only; cartridge artwork and runtime behavior are unchanged.</HelpButton>
             </div>
             <div className="themeSwitch segmentedControl" role="tablist" aria-label="Theme">
-              {PALETTES.map((p) => (
+              {VISIBLE_PALETTES.map((p) => (
                 <button key={p.key} type="button" className={accent === p.key ? "active" : ""} onClick={() => setAccent(p.key)} aria-pressed={accent === p.key}>
                   <span>{p.label}</span>
                 </button>
