@@ -6,7 +6,7 @@
    are preserved 1:1 with the previous light theme so the React
    logic in App.tsx needs no changes — only the visual layer
    (color, glass, depth) is rebuilt.
-   See design/BD-SpineX-Redesign.html for the full design book.
+   See docs/design/BD-SpineX-Redesign.html for the full design book.
    ============================================================ */
 
 @font-face {
