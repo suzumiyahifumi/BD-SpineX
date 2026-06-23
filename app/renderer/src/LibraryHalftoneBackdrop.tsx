@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 type HalftoneDot = [number, number, number, number, number, number?];
-type LineArtMeta = { image: string };
+type LineArtMeta = { image: string; preset?: string };
 type LibraryBackdropMode = "classic" | "posterGhost" | "duotone" | "pureTone";
 type ParticleDensityPreset = "full" | "sparse";
 type ParticleLayerMode = "standard" | "outer";
@@ -40,6 +40,7 @@ type HalftoneShape = HalftoneData & {
   duotoneImage: HTMLImageElement;
   lineArtImage: HTMLImageElement;
   pureToneImage: HTMLImageElement;
+  pureToneIsMask: boolean;
   pureToneMaskImage?: HTMLImageElement;
 };
 type ParticleTarget = {
@@ -130,8 +131,8 @@ const DEFAULT_BACKDROP_SETTINGS: LibraryBackdropSettings = {
   particleLayerMode: "outer",
   particlesEnabled: true,
   posterGhostInk: 0.72,
-  pureToneInk: 0.3,
-  pureToneStyle: "original"
+  pureToneInk: 3.5,
+  pureToneStyle: "grayscale"
 };
 const TRANSITION_DURATION = 4200;
 const SETTLED_HOLD_DURATION = 16000;
@@ -145,6 +146,7 @@ const DEFAULT_DOT_COLORS: ParticlePalette = {
   amber: [232, 162, 44],
   paper: [237, 224, 196]
 };
+const NIGHT_PRESS_PURE_TONE_COLORS: ParticlePalette = DEFAULT_DOT_COLORS;
 const pureToneThemeCache = new WeakMap<HTMLImageElement, Map<string, HTMLCanvasElement>>();
 
 export function LibraryHalftoneBackdrop() {
@@ -586,7 +588,7 @@ function normalizeBackdropSettings(value: unknown, fallback: LibraryBackdropSett
     particleLayerMode: normalizeParticleLayerMode(input.particleLayerMode, fallback.particleLayerMode),
     particlesEnabled: booleanValue(input.particlesEnabled, fallback.particlesEnabled),
     posterGhostInk: finiteNumber(input.posterGhostInk, fallback.posterGhostInk, 0, 1.5),
-    pureToneInk: finiteNumber(input.pureToneInk, fallback.pureToneInk, 0, 1.5),
+    pureToneInk: finiteNumber(input.pureToneInk, fallback.pureToneInk, 0, 3.5),
     pureToneStyle: normalizePureToneStyle(input.pureToneStyle, fallback.pureToneStyle)
   };
 }
@@ -702,6 +704,7 @@ async function loadHalftoneShape(id: string, cache: Map<string, HalftoneShape>) 
   const pureTone = data.lineArtVariants?.pureTone ?? data.lineArtVariants?.duotone ?? data.lineArt;
   if (!pureTone?.image) throw new Error(`Missing pure tone art for ${id}`);
   const pureToneMask = data.lineArtVariants?.pureToneMask;
+  const pureToneIsMask = isPureToneMaskMeta(pureTone, pureToneMask);
   const lineArt = data.lineArtVariants?.posterGhost ?? data.lineArtVariants?.duotone ?? data.lineArt ?? pureTone;
   const duotone = data.lineArtVariants?.duotone ?? lineArt;
   const lineArtImage = await loadImage(`${LIBRARY_HALFTONE_DIR}/${lineArt.image}`);
@@ -716,9 +719,17 @@ async function loadHalftoneShape(id: string, cache: Map<string, HalftoneShape>) 
   const pureToneMaskImage = pureToneMask?.image
     ? await loadOptionalImage(`${LIBRARY_HALFTONE_DIR}/${pureToneMask.image}`)
     : undefined;
-  const shape = { ...data, duotoneImage, lineArtImage, pureToneImage, pureToneMaskImage };
+  const shape = { ...data, duotoneImage, lineArtImage, pureToneImage, pureToneIsMask, pureToneMaskImage };
   cache.set(id, shape);
   return shape;
+}
+
+function isPureToneMaskMeta(pureTone: LineArtMeta, pureToneMask: LineArtMeta | undefined) {
+  return (
+    pureTone.image === pureToneMask?.image ||
+    pureTone.preset === "pureToneMask" ||
+    pureTone.image.includes(".pure-tone-mask.")
+  );
 }
 
 function loadImage(src: string) {
@@ -963,7 +974,7 @@ function drawStillBackdropImage(
     return;
   }
   if (mode === "pureTone") {
-    drawPureToneImage(ctx, shape, width, height, visibility, settings.pureToneInk, settings.pureToneStyle, palette);
+    drawPureToneImage(ctx, shape, width, height, visibility, settings.pureToneInk, settings.pureToneStyle);
     return;
   }
 
@@ -982,7 +993,7 @@ function drawPosterGhostImage(
   const layout = shapeLayout(shape, width, height);
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = ink * clamp(visibility, 0, 1);
+  ctx.globalAlpha = clamp(ink * clamp(visibility, 0, 1), 0, 1);
   ctx.imageSmoothingEnabled = true;
   ctx.filter = "saturate(1.06) contrast(1.04)";
   ctx.drawImage(shape.lineArtImage, layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
@@ -1005,7 +1016,7 @@ function drawStandardDuotoneImage(
   const layout = shapeLayout(shape, width, height);
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = ink * clamp(visibility, 0, 1);
+  ctx.globalAlpha = clamp(ink * clamp(visibility, 0, 1), 0, 1);
   ctx.imageSmoothingEnabled = true;
   ctx.filter = "saturate(1.03) contrast(1.06)";
   ctx.drawImage(shape.duotoneImage, layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
@@ -1019,8 +1030,7 @@ function drawPureToneImage(
   height: number,
   visibility: number,
   ink: number,
-  style: PureToneStyle,
-  palette: ParticlePalette
+  style: PureToneStyle
 ) {
   if (!shape?.pureToneImage || visibility <= 0) {
     drawStandardDuotoneImage(ctx, shape, width, height, visibility, ink);
@@ -1030,16 +1040,18 @@ function drawPureToneImage(
   const layout = shapeLayout(shape, width, height);
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = ink * clamp(visibility, 0, 1);
+  ctx.globalAlpha = clamp(ink * clamp(visibility, 0, 1), 0, 1);
   ctx.imageSmoothingEnabled = true;
-  const sourceImage = style === "grayscale" ? shape.pureToneMaskImage ?? shape.pureToneImage : shape.pureToneImage;
-  ctx.drawImage(pureToneImageSource(sourceImage, style, palette), layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
+  const shouldToneAsNightPress = style === "grayscale" || shape.pureToneIsMask;
+  const sourceImage = shouldToneAsNightPress ? shape.pureToneMaskImage ?? shape.pureToneImage : shape.pureToneImage;
+  ctx.drawImage(pureToneImageSource(sourceImage, shouldToneAsNightPress), layout.left, layout.top, layout.shapeWidth, layout.shapeHeight);
   ctx.restore();
 }
 
-function pureToneImageSource(image: HTMLImageElement, style: PureToneStyle, palette: ParticlePalette): CanvasImageSource {
-  if (style !== "grayscale") return image;
-  const cacheKey = particlePaletteKey(palette);
+function pureToneImageSource(image: HTMLImageElement, shouldToneAsNightPress: boolean): CanvasImageSource {
+  if (!shouldToneAsNightPress) return image;
+  const tonePalette = NIGHT_PRESS_PURE_TONE_COLORS;
+  const cacheKey = particlePaletteKey(tonePalette);
   const cached = pureToneThemeCache.get(image)?.get(cacheKey);
   if (cached) return cached;
 
@@ -1061,7 +1073,7 @@ function pureToneImageSource(image: HTMLImageElement, style: PureToneStyle, pale
     for (let offset = 0; offset < data.length; offset += 4) {
       if (data[offset + 3] <= 0) continue;
       const luminance = (data[offset] * 0.2126 + data[offset + 1] * 0.7152 + data[offset + 2] * 0.0722) / 255;
-      const color = pureTonePaletteColor(luminance, palette);
+      const color = pureTonePaletteColor(luminance, tonePalette);
       data[offset] = color[0];
       data[offset + 1] = color[1];
       data[offset + 2] = color[2];

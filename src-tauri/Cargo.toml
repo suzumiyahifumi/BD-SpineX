@@ -1,6 +1,6 @@
 [package]
 name = "bd-spinex-tauri"
-version = "2.28.10"
+version = "2.28.10-b2"
 description = "BrownDust II runtime mod manager for Mac PlayCover."
 authors = ["BD-SpineX contributors"]
 edition = "2021"

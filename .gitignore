@@ -1,11 +1,11 @@
 # ──────────────────────────────────────────────────────────────────────────
 # BD-SpineX .gitignore
 #
-# The GitHub repo intentionally ships ONLY:
-#   • app/        – the frontend panel
-#   • design/     – design docs / design book
-#   • core, python, experiments, manager-data – the Patch __data engine,
-#     bundled converter tools, and per-version indexes
+# The GitHub repo intentionally ships ONLY the public app surface:
+#   • app/                     – frontend panel and Electron shell
+#   • core, python, experiments, manager-data
+#                              – public Patch __data engine and indexes
+#   • docs/                    – README assets, design docs, release notes
 #
 # Everything below keeps these OUT of the repo:
 #   (1) local-only test resources (images, sample mods, generated data)
@@ -72,9 +72,12 @@ __pycache__/
 #     Drop local test images / sample mods into  local/  (auto-ignored).
 # ══════════════════════════════════════════════════════════════════════════
 local/
-mods/**
-!mods/
-!mods/.gitkeep
+mods/
+
+# Generated visual experiments. Curated public artwork may still live beside
+# these files, but local mask batches are intentionally not tracked.
+app/renderer/public/characters/halftone/standing/*.pure-tone-mask.lineart.png
+app/renderer/public/characters/halftone/standing/*.pure-tone-mask.lineart.webp
 
 # BD2 Mod Manager runtime output (generated on the user's machine).
 # Per-version shared indexes ARE kept (they ship with the app); everything
@@ -107,13 +110,16 @@ manager-data/tools/source/**
 # ══════════════════════════════════════════════════════════════════════════
 # (2) Runtime-injection research & core — kept private (never on GitHub)
 # ══════════════════════════════════════════════════════════════════════════
+private/
 # injection research / probes / planning
 bepinex-playcover/
 SPINE_RUNTIME_PROBE_RESEARCH.md
 # BepInEx + internal research notes
-doc/
+docs/private/
+doc/BepInEx/
 # Rust loader payload (native/bd2loader)
 native/
+core/macho-inject.ts
 
 
 # ══════════════════════════════════════════════════════════════════════════

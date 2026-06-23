@@ -10,7 +10,7 @@ const dryRun = process.argv.includes("--dry-run");
 const keepAsset = (name) => (
   name === "manifest.json" ||
   /^\d+\.json$/.test(name) ||
-  /^\d+\.pure-tone\.lineart\.png$/.test(name)
+  /^\d+\.pure-tone-mask\.lineart\.webp$/.test(name)
 );
 
 const entries = await fs.readdir(targetDir, { withFileTypes: true }).catch((error) => {
@@ -48,24 +48,27 @@ for (const entry of entries) {
   const id = entry.name.slice(0, -".json".length);
   const filePath = path.join(targetDir, entry.name);
   const data = JSON.parse(await fs.readFile(filePath, "utf8"));
-  const pureToneImage = data.lineArtVariants?.pureTone?.image ?? `${id}.pure-tone.lineart.png`;
-  const pureTonePath = path.join(targetDir, pureToneImage);
+  const pureToneMaskImage = data.lineArtVariants?.pureToneMask?.image ?? `${id}.pure-tone-mask.lineart.webp`;
+  const pureToneMaskPath = path.join(targetDir, pureToneMaskImage);
 
   try {
-    const stat = await fs.stat(pureTonePath);
+    const stat = await fs.stat(pureToneMaskPath);
     if (!stat.isFile()) throw new Error("not a file");
   } catch {
-    throw new Error(`Missing pureTone backdrop image for ${id}: ${pureToneImage}`);
+    throw new Error(`Missing pureTone mask backdrop image for ${id}: ${pureToneMaskImage}`);
   }
 
-  const pureToneMeta = {
-    ...(data.lineArtVariants?.pureTone ?? {}),
-    image: pureToneImage,
-    preset: "pureTone"
+  const sharedMaskMeta = {
+    ...(data.lineArtVariants?.pureTone ?? data.lineArt ?? {}),
+    ...(data.lineArtVariants?.pureToneMask ?? {}),
+    image: pureToneMaskImage
   };
+  const pureToneMeta = { ...sharedMaskMeta, preset: "pureTone" };
+  const pureToneMaskMeta = { ...sharedMaskMeta, preset: "pureToneMask" };
 
   data.lineArt = pureToneMeta;
-  data.lineArtVariants = { pureTone: pureToneMeta };
+  data.lineArtVariants = { pureTone: pureToneMeta, pureToneMask: pureToneMaskMeta };
+  delete data.source;
   rewritten += 1;
 
   if (!dryRun) {
@@ -87,5 +90,5 @@ if (!dryRun) {
 const removedMiB = (removedBytes / 1024 / 1024).toFixed(1);
 const mode = dryRun ? "would prune" : "pruned";
 console.log(
-  `Halftone dist ${mode}: kept ${kept}, removed ${removed} dev-only assets (${removedMiB} MiB), rewrote ${rewritten} JSON files to pureTone.`
+  `Halftone dist ${mode}: kept ${kept}, removed ${removed} dev-only assets (${removedMiB} MiB), rewrote ${rewritten} JSON files to pureTone WebP masks.`
 );

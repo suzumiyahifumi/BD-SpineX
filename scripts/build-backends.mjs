@@ -51,7 +51,7 @@ await buildUnityPyExecutable("unitypy_patch_bundle", path.join(root, "python", "
 await buildUnityPyExecutable("unitypy_scan_bundle", path.join(root, "python", "scan_bundle.py"));
 await buildUnityPyExecutable("astc_encode", path.join(root, "python", "astc_encode.py"));
 
-// 執行時 loader（BepInEx-for-PlayCover）→ dist-native/bd2loader/libbd2loader.dylib
+// Private Runtime Injection loader, when the private workspace is present.
 await buildLoader();
 
 async function buildUnityPyExecutable(name, entryPoint) {

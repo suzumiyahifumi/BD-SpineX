@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const privateRuntimeRoot = path.join(root, "private", "runtime-injection");
 const currentPackageVersion = await readCurrentPackageVersion();
 const gameVersion = readGameVersion(currentPackageVersion);
 const releaseVersion = readReleaseVersion(gameVersion, currentPackageVersion);
@@ -71,6 +72,8 @@ async function readCurrentPackageVersion() {
 }
 
 async function assertRequiredReleaseInputs() {
+  await assertPrivateRuntimeWorkspace();
+
   const requiredFiles = [
     `manager-data/versions/${gameVersion}/shared-index.json`,
     `manager-data/versions/${gameVersion}/shared-file-index.json`,
@@ -92,6 +95,28 @@ async function assertRequiredReleaseInputs() {
       }
     } catch {
       throw new Error(`Missing release input: ${relativePath}`);
+    }
+  }
+}
+
+async function assertPrivateRuntimeWorkspace() {
+  const requiredPrivateFiles = [
+    "core/runtime-loader.ts",
+    "core/macho-inject.ts",
+    "scripts/build-loader.mjs",
+    "src-tauri/lib.rs",
+    "native/bd2loader/Cargo.toml"
+  ];
+
+  for (const relativePath of requiredPrivateFiles) {
+    const filePath = path.join(privateRuntimeRoot, relativePath);
+    try {
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile()) {
+        throw new Error(`${relativePath} is not a file.`);
+      }
+    } catch {
+      throw new Error(`Missing private Runtime Injection input: private/runtime-injection/${relativePath}`);
     }
   }
 }
@@ -121,7 +146,9 @@ async function assertNoPrivatePaths() {
   const scanRoots = [
     "app",
     "core",
-    "native/bd2loader",
+    "private/runtime-injection/core",
+    "private/runtime-injection/src-tauri",
+    "private/runtime-injection/native/bd2loader",
     "experiments/uabea-patcher",
     "experiments/rust-uabea-cli/src",
     "dist-native/bd2loader/libbd2loader.dylib",
